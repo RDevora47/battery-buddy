@@ -1,7 +1,22 @@
-.superpowers/
+# Build output
 bin/
 obj/
-.vs/
-*.user
 build/out/*
 !build/out/.gitkeep
+*.binlog
+
+# Test results
+TestResults/
+*.trx
+coverage*/
+
+# IDE and user state
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+*.userprefs
+
+# Tooling scratch
+.superpowers/

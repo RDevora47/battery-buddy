@@ -17,7 +17,12 @@
     <EmbeddedResource Include="Skins\axolotl\skin.json" LogicalName="skins.axolotl.skin.json" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\BatteryBuddy.Core\BatteryBuddy.Core.csproj" />
-    <ProjectReference Include="..\BatteryBuddy.Bluetooth\BatteryBuddy.Bluetooth.csproj" />
+    <!-- Frontend + contract; the backend projects are referenced only by Backends.cs, the composition root. -->
+    <ProjectReference Include="..\BatteryBuddy.Devices\BatteryBuddy.Devices.csproj" />
+    <ProjectReference Include="..\BatteryBuddy.Pet\BatteryBuddy.Pet.csproj" />
+    <ProjectReference Include="..\BatteryBuddy.Backend\BatteryBuddy.Backend.csproj" />
+    <ProjectReference Include="..\BatteryBuddy.Backends.Windows\BatteryBuddy.Backends.Windows.csproj" />
+    <ProjectReference Include="..\BatteryBuddy.Backends.GalaxyBuds\BatteryBuddy.Backends.GalaxyBuds.csproj" />
+    <ProjectReference Include="..\BatteryBuddy.Backends.Logitech\BatteryBuddy.Backends.Logitech.csproj" />
   </ItemGroup>
 </Project>

@@ -1,19 +1,27 @@
 # Battery Buddy
 
 A pixel-art axolotl that lives above your taskbar and wears your Bluetooth devices.
-Each device shows its battery bar; the axolotl gets sleepy (≤ 20 %) or worried (≤ 10 %)
-when your lowest device runs low.
+Each device shows its charge (colored outline, bar or mini battery) and a bolt while it
+charges. As your lowest device drains, the axolotl's gills droop and its color fades; it
+gets sleepy (≤ 20 %) and, at ≤ 10 %, shakes the device to squeeze out the last energy.
 
 - **Click a device** — speech bubble with its latest charge (Galaxy Buds: left / right / case).
 - **Click the axolotl** — rescan now.
 - **Drag** — move it; the position is remembered.
-- **Right-click or tray icon** — Rescan, Start with Windows, Quit.
+- **Right-click or tray icon** — Rescan, Battery display, Start with Windows, Quit.
 
 ## Setup
 
 1. Install the .NET 8 SDK: `winget install --id Microsoft.DotNet.SDK.8 -e`
 2. Build: `.\build\build.ps1` (runs the tests, then publishes; add `-SkipTests` to skip them)
 3. Run: `build\out\BatteryBuddy.exe`
+
+### Logitech devices
+
+Logitech mice and keyboards (Bluetooth or on a Unifying/Bolt/Lightspeed receiver) report
+their real battery level and charging state over HID++, with or without Logi Options+
+running. Devices that don't support it fall back to the Windows value, with charging
+inferred from rising levels.
 
 ### Galaxy Buds detail (left / right / case)
 
@@ -34,7 +42,11 @@ Buddy shows the single Windows battery value ("L/R detail unavailable") until it
 
 - Tests: `dotnet test`
 - Hardware probes: `dotnet run --project tools/ProbeWindows` (PnP battery + events),
-  `dotnet run --project tools/ProbeBuds` (Buds RFCOMM frames)
+  `dotnet run --project tools/ProbeBuds` (Buds RFCOMM frames),
+  `dotnet run --project tools/ProbeLogitech [list|hub|<seconds>]` (HID++ battery; read-only)
+- Adding a protocol: implement `IDeviceSource` (from `BatteryBuddy.Devices`) in a new
+  `src/BatteryBuddy.Backends.<Name>` project and add it to `src/BatteryBuddy.App/Backends.cs`.
+  Set `ChargingKnown` if it reports charging and `Address` if it knows the Bluetooth MAC.
 
 ## Manual checklist
 

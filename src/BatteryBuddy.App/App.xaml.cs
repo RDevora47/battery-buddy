@@ -28,7 +28,7 @@ public partial class App : Application
         };
 
         var window = new PetWindow();
-        _controller = new PetController(window);
+        _controller = new PetController(window, Backends.Create());
         var controller = _controller;
         _tray = new TrayIcon(controller.IconSprite, controller.RescanAsync,
             () => controller.BatteryStyle, style => controller.BatteryStyle = style, Shutdown);

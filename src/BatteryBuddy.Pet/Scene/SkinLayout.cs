@@ -1,0 +1,66 @@
+using System.Text.Json;
+
+namespace BatteryBuddy.Pet.Scene;
+
+public readonly record struct PixelPoint(int X, int Y);
+
+public enum Paw { Left, Right }
+
+public enum Side { Left, Right }
+
+/// <summary>
+/// Where a device goes: sprite drawn at each point, battery bar at Bar. FollowsBody = bobs with the pet;
+/// FollowsClick = held in the clicking paw, so it dips on mouse clicks (but not while that paw types).
+/// Icons = the side the status icon and mini battery go on, vertically centred; null = badge at the top-right.
+/// </summary>
+public sealed record Place(IReadOnlyList<PixelPoint> Points, PixelPoint Bar, bool FollowsBody, bool FollowsClick = false, Side? Icons = null);
+
+public sealed record SkinLayout(
+    int CanvasWidth,
+    int CanvasHeight,
+    PixelPoint Body,
+    IReadOnlyDictionary<string, Place> Places,
+    IReadOnlyDictionary<string, PixelPoint> Overlays,
+    IReadOnlyDictionary<Paw, PixelPoint>? Paws = null,
+    PixelPoint? Desk = null,
+    PixelPoint? MousePaw = null)
+{
+    // Paws: the "paw" sprite drawn over the body at these points. Desk: the "desk" sprite in front of the
+    // body, which the seat's device lies on. MousePaw: where the right paw goes to click the mouse.
+    // All are canvas positions like Body.
+    public static readonly string[] RequiredPlaces = { "gills", "neck", "hands", "righthand", "seat", "side", "float1", "float2" };
+
+    public static SkinLayout Parse(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+        var canvas = root.GetProperty("canvas");
+
+        var places = new Dictionary<string, Place>();
+        foreach (var p in root.GetProperty("places").EnumerateObject())
+        {
+            places[p.Name] = new Place(
+                p.Value.GetProperty("points").EnumerateArray().Select(Point).ToList(),
+                Point(p.Value.GetProperty("bar")),
+                p.Value.GetProperty("followsBody").GetBoolean(),
+                p.Value.TryGetProperty("followsClick", out var click) && click.GetBoolean(),
+                p.Value.TryGetProperty("icons", out var icons) ? Enum.Parse<Side>(icons.GetString()!, ignoreCase: true) : null);
+        }
+
+        var overlays = root.GetProperty("overlays").EnumerateObject().ToDictionary(o => o.Name, o => Point(o.Value));
+
+        return new SkinLayout(
+            canvas.GetProperty("width").GetInt32(),
+            canvas.GetProperty("height").GetInt32(),
+            Point(root.GetProperty("body")),
+            places,
+            overlays,
+            root.TryGetProperty("paws", out var paws)
+                ? paws.EnumerateObject().ToDictionary(p => Enum.Parse<Paw>(p.Name, ignoreCase: true), p => Point(p.Value))
+                : null,
+            root.TryGetProperty("desk", out var desk) ? Point(desk) : null,
+            root.TryGetProperty("mousePaw", out var mousePaw) ? Point(mousePaw) : null);
+    }
+
+    static PixelPoint Point(JsonElement e) => new(e[0].GetInt32(), e[1].GetInt32());
+}

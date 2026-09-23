@@ -1,4 +1,4 @@
-using BatteryBuddy.Core.Scene;
+using BatteryBuddy.Pet.Scene;
 using Drawing = System.Drawing;
 using WinForms = System.Windows.Forms;
 
@@ -17,15 +17,19 @@ sealed class TrayIcon : IDisposable
         var display = new WinForms.ToolStripMenuItem("Battery display");
         var outline = new WinForms.ToolStripMenuItem("Colored outline");
         var bar = new WinForms.ToolStripMenuItem("Battery bar");
+        var gauge = new WinForms.ToolStripMenuItem("Mini battery");
         void Sync()
         {
             outline.Checked = getStyle() == BatteryStyle.Outline;
             bar.Checked = getStyle() == BatteryStyle.Bar;
+            gauge.Checked = getStyle() == BatteryStyle.Gauge;
         }
         outline.Click += (_, _) => { setStyle(BatteryStyle.Outline); Sync(); };
         bar.Click += (_, _) => { setStyle(BatteryStyle.Bar); Sync(); };
+        gauge.Click += (_, _) => { setStyle(BatteryStyle.Gauge); Sync(); };
         display.DropDownItems.Add(outline);
         display.DropDownItems.Add(bar);
+        display.DropDownItems.Add(gauge);
         Sync();
         _menu.Items.Add(display);
 

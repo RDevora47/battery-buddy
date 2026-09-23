@@ -1,4 +1,5 @@
-using BatteryBuddy.Bluetooth;
+using BatteryBuddy.Backends.Windows;
+using BatteryBuddy.Backends.GalaxyBuds;
 
 void Log(string message) => Console.WriteLine($"{DateTime.Now:HH:mm:ss} {message}");
 

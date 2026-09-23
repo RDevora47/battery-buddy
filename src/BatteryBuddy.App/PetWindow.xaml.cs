@@ -8,11 +8,13 @@ namespace BatteryBuddy.App;
 
 public partial class PetWindow : Window
 {
+    /// <summary>Screen DIPs per art pixel.</summary>
     public const int Scale = 4;
     const double DragThreshold = 4;
 
     Point _pressedAt;
     bool _pressed;
+    int _resolution = 1;
 
     public PetWindow()
     {
@@ -20,16 +22,18 @@ public partial class PetWindow : Window
         SourceInitialized += (_, _) => NativeMethods.MakeToolWindowNoActivate(new WindowInteropHelper(this).Handle);
     }
 
-    /// <summary>Click on the pet in canvas pixel coordinates (not screen pixels).</summary>
+    /// <summary>Click on the pet in frame pixel coordinates (art pixels x resolution, not screen pixels).</summary>
     public event Action<int, int>? PetClicked;
     public event Action? Moved;
     public event Action? MenuRequested;
 
-    public void SetBitmap(WriteableBitmap bitmap)
+    /// <summary>resolution: bitmap pixels per art pixel.</summary>
+    public void SetBitmap(WriteableBitmap bitmap, int resolution)
     {
+        _resolution = resolution;
         PetImage.Source = bitmap;
-        PetImage.Width = bitmap.PixelWidth * Scale;
-        PetImage.Height = bitmap.PixelHeight * Scale;
+        PetImage.Width = bitmap.PixelWidth * Scale / resolution;
+        PetImage.Height = bitmap.PixelHeight * Scale / resolution;
     }
 
     public void ShowBubble(string text)
@@ -73,7 +77,7 @@ public partial class PetWindow : Window
         if (!_pressed) return;
         _pressed = false;
         var p = e.GetPosition(PetImage);
-        PetClicked?.Invoke((int)(p.X / Scale), (int)(p.Y / Scale));
+        PetClicked?.Invoke((int)(p.X * _resolution / Scale), (int)(p.Y * _resolution / Scale));
     }
 
     void PetImage_MouseRightButtonUp(object sender, MouseButtonEventArgs e) => MenuRequested?.Invoke();

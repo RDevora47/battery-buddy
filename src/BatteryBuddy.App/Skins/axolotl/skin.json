@@ -11,5 +11,5 @@
     "float1":    { "points": [[0, 20]],            "bar": [0, 26],  "followsBody": false },
     "float2":    { "points": [[0, 11]],            "bar": [0, 17],  "followsBody": false }
   },
-  "overlays": { "zzz": [37, 5], "sweat": [36, 10] }
+  "overlays": { "zzz": [37, 5], "sweat": [36, 10], "saiyan": [11, 1] }
 }

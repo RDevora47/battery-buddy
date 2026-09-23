@@ -16,6 +16,10 @@ S #c8ccd4
 Z #9fb4ff
 B #5fb4ff
 P #e8e8f0
+Y #ffd23f
+G #3ddc84
+O #ffe066
+o #f0b400
 
 sprite body_idle
 ....g....kkkkkkkkkkkkkk....g....
@@ -241,4 +245,54 @@ sprite sweat
 BBB
 BBB
 .B.
+end
+
+sprite bolt
+..Y
+.Y.
+YYY
+.Y.
+Y..
+end
+
+sprite full
+kkkkk.
+kGGGkk
+kGGGkk
+kkkkk.
+end
+
+sprite whoosh1
+......WWW
+....WWWWW
+......WWW
+....WWWWW
+......WWW
+end
+
+sprite whoosh2
+...WWWW..
+.WWWWW...
+...WWWW..
+.WWWWW...
+...WWWW..
+end
+
+sprite whoosh3
+W...W...W
+.........
+W.......W
+.........
+W...W...W
+end
+
+sprite saiyan
+....k......k......k...
+...kOk....kOk....kOk..
+..kOOOk..kOOOk..kOOOk.
+.kOOOOOkkOOOOOkkOOOOOk
+kOOOOOOOOOOOOOOOOOOOOk
+kOOoOOOOOOOOOOOOOOoOOk
+.kOOOOOOOOOOOOOOOOOOk.
+..kkkkkkkkkkkkkkkkkk..
 end

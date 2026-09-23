@@ -108,6 +108,17 @@ public class SamsungProtocolTests
     }
 
     [Fact]
+    public void Buds_in_case_are_flagged()
+    {
+        // wearState 0x33: both buds in the (open) case.
+        var frame = new FrameDecoder().Push(FrameEncoder.Encode(0x60, new byte[] { 2, 50, 60, 1, 0, 0x33, 80, 0, 0, 0 }))[0];
+        var detail = StatusParser.TryParse(frame)!;
+        Assert.True(detail.LeftInCase);
+        Assert.True(detail.RightInCase);
+        Assert.False(detail.LeftWorn);
+    }
+
+    [Fact]
     public void Unknown_message_returns_null() =>
         Assert.Null(StatusParser.TryParse(new SamsungFrame(0x42, new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 }, 0)));
 

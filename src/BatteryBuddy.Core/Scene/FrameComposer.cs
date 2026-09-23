@@ -43,7 +43,8 @@ public static class FrameComposer
         SkinLayout layout,
         IReadOnlyDictionary<string, Sprite> sprites,
         IReadOnlyList<DevicePlacement> placements,
-        FrameSpec spec)
+        FrameSpec spec,
+        BatteryStyle style = BatteryStyle.Outline)
     {
         int w = layout.CanvasWidth, h = layout.CanvasHeight;
         var pixels = new uint[w * h];
@@ -77,19 +78,45 @@ public static class FrameComposer
                         Plot(ox + s * 3 + x, oy + y, s < filled ? color : BatteryBar.Empty, owner);
         }
 
+        // 1px ring just outside the sprite's opaque pixels.
+        void DrawOutline(Sprite sprite, int ox, int oy, uint color, short owner)
+        {
+            for (int y = -1; y <= sprite.Height; y++)
+                for (int x = -1; x <= sprite.Width; x++)
+                    if (!Opaque(sprite, x, y) &&
+                        (Opaque(sprite, x - 1, y) || Opaque(sprite, x + 1, y) || Opaque(sprite, x, y - 1) || Opaque(sprite, x, y + 1)))
+                        Plot(ox + x, oy + y, color, owner);
+        }
+
         void DrawDevice(int index)
         {
             var placement = placements[index];
             var place = layout.Places[placement.PlaceName];
+            var sprite = sprites[placement.SpriteName];
             int dy = place.FollowsBody ? spec.BodyDy : 0;
             short owner = (short)(index + 1);
             int? battery = placement.Device.EffectiveBattery;
             bool critical = battery <= BatteryBar.CriticalAtOrBelow;
 
+            if (style == BatteryStyle.Outline)
+                foreach (var point in place.Points)
+                    DrawOutline(sprite, point.X, point.Y + dy, BatteryBar.ColorFor(battery), owner);
             if (!critical || spec.CriticalVisible)
                 foreach (var point in place.Points)
-                    Blit(sprites[placement.SpriteName], point.X, point.Y + dy, owner);
-            DrawBar(battery, place.Bar.X, place.Bar.Y + dy, owner);
+                    Blit(sprite, point.X, point.Y + dy, owner);
+            if (style == BatteryStyle.Bar)
+                DrawBar(battery, place.Bar.X, place.Bar.Y + dy, owner);
+
+            string? status = battery == 100 ? "full" : placement.Device.IsCharging ? "bolt" : null;
+            if (status is not null)
+            {
+                // Right of the (last) sprite, past its ring; flipped to the left at the canvas edge.
+                var icon = sprites[status];
+                var last = place.Points[^1];
+                int x = last.X + sprite.Width + 1;
+                if (x + icon.Width > w) x = place.Points[0].X - icon.Width - 2;
+                Blit(icon, x, last.Y + dy - 2, owner);
+            }
         }
 
         for (int i = 0; i < placements.Count; i++)
@@ -102,4 +129,7 @@ public static class FrameComposer
 
         return new ComposedFrame(w, h, pixels, owners, placements);
     }
+
+    static bool Opaque(Sprite sprite, int x, int y) =>
+        x >= 0 && y >= 0 && x < sprite.Width && y < sprite.Height && sprite.Pixels[y * sprite.Width + x] != 0;
 }

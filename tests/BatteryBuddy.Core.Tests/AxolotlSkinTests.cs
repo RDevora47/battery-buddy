@@ -13,6 +13,7 @@ public class AxolotlSkinTests
         "body_idle", "body_blink", "body_sleepy", "body_worried", "body_sniff_l", "body_sniff_r",
         "earbud", "mouse", "gamepad", "keyboard", "phone", "gadget",
         "smoke1", "smoke2", "smoke3", "ploof_text", "zzz", "sweat",
+        "bolt", "full", "whoosh1", "whoosh2", "whoosh3", "saiyan",
     };
 
     // The sprite(s) each place is designed to hold.
@@ -41,6 +42,7 @@ public class AxolotlSkinTests
         Assert.All(SkinLayout.RequiredPlaces, p => Assert.True(Layout.Places.ContainsKey(p), $"missing place {p}"));
         Assert.True(Layout.Overlays.ContainsKey("zzz"));
         Assert.True(Layout.Overlays.ContainsKey("sweat"));
+        Assert.True(Layout.Overlays.ContainsKey("saiyan"));
     }
 
     [Fact]

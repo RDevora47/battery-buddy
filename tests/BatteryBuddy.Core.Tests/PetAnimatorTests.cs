@@ -80,6 +80,29 @@ public class PetAnimatorTests
     }
 
     [Fact]
+    public void Whoosh_plays_three_frames_then_ends()
+    {
+        var animator = New();
+        animator.AddWhoosh(20, 20, TimeSpan.Zero);
+        Assert.Contains(new Overlay("whoosh1", 17, 19), animator.FrameAt(Ms(10)).Overlays);
+        Assert.Contains(animator.FrameAt(Ms(400)).Overlays, o => o.Sprite == "whoosh3");
+        Assert.True(animator.NeedsTicks(Ms(400)));
+        Assert.Empty(animator.FrameAt(Ms(600)).Overlays);
+        Assert.False(animator.NeedsTicks(Ms(600)));
+    }
+
+    [Fact]
+    public void All_full_gives_the_pet_saiyan_hair_that_bobs_with_it()
+    {
+        var animator = new PetAnimator(() => 0, TimeSpan.Zero, new PixelPoint(37, 5), new PixelPoint(36, 10), new PixelPoint(12, 1));
+        animator.AllFull = true;
+        Assert.Contains(new Overlay("saiyan", 12, 1), animator.FrameAt(Ms(100)).Overlays);
+        animator.FrameAt(TimeSpan.FromSeconds(3));
+        var bob = animator.FrameAt(TimeSpan.FromSeconds(3) + Ms(340));
+        Assert.Contains(new Overlay("saiyan", 12, 1 + bob.BodyDy), bob.Overlays);
+    }
+
+    [Fact]
     public void Critical_devices_blink_at_one_hertz()
     {
         var animator = New();

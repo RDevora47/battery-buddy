@@ -24,7 +24,14 @@ public class FrameComposerTests
         ["mouse"] = new("mouse", 1, 1, new[] { Blue }),
         ["keyboard"] = new("keyboard", 3, 1, new[] { Blue, Blue, Blue }),
         ["fx"] = new("fx", 1, 1, new[] { Blue }),
+        ["bolt"] = new("bolt", 1, 1, new[] { Yellow }),
+        ["full"] = new("full", 1, 1, new[] { Green }),
     };
+
+    const uint Yellow = 0xFFFFFF00, Green = 0xFF00FF00;
+
+    static ComposedFrame Compose(IReadOnlyList<DevicePlacement> placements, FrameSpec spec, BatteryStyle style = BatteryStyle.Bar) =>
+        FrameComposer.Compose(Layout, Sprites, placements, spec, style);
 
     static FrameSpec Spec(int dy = 0, bool criticalVisible = true, params Overlay[] overlays) =>
         new("body", dy, overlays, criticalVisible);
@@ -37,7 +44,7 @@ public class FrameComposerTests
     [Fact]
     public void Hit_test_distinguishes_body_device_and_empty()
     {
-        var frame = FrameComposer.Compose(Layout, Sprites, new[] { Mouse() }, Spec());
+        var frame = Compose(new[] { Mouse() }, Spec());
         Assert.Equal(HitTarget.Body, frame.HitTest(1, 1, out _));
         Assert.Equal(HitTarget.Device, frame.HitTest(5, 5, out var device));
         Assert.Equal("Mouse", device!.Name);
@@ -48,7 +55,7 @@ public class FrameComposerTests
     [Fact]
     public void Battery_bar_is_colored_and_clickable()
     {
-        var frame = FrameComposer.Compose(Layout, Sprites, new[] { Mouse(80) }, Spec());
+        var frame = Compose(new[] { Mouse(80) }, Spec());
         Assert.Equal(BatteryBar.ColorFor(80), Pixel(frame, 0, 8));
         Assert.Equal(HitTarget.Device, frame.HitTest(0, 8, out _));
     }
@@ -56,7 +63,7 @@ public class FrameComposerTests
     [Fact]
     public void Body_dy_moves_body_and_following_places()
     {
-        var frame = FrameComposer.Compose(Layout, Sprites, new[] { Mouse() }, Spec(dy: 1));
+        var frame = Compose(new[] { Mouse() }, Spec(dy: 1));
         Assert.Equal(0u, Pixel(frame, 0, 0));
         Assert.Equal(Red, Pixel(frame, 0, 2));
         Assert.Equal(Blue, Pixel(frame, 5, 6));
@@ -65,7 +72,7 @@ public class FrameComposerTests
     [Fact]
     public void Critical_device_blinks_but_keeps_its_bar()
     {
-        var frame = FrameComposer.Compose(Layout, Sprites, new[] { Mouse(5) }, Spec(criticalVisible: false));
+        var frame = Compose(new[] { Mouse(5) }, Spec(criticalVisible: false));
         Assert.Equal(0u, Pixel(frame, 5, 5));
         Assert.Equal(HitTarget.Device, frame.HitTest(0, 8, out _));
     }
@@ -74,7 +81,7 @@ public class FrameComposerTests
     public void Seat_is_drawn_under_the_body()
     {
         var keyboard = new DevicePlacement(TestReadings.Make("Keys", DeviceKind.Keyboard), "seat", "keyboard");
-        var frame = FrameComposer.Compose(Layout, Sprites, new[] { keyboard }, Spec());
+        var frame = Compose(new[] { keyboard }, Spec());
         Assert.Equal(HitTarget.Body, frame.HitTest(1, 1, out _));
         Assert.Equal(HitTarget.Device, frame.HitTest(2, 1, out _));
     }
@@ -82,9 +89,56 @@ public class FrameComposerTests
     [Fact]
     public void Overlays_are_drawn_and_clipped()
     {
-        var frame = FrameComposer.Compose(Layout, Sprites, Array.Empty<DevicePlacement>(),
+        var frame = Compose(Array.Empty<DevicePlacement>(),
             Spec(0, true, new Overlay("fx", 10, 3), new Overlay("fx", 99, 99)));
         Assert.Equal(Blue, Pixel(frame, 10, 3));
+    }
+
+    [Fact]
+    public void Outline_style_rings_the_device_in_its_battery_color_and_drops_the_bar()
+    {
+        var frame = Compose(new[] { Mouse(30) }, Spec(), BatteryStyle.Outline);
+        uint amber = BatteryBar.ColorFor(30);
+        Assert.Equal(new[] { amber, amber, amber, amber },
+            new[] { Pixel(frame, 4, 5), Pixel(frame, 6, 5), Pixel(frame, 5, 4), Pixel(frame, 5, 6) });
+        Assert.Equal(Blue, Pixel(frame, 5, 5));
+        Assert.Equal(HitTarget.Device, frame.HitTest(6, 5, out _));
+        Assert.Equal(0u, Pixel(frame, 0, 8));
+    }
+
+    [Fact]
+    public void Outline_stays_while_a_critical_device_blinks()
+    {
+        var frame = Compose(new[] { Mouse(5) }, Spec(criticalVisible: false), BatteryStyle.Outline);
+        Assert.Equal(BatteryBar.Red, Pixel(frame, 4, 5));
+    }
+
+    [Fact]
+    public void Charging_device_gets_a_bolt_right_of_its_sprite()
+    {
+        var charging = Mouse() with { Device = Mouse().Device with { IsCharging = true } };
+        var frame = Compose(new[] { charging }, Spec(), BatteryStyle.Outline);
+        Assert.Equal(Yellow, Pixel(frame, 7, 3));
+        Assert.Equal(HitTarget.Device, frame.HitTest(7, 3, out _));
+    }
+
+    [Fact]
+    public void Bolt_flips_left_at_the_canvas_edge()
+    {
+        var edge = new SkinLayout(20, 12, new PixelPoint(0, 0),
+            new Dictionary<string, Place> { ["hands"] = new(new[] { new PixelPoint(19, 5) }, new PixelPoint(0, 8), false) },
+            new Dictionary<string, PixelPoint>());
+        var charging = Mouse() with { Device = Mouse().Device with { IsCharging = true } };
+        var frame = FrameComposer.Compose(edge, Sprites, new[] { charging }, Spec(), BatteryStyle.Outline);
+        Assert.Equal(Yellow, Pixel(frame, 16, 3));
+    }
+
+    [Fact]
+    public void Full_device_gets_the_full_icon_instead_of_a_bolt()
+    {
+        var full = Mouse(100) with { Device = Mouse(100).Device with { IsCharging = true } };
+        var frame = Compose(new[] { full }, Spec(), BatteryStyle.Outline);
+        Assert.Equal(Green, Pixel(frame, 7, 3));
     }
 
     [Theory]

@@ -20,13 +20,16 @@ public static class StatusParser
         var p = frame.Payload;
         if (offset < 0 || p.Length < offset + 6) return null;
 
-        byte wear = p[offset + 4]; // high nibble = left, low nibble = right; 1 = wearing
+        // Placement: high nibble = left, low nibble = right; 1 = wearing, 3 = in open case, 4 = in closed case.
+        int left = p[offset + 4] >> 4, right = p[offset + 4] & 0x0F;
         return new BudsDetail(
             Left: Percent(p[offset]),
             Right: Percent(p[offset + 1]),
             Case: Percent(p[offset + 5]),
-            LeftWorn: (wear >> 4) == 1,
-            RightWorn: (wear & 0x0F) == 1);
+            LeftWorn: left == 1,
+            RightWorn: right == 1,
+            LeftInCase: left is 3 or 4,
+            RightInCase: right is 3 or 4);
     }
 
     // 0 is reported when a component can't be read (e.g. case while buds are out).

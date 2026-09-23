@@ -27,6 +27,15 @@ public class MoodCalculatorTests
         Assert.Equal(Mood.Happy, MoodOf(TestReadings.Make("A", battery: null)));
 
     [Fact]
+    public void All_full_needs_every_known_battery_at_100()
+    {
+        Assert.True(MoodCalculator.AllFull(new[] { TestReadings.Make("A", battery: 100), TestReadings.Make("B", battery: null) }));
+        Assert.False(MoodCalculator.AllFull(new[] { TestReadings.Make("A", battery: 100), TestReadings.Make("B", battery: 99) }));
+        Assert.False(MoodCalculator.AllFull(Array.Empty<DeviceReading>()));
+        Assert.False(MoodCalculator.AllFull(new[] { TestReadings.Make("A", battery: null) }));
+    }
+
+    [Fact]
     public void Buds_use_lowest_bud() =>
         Assert.Equal(Mood.Worried, MoodOf(TestReadings.Make("Buds", battery: 90, detail: new BudsDetail(90, 8, 50, true, true))));
 }

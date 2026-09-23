@@ -16,4 +16,11 @@ public static class MoodCalculator
             _ => Mood.Happy,
         };
     }
+
+    /// <summary>At least one connected device reports a battery, and every one that does is at 100 %.</summary>
+    public static bool AllFull(IEnumerable<DeviceReading> devices)
+    {
+        var levels = devices.Where(d => d.IsConnected).Select(d => d.EffectiveBattery).OfType<int>().ToList();
+        return levels.Count > 0 && levels.All(level => level == 100);
+    }
 }

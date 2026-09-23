@@ -32,6 +32,13 @@ public class BubbleTextTests
             BubbleText.For(TestReadings.Make("MX Master 3S", DeviceKind.Mouse, battery: 55), Now).ReplaceLineEndings("\n"));
 
     [Fact]
+    public void Charging_is_mentioned()
+    {
+        var mouse = TestReadings.Make("MX Master 3S", DeviceKind.Mouse, battery: 55) with { IsCharging = true };
+        Assert.Contains("Battery 55% · charging", BubbleText.For(mouse, Now));
+    }
+
+    [Fact]
     public void Unknown_battery_shows_question_mark() =>
         Assert.Contains("Battery ?", BubbleText.For(TestReadings.Make("Thing", battery: null), Now));
 

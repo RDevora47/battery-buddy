@@ -14,7 +14,7 @@ public static class BubbleText
         text.AppendLine(device.Name);
         if (device.Detail is BudsDetail buds)
         {
-            text.AppendLine($"L {Percent(buds.Left)} · R {Percent(buds.Right)} · Case {Percent(buds.Case)}");
+            text.AppendLine($"L {Percent(buds.Left)} · R {Percent(buds.Right)} · Case {Percent(buds.Case)}{Charging(device)}");
             text.AppendLine((buds.LeftWorn, buds.RightWorn) switch
             {
                 (true, true) => "wearing both",
@@ -25,7 +25,7 @@ public static class BubbleText
         }
         else
         {
-            text.AppendLine($"Battery {Percent(device.BatteryPercent)}");
+            text.AppendLine($"Battery {Percent(device.BatteryPercent)}{Charging(device)}");
             if (device.Kind == DeviceKind.Earbuds && SamsungBuds.IsGalaxyBudsName(device.Name))
                 text.AppendLine("L/R detail unavailable");
         }
@@ -42,4 +42,6 @@ public static class BubbleText
     }
 
     static string Percent(int? value) => value is int v ? $"{v}%" : "?";
+
+    static string Charging(DeviceReading device) => device.IsCharging ? " · charging" : "";
 }

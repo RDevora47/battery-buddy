@@ -11,6 +11,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0668DE4A
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BatteryBuddy.Core.Tests", "tests\BatteryBuddy.Core.Tests\BatteryBuddy.Core.Tests.csproj", "{3D5F76E2-B757-4893-8294-92568E2560EF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BatteryBuddy.Bluetooth", "src\BatteryBuddy.Bluetooth\BatteryBuddy.Bluetooth.csproj", "{9288A1C3-30EB-4063-9E26-CCA34173ACE2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{DEADEED1-1CB5-4B17-92AB-89CCDB3C00DE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProbeWindows", "tools\ProbeWindows\ProbeWindows.csproj", "{2F971888-0990-4E28-90FB-88EEE9086F8E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,9 +34,19 @@ Global
 		{3D5F76E2-B757-4893-8294-92568E2560EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3D5F76E2-B757-4893-8294-92568E2560EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3D5F76E2-B757-4893-8294-92568E2560EF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9288A1C3-30EB-4063-9E26-CCA34173ACE2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9288A1C3-30EB-4063-9E26-CCA34173ACE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9288A1C3-30EB-4063-9E26-CCA34173ACE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9288A1C3-30EB-4063-9E26-CCA34173ACE2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2F971888-0990-4E28-90FB-88EEE9086F8E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2F971888-0990-4E28-90FB-88EEE9086F8E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2F971888-0990-4E28-90FB-88EEE9086F8E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2F971888-0990-4E28-90FB-88EEE9086F8E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{1D5FFA79-5341-4A6C-98B4-B6BA557E552D} = {10770D01-5AC9-4148-B0CD-C240D41D1977}
 		{3D5F76E2-B757-4893-8294-92568E2560EF} = {0668DE4A-3AB9-45B6-AD22-5D009C905B2A}
+		{9288A1C3-30EB-4063-9E26-CCA34173ACE2} = {10770D01-5AC9-4148-B0CD-C240D41D1977}
+		{2F971888-0990-4E28-90FB-88EEE9086F8E} = {DEADEED1-1CB5-4B17-92AB-89CCDB3C00DE}
 	EndGlobalSection
 EndGlobal

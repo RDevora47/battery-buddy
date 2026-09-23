@@ -12,8 +12,8 @@ when your lowest device runs low.
 ## Setup
 
 1. Install the .NET 8 SDK: `winget install --id Microsoft.DotNet.SDK.8 -e`
-2. Build: `dotnet build -c Release`
-3. Run: `src/BatteryBuddy.App/bin/Release/net8.0-windows10.0.22621.0/BatteryBuddy.exe`
+2. Build: `.\build\build.ps1` (runs the tests, then publishes; add `-SkipTests` to skip them)
+3. Run: `build\out\BatteryBuddy.exe`
 
 ### Galaxy Buds detail (left / right / case)
 

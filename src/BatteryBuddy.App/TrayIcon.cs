@@ -9,10 +9,26 @@ sealed class TrayIcon : IDisposable
     readonly WinForms.NotifyIcon _icon;
     readonly WinForms.ContextMenuStrip _menu;
 
-    public TrayIcon(Sprite iconSprite, Func<Task> rescan, Action quit)
+    public TrayIcon(Sprite iconSprite, Func<Task> rescan, Func<BatteryStyle> getStyle, Action<BatteryStyle> setStyle, Action quit)
     {
         _menu = new WinForms.ContextMenuStrip();
         _menu.Items.Add("Rescan", null, (_, _) => _ = rescan());
+
+        var display = new WinForms.ToolStripMenuItem("Battery display");
+        var outline = new WinForms.ToolStripMenuItem("Colored outline");
+        var bar = new WinForms.ToolStripMenuItem("Battery bar");
+        void Sync()
+        {
+            outline.Checked = getStyle() == BatteryStyle.Outline;
+            bar.Checked = getStyle() == BatteryStyle.Bar;
+        }
+        outline.Click += (_, _) => { setStyle(BatteryStyle.Outline); Sync(); };
+        bar.Click += (_, _) => { setStyle(BatteryStyle.Bar); Sync(); };
+        display.DropDownItems.Add(outline);
+        display.DropDownItems.Add(bar);
+        Sync();
+        _menu.Items.Add(display);
+
         var startup = new WinForms.ToolStripMenuItem("Start with Windows")
         {
             CheckOnClick = true,

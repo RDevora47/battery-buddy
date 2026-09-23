@@ -29,7 +29,9 @@ public partial class App : Application
 
         var window = new PetWindow();
         _controller = new PetController(window);
-        _tray = new TrayIcon(_controller.IconSprite, _controller.RescanAsync, Shutdown);
+        var controller = _controller;
+        _tray = new TrayIcon(controller.IconSprite, controller.RescanAsync,
+            () => controller.BatteryStyle, style => controller.BatteryStyle = style, Shutdown);
         window.MenuRequested += _tray.ShowMenu;
         await _controller.StartAsync();
     }

@@ -29,7 +29,8 @@ sealed class PetController : IDisposable
     readonly DispatcherTimer _frameTimer;
     readonly DispatcherTimer _idleTimer;
     readonly DispatcherTimer _bubbleTimer;
-    readonly DeviceRegistry _registry = new();
+    readonly DispatcherTimer _chargeTimer;
+    readonly DeviceRegistry _registry = new(new ChargeTracker(DeviceStatsFile.Load()));
     readonly WindowsBatterySource _windows;
     readonly GalaxyBudsSource _buds;
     readonly BluetoothRadioMonitor _radio = new();
@@ -44,7 +45,8 @@ sealed class PetController : IDisposable
     {
         _window = window;
         (_layout, _sprites) = SkinLoader.Load("axolotl");
-        _animator = new PetAnimator(Random.Shared.NextDouble, _clock.Elapsed, _layout.Overlays["zzz"], _layout.Overlays["sweat"]);
+        _animator = new PetAnimator(Random.Shared.NextDouble, _clock.Elapsed,
+            _layout.Overlays["zzz"], _layout.Overlays["sweat"], _layout.Overlays["saiyan"]);
         _bitmap = new WriteableBitmap(_layout.CanvasWidth, _layout.CanvasHeight, 96, 96, PixelFormats.Bgra32, null);
         _window.SetBitmap(_bitmap);
 
@@ -58,6 +60,15 @@ sealed class PetController : IDisposable
             _bubbleTimer.Stop();
             _window.HideBubble();
         };
+        // One-shot: fires when the earliest inferred-charging bolt is due to run out.
+        _chargeTimer = new DispatcherTimer();
+        _chargeTimer.Tick += (_, _) =>
+        {
+            _chargeTimer.Stop();
+            _registry.Refresh(DateTimeOffset.Now);
+            ScheduleChargeCheck();
+        };
+        _registry.Charge.StatsChanged += () => DeviceStatsFile.Save(_registry.Charge.Stats);
 
         _windows = new WindowsBatterySource(WindowsPollInterval, Log.Write);
         _buds = new GalaxyBudsSource(Log.Write);
@@ -72,6 +83,17 @@ sealed class PetController : IDisposable
     }
 
     public Sprite IconSprite => _sprites["body_idle"];
+
+    public BatteryStyle BatteryStyle
+    {
+        get => _settings.BatteryStyle;
+        set
+        {
+            _settings = _settings with { BatteryStyle = value };
+            _settings.Save();
+            Render();
+        }
+    }
 
     public async Task StartAsync()
     {
@@ -124,6 +146,25 @@ sealed class PetController : IDisposable
         if (change.Added.Any(d => SamsungBuds.IsGalaxyBudsName(d.Name)))
             _buds.NotifyWindowsConnection(true);
         Rebuild();
+
+        foreach (var arrived in change.Added)
+        {
+            var placement = _placements.FirstOrDefault(p => p.Device.Key == arrived.Key);
+            if (placement is null) continue;
+            var point = _layout.Places[placement.PlaceName].Points[0];
+            _animator.AddWhoosh(point.X, point.Y, now);
+        }
+        if (change.Added.Count > 0) Render();
+        ScheduleChargeCheck();
+    }
+
+    void ScheduleChargeCheck()
+    {
+        _chargeTimer.Stop();
+        if (_registry.NextChargeExpiry is not DateTimeOffset expiry) return;
+        var wait = expiry - DateTimeOffset.Now;
+        _chargeTimer.Interval = wait > TimeSpan.FromSeconds(1) ? wait : TimeSpan.FromSeconds(1);
+        _chargeTimer.Start();
     }
 
     void OnBluetoothAvailability(bool on)
@@ -169,6 +210,7 @@ sealed class PetController : IDisposable
         _placements = SlotAssigner.Assign(connected);
         _animator.Mood = MoodCalculator.From(connected);
         _animator.HasCritical = connected.Any(d => d.EffectiveBattery <= BatteryBar.CriticalAtOrBelow);
+        _animator.AllFull = MoodCalculator.AllFull(connected);
         Render();
     }
 
@@ -176,7 +218,7 @@ sealed class PetController : IDisposable
     {
         var now = _clock.Elapsed;
         var spec = _animator.FrameAt(now);
-        _frame = FrameComposer.Compose(_layout, _sprites, _placements, spec);
+        _frame = FrameComposer.Compose(_layout, _sprites, _placements, spec, _settings.BatteryStyle);
         _bitmap.WritePixels(new Int32Rect(0, 0, _frame.Width, _frame.Height), _frame.Pixels, _frame.Width * 4, 0);
 
         if (_animator.NeedsTicks(now)) { if (!_frameTimer.IsEnabled) _frameTimer.Start(); }
@@ -215,6 +257,7 @@ sealed class PetController : IDisposable
         _frameTimer.Stop();
         _idleTimer.Stop();
         _bubbleTimer.Stop();
+        _chargeTimer.Stop();
         _windows.Dispose();
         _buds.Dispose();
         _radio.Dispose();

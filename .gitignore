@@ -3,3 +3,5 @@ bin/
 obj/
 .vs/
 *.user
+build/out/*
+!build/out/.gitkeep

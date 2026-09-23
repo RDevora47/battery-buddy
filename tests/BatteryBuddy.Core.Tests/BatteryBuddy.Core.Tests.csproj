@@ -21,6 +21,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="..\..\src\BatteryBuddy.App\Skins\axolotl\*" LinkBase="Skins\axolotl" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\BatteryBuddy.Core\BatteryBuddy.Core.csproj" />
   </ItemGroup>
 

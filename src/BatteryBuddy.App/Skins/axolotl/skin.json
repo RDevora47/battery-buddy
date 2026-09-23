@@ -1,0 +1,15 @@
+{
+  "canvas": { "width": 44, "height": 38 },
+  "body": [6, 8],
+  "places": {
+    "gills":  { "points": [[7, 10], [34, 10]], "bar": [16, 4],  "followsBody": true },
+    "neck":   { "points": [[16, 18], [25, 18]], "bar": [0, 1],  "followsBody": true },
+    "hands":  { "points": [[19, 19]],           "bar": [16, 26], "followsBody": true },
+    "lap":    { "points": [[28, 21]],           "bar": [28, 18], "followsBody": true },
+    "seat":   { "points": [[8, 29]],            "bar": [16, 35], "followsBody": false },
+    "side":   { "points": [[39, 18]],           "bar": [33, 26], "followsBody": false },
+    "float1": { "points": [[0, 20]],            "bar": [0, 26],  "followsBody": false },
+    "float2": { "points": [[0, 11]],            "bar": [0, 17],  "followsBody": false }
+  },
+  "overlays": { "zzz": [37, 5], "sweat": [36, 10] }
+}

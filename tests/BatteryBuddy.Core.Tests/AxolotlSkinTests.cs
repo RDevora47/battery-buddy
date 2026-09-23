@@ -19,7 +19,7 @@ public class AxolotlSkinTests
     static readonly Dictionary<string, string[]> PlaceSprites = new()
     {
         ["gills"] = new[] { "earbud" }, ["neck"] = new[] { "earbud" },
-        ["hands"] = new[] { "mouse", "gamepad" }, ["lap"] = new[] { "gamepad" },
+        ["hands"] = new[] { "gamepad" }, ["righthand"] = new[] { "mouse" },
         ["seat"] = new[] { "keyboard" }, ["side"] = new[] { "phone" },
         ["float1"] = new[] { "gadget" }, ["float2"] = new[] { "gadget" },
     };

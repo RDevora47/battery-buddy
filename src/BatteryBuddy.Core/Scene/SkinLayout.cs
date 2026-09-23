@@ -14,7 +14,7 @@ public sealed record SkinLayout(
     IReadOnlyDictionary<string, Place> Places,
     IReadOnlyDictionary<string, PixelPoint> Overlays)
 {
-    public static readonly string[] RequiredPlaces = { "gills", "neck", "hands", "lap", "seat", "side", "float1", "float2" };
+    public static readonly string[] RequiredPlaces = { "gills", "neck", "hands", "righthand", "seat", "side", "float1", "float2" };
 
     public static SkinLayout Parse(string json)
     {

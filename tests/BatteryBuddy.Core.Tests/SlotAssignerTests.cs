@@ -18,24 +18,27 @@ public class SlotAssignerTests
             TestReadings.Make("Phone", DeviceKind.Phone),
             TestReadings.Make("Thing", DeviceKind.Other));
         Assert.Equal("gills", places["Buds"]);
-        Assert.Equal("hands", places["Mouse"]);
+        Assert.Equal("righthand", places["Mouse"]);
         Assert.Equal("seat", places["Keys"]);
         Assert.Equal("side", places["Phone"]);
         Assert.Equal("float1", places["Thing"]);
     }
 
     [Fact]
-    public void Gamepad_takes_hands_when_no_mouse() =>
+    public void Gamepad_is_held_in_both_hands() =>
         Assert.Equal("hands", PlacesOf(TestReadings.Make("Pad", DeviceKind.Gamepad))["Pad"]);
 
     [Fact]
-    public void Gamepad_moves_to_lap_when_mouse_connected()
+    public void Mouse_in_right_hand_and_gamepad_in_both_hands_coexist()
     {
-        // "Aaa Pad" sorts before "Mouse": the mouse must still win the hands.
         var places = PlacesOf(TestReadings.Make("Aaa Pad", DeviceKind.Gamepad), TestReadings.Make("Mouse", DeviceKind.Mouse));
-        Assert.Equal("lap", places["Aaa Pad"]);
-        Assert.Equal("hands", places["Mouse"]);
+        Assert.Equal("hands", places["Aaa Pad"]);
+        Assert.Equal("righthand", places["Mouse"]);
     }
+
+    [Fact]
+    public void Second_gamepad_floats() =>
+        Assert.Equal("float1", PlacesOf(TestReadings.Make("A Pad", DeviceKind.Gamepad), TestReadings.Make("B Pad", DeviceKind.Gamepad))["B Pad"]);
 
     [Fact]
     public void Second_earbuds_go_to_neck_and_float_uses_gadget_sprite()

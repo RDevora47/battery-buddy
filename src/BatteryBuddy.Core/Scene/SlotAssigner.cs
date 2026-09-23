@@ -11,7 +11,6 @@ public static class SlotAssigner
     public static IReadOnlyList<DevicePlacement> Assign(IReadOnlyList<DeviceReading> devices)
     {
         var connected = devices.Where(d => d.IsConnected).OrderBy(d => d.Key, StringComparer.Ordinal).ToList();
-        bool hasMouse = connected.Any(d => d.Kind == DeviceKind.Mouse);
         var used = new HashSet<string>();
         var placements = new List<DevicePlacement>();
 
@@ -20,8 +19,8 @@ public static class SlotAssigner
             string[] preferred = device.Kind switch
             {
                 DeviceKind.Earbuds => new[] { "gills", "neck" },
-                DeviceKind.Mouse => new[] { "hands" },
-                DeviceKind.Gamepad => hasMouse ? new[] { "lap" } : new[] { "hands", "lap" },
+                DeviceKind.Mouse => new[] { "righthand" },
+                DeviceKind.Gamepad => new[] { "hands" },
                 DeviceKind.Keyboard => new[] { "seat" },
                 DeviceKind.Phone => new[] { "side" },
                 _ => Array.Empty<string>(),

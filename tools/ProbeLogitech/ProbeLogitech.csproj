@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\BatteryBuddy.Backend\BatteryBuddy.Backend.csproj" />
+    <ProjectReference Include="..\..\src\BatteryBuddy.Backends.Windows\BatteryBuddy.Backends.Windows.csproj" />
+    <ProjectReference Include="..\..\src\BatteryBuddy.Backends.Logitech\BatteryBuddy.Backends.Logitech.csproj" />
+    <ProjectReference Include="..\..\src\BatteryBuddy.Devices\BatteryBuddy.Devices.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

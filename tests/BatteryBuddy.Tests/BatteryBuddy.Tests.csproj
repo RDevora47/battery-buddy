@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Windows TFM so the backend projects' protocol code can be tested too. -->
+    <TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.5.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\src\BatteryBuddy.App\Skins\axolotl\*" LinkBase="Skins\axolotl" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\BatteryBuddy.Devices\BatteryBuddy.Devices.csproj" />
+    <ProjectReference Include="..\..\src\BatteryBuddy.Backend\BatteryBuddy.Backend.csproj" />
+    <ProjectReference Include="..\..\src\BatteryBuddy.Backends.Windows\BatteryBuddy.Backends.Windows.csproj" />
+    <ProjectReference Include="..\..\src\BatteryBuddy.Backends.GalaxyBuds\BatteryBuddy.Backends.GalaxyBuds.csproj" />
+    <ProjectReference Include="..\..\src\BatteryBuddy.Backends.Logitech\BatteryBuddy.Backends.Logitech.csproj" />
+    <ProjectReference Include="..\..\src\BatteryBuddy.Pet\BatteryBuddy.Pet.csproj" />
+  </ItemGroup>
+
+</Project>

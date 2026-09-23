@@ -1,5 +1,5 @@
 using System.IO;
-using BatteryBuddy.Core.Scene;
+using BatteryBuddy.Pet.Scene;
 
 namespace BatteryBuddy.App;
 

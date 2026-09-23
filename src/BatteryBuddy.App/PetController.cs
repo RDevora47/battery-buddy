@@ -4,20 +4,16 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using BatteryBuddy.Bluetooth;
-using BatteryBuddy.Core.Animation;
-using BatteryBuddy.Core.Devices;
-using BatteryBuddy.Core.Samsung;
-using BatteryBuddy.Core.Scene;
-using BatteryBuddy.Core.Tracking;
-using BatteryBuddy.Core.Ui;
+using BatteryBuddy.Devices;
+using BatteryBuddy.Pet.Animation;
+using BatteryBuddy.Pet.Scene;
+using BatteryBuddy.Pet.Ui;
 
 namespace BatteryBuddy.App;
 
+/// <summary>The pet frontend. It only sees devices through <see cref="IBatteryBackend"/>, whatever produces them.</summary>
 sealed class PetController : IDisposable
 {
-    // The Task 5 probe showed the watcher reports battery and connection changes, so this is only a backstop.
-    static readonly TimeSpan WindowsPollInterval = TimeSpan.FromMinutes(5);
     static readonly TimeSpan BubbleDuration = TimeSpan.FromSeconds(6);
 
     readonly PetWindow _window;
@@ -29,11 +25,8 @@ sealed class PetController : IDisposable
     readonly DispatcherTimer _frameTimer;
     readonly DispatcherTimer _idleTimer;
     readonly DispatcherTimer _bubbleTimer;
-    readonly DispatcherTimer _chargeTimer;
-    readonly DeviceRegistry _registry = new(new ChargeTracker(DeviceStatsFile.Load()));
-    readonly WindowsBatterySource _windows;
-    readonly GalaxyBudsSource _buds;
-    readonly BluetoothRadioMonitor _radio = new();
+    readonly IBatteryBackend _backend;
+    readonly InputMonitor _input = new();
     readonly CancellationTokenSource _cts = new();
     Settings _settings = Settings.Load();
     IReadOnlyList<DevicePlacement> _placements = Array.Empty<DevicePlacement>();
@@ -41,14 +34,16 @@ sealed class PetController : IDisposable
     bool _bluetoothOn = true;
     bool _rescanning;
 
-    public PetController(PetWindow window)
+    public PetController(PetWindow window, IBatteryBackend backend)
     {
         _window = window;
+        _backend = backend;
         (_layout, _sprites) = SkinLoader.Load("axolotl");
         _animator = new PetAnimator(Random.Shared.NextDouble, _clock.Elapsed,
             _layout.Overlays["zzz"], _layout.Overlays["sweat"], _layout.Overlays["saiyan"]);
-        _bitmap = new WriteableBitmap(_layout.CanvasWidth, _layout.CanvasHeight, 96, 96, PixelFormats.Bgra32, null);
-        _window.SetBitmap(_bitmap);
+        int resolution = FrameComposer.ResolutionOf(_sprites);
+        _bitmap = new WriteableBitmap(_layout.CanvasWidth * resolution, _layout.CanvasHeight * resolution, 96, 96, PixelFormats.Bgra32, null);
+        _window.SetBitmap(_bitmap, resolution);
 
         _frameTimer = new DispatcherTimer { Interval = PetAnimator.FrameInterval };
         _frameTimer.Tick += (_, _) => Render();
@@ -60,29 +55,28 @@ sealed class PetController : IDisposable
             _bubbleTimer.Stop();
             _window.HideBubble();
         };
-        // One-shot: fires when the earliest inferred-charging bolt is due to run out.
-        _chargeTimer = new DispatcherTimer();
-        _chargeTimer.Tick += (_, _) =>
-        {
-            _chargeTimer.Stop();
-            _registry.Refresh(DateTimeOffset.Now);
-            ScheduleChargeCheck();
-        };
-        _registry.Charge.StatsChanged += () => DeviceStatsFile.Save(_registry.Charge.Stats);
-
-        _windows = new WindowsBatterySource(WindowsPollInterval, Log.Write);
-        _buds = new GalaxyBudsSource(Log.Write);
-        _registry.Changed += OnRegistryChanged;
-        foreach (IDeviceSource source in new IDeviceSource[] { _windows, _buds })
-            source.SnapshotChanged += (_, snapshot) =>
-                _window.Dispatcher.BeginInvoke(() => _registry.Apply(source.Name, snapshot));
-        _radio.AvailabilityChanged += (_, on) => _window.Dispatcher.BeginInvoke(() => OnBluetoothAvailability(on));
+        _backend.Changed += OnDevicesChanged;
+        _backend.AvailabilityChanged += (_, on) => OnAvailabilityChanged(on);
 
         _window.PetClicked += OnPetClicked;
         _window.Moved += SavePosition;
+        _input.KeyPressed += () => { _animator.KeyTap(_clock.Elapsed); Render(); };
+        _input.MouseClicked += () => { _animator.Click(_clock.Elapsed); Render(); };
     }
 
-    public Sprite IconSprite => _sprites["body_idle"];
+    public Sprite IconSprite => Stack(_sprites["body_idle"], _sprites["gills_perky"]);
+
+    // Top drawn over bottom, both anchored top-left; sized to cover both.
+    static Sprite Stack(Sprite bottom, Sprite top)
+    {
+        int w = Math.Max(bottom.Width, top.Width), h = Math.Max(bottom.Height, top.Height);
+        var pixels = new uint[w * h];
+        foreach (var s in new[] { bottom, top })
+            for (int y = 0; y < s.Height; y++)
+                for (int x = 0; x < s.Width; x++)
+                    if (s.Pixels[y * s.Width + x] is var c and not 0) pixels[y * w + x] = c;
+        return new Sprite(bottom.Name, w, h, pixels);
+    }
 
     public BatteryStyle BatteryStyle
     {
@@ -91,7 +85,7 @@ sealed class PetController : IDisposable
         {
             _settings = _settings with { BatteryStyle = value };
             _settings.Save();
-            Render();
+            Rebuild();
         }
     }
 
@@ -99,10 +93,9 @@ sealed class PetController : IDisposable
     {
         PlaceWindow();
         _window.Show();
+        _input.Start(_window);
         Render();
-        await StartSafely("radio", _radio.StartAsync);
-        await StartSafely("windows", () => _windows.StartAsync(_cts.Token));
-        await StartSafely("buds", () => _buds.StartAsync(_cts.Token));
+        await _backend.StartAsync(_cts.Token);
     }
 
     public async Task RescanAsync()
@@ -113,7 +106,7 @@ sealed class PetController : IDisposable
         Render();
         try
         {
-            await Task.WhenAll(_windows.RefreshAsync(_cts.Token), _buds.RefreshAsync(_cts.Token));
+            await _backend.RefreshAsync(_cts.Token);
         }
         catch (Exception ex) when (!_cts.IsCancellationRequested)
         {
@@ -127,13 +120,7 @@ sealed class PetController : IDisposable
         }
     }
 
-    static async Task StartSafely(string what, Func<Task> start)
-    {
-        try { await start(); }
-        catch (Exception ex) { Log.Write($"{what}: start failed: {ex}"); }
-    }
-
-    void OnRegistryChanged(object? sender, RegistryChange change)
+    void OnDevicesChanged(object? sender, DeviceChange change)
     {
         var now = _clock.Elapsed;
         foreach (var gone in change.Removed)
@@ -143,8 +130,6 @@ sealed class PetController : IDisposable
             var point = _layout.Places[old.PlaceName].Points[0];
             _animator.AddPloof(point.X, point.Y, now);
         }
-        if (change.Added.Any(d => SamsungBuds.IsGalaxyBudsName(d.Name)))
-            _buds.NotifyWindowsConnection(true);
         Rebuild();
 
         foreach (var arrived in change.Added)
@@ -155,19 +140,9 @@ sealed class PetController : IDisposable
             _animator.AddWhoosh(point.X, point.Y, now);
         }
         if (change.Added.Count > 0) Render();
-        ScheduleChargeCheck();
     }
 
-    void ScheduleChargeCheck()
-    {
-        _chargeTimer.Stop();
-        if (_registry.NextChargeExpiry is not DateTimeOffset expiry) return;
-        var wait = expiry - DateTimeOffset.Now;
-        _chargeTimer.Interval = wait > TimeSpan.FromSeconds(1) ? wait : TimeSpan.FromSeconds(1);
-        _chargeTimer.Start();
-    }
-
-    void OnBluetoothAvailability(bool on)
+    void OnAvailabilityChanged(bool on)
     {
         bool wasOn = _bluetoothOn;
         _bluetoothOn = on;
@@ -194,7 +169,7 @@ sealed class PetController : IDisposable
         _window.HideBubble();
         if (target == HitTarget.Device && device is not null)
         {
-            var latest = _registry.LastKnown(device.Key) ?? device;
+            var latest = _backend.LastKnown(device.Key) ?? device;
             _window.ShowBubble(BubbleText.For(latest, DateTimeOffset.Now));
             _bubbleTimer.Start();
         }
@@ -206,10 +181,11 @@ sealed class PetController : IDisposable
 
     void Rebuild()
     {
-        IReadOnlyList<DeviceReading> connected = _bluetoothOn ? _registry.Connected : Array.Empty<DeviceReading>();
+        IReadOnlyList<DeviceReading> connected = _bluetoothOn ? _backend.Connected : Array.Empty<DeviceReading>();
         _placements = SlotAssigner.Assign(connected);
         _animator.Mood = MoodCalculator.From(connected);
         _animator.HasCritical = connected.Any(d => d.EffectiveBattery <= BatteryBar.CriticalAtOrBelow);
+        _animator.LowestBattery = MoodCalculator.Lowest(connected);
         _animator.AllFull = MoodCalculator.AllFull(connected);
         Render();
     }
@@ -254,12 +230,10 @@ sealed class PetController : IDisposable
     public void Dispose()
     {
         _cts.Cancel();
+        _input.Dispose();
         _frameTimer.Stop();
         _idleTimer.Stop();
         _bubbleTimer.Stop();
-        _chargeTimer.Stop();
-        _windows.Dispose();
-        _buds.Dispose();
-        _radio.Dispose();
+        _backend.Dispose();
     }
 }

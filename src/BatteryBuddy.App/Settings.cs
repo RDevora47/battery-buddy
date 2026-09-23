@@ -1,8 +1,8 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using BatteryBuddy.Core.Scene;
-using BatteryBuddy.Core.Tracking;
+using BatteryBuddy.Pet.Scene;
+using BatteryBuddy.Backend;
 
 namespace BatteryBuddy.App;
 

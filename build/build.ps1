@@ -17,7 +17,7 @@ $out = Join-Path $PSScriptRoot "out"
 Push-Location $root
 try {
     if (-not $SkipTests) {
-        dotnet test tests/BatteryBuddy.Core.Tests -c $Configuration --nologo
+        dotnet test tests/BatteryBuddy.Tests -c $Configuration --nologo
         if ($LASTEXITCODE -ne 0) { throw "Tests failed; nothing was published." }
     }
 

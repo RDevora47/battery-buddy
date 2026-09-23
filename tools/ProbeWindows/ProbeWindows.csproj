@@ -1,8 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\BatteryBuddy.Bluetooth\BatteryBuddy.Bluetooth.csproj" />
-    <ProjectReference Include="..\..\src\BatteryBuddy.Core\BatteryBuddy.Core.csproj" />
+    <ProjectReference Include="..\..\src\BatteryBuddy.Backends.Windows\BatteryBuddy.Backends.Windows.csproj" />
+    <ProjectReference Include="..\..\src\BatteryBuddy.Devices\BatteryBuddy.Devices.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

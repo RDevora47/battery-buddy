@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using BatteryBuddy.Bluetooth;
+using BatteryBuddy.Backends.Windows;
 
 var source = new WindowsBatterySource(TimeSpan.FromMinutes(5), m => Console.WriteLine($"{DateTime.Now:HH:mm:ss} {m}"), verbose: true);
 source.SnapshotChanged += (_, snapshot) =>

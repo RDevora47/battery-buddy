@@ -55,6 +55,24 @@ public class SamsungProtocolTests
     }
 
     [Fact]
+    public void Decoder_does_not_stall_on_false_start_declaring_a_huge_length()
+    {
+        // A stray 0xFD whose "header" claims 1023 bytes must not block the real frame behind it.
+        var frames = new FrameDecoder().Push(Hex("FD-FF-03-11-" + Status));
+        Assert.Equal(0x60, Assert.Single(frames).MessageId);
+    }
+
+    [Fact]
+    public void Decoder_still_waits_for_a_genuinely_incomplete_long_frame()
+    {
+        var bytes = Hex(Extended);
+        var decoder = new FrameDecoder();
+        Assert.Empty(decoder.Push(bytes.AsSpan(0, 30)));
+        Assert.Single(decoder.Push(bytes.AsSpan(30)));
+        Assert.Equal(0, decoder.RejectedFrames);
+    }
+
+    [Fact]
     public void Encoder_builds_extended_status_ack_seen_in_logs() =>
         Assert.Equal(Hex("FD-04-10-61-00-1B-38-DD"), FrameEncoder.ExtendedStatusAck());
 

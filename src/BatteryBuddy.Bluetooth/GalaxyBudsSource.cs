@@ -16,11 +16,11 @@ public sealed class GalaxyBudsSource : IDeviceSource, IDisposable
 
     readonly Action<string> _log;
     readonly bool _verbose;
-    readonly Backoff _backoff = new(TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(5));
+    // Backoff only resets after a link that stayed up 30 s, so a takeover by the Galaxy Buds app
+    // doesn't turn into a reconnect fight every 10 s.
+    readonly RetryScheduler _retry = new(new Backoff(TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(5)), TimeSpan.FromSeconds(30));
     readonly FailureCounter _failures = new(5, TimeSpan.FromSeconds(30));
     readonly Stopwatch _clock = Stopwatch.StartNew();
-    readonly object _gate = new();
-    CancellationTokenSource? _wake;
     string _deviceName = "Galaxy Buds";
 
     public GalaxyBudsSource(Action<string> log, bool verbose = false)
@@ -42,64 +42,74 @@ public sealed class GalaxyBudsSource : IDeviceSource, IDisposable
     /// <summary>Buds push their status; a refresh only cuts a pending retry delay short.</summary>
     public Task RefreshAsync(CancellationToken ct)
     {
-        Wake();
+        _retry.Wake();
         return Task.CompletedTask;
     }
 
+    /// <summary>Windows saw the buds connect: retry now and forget any long backoff.</summary>
     public void NotifyWindowsConnection(bool connected)
     {
-        if (connected) Wake();
-    }
-
-    void Wake()
-    {
-        lock (_gate) _wake?.Cancel();
+        if (connected) _retry.Wake(resetBackoff: true);
     }
 
     async Task RunAsync(CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
         {
-            bool hadSession = false;
-            try { hadSession = await RunSessionAsync(ct); }
+            try
+            {
+                if (await RunSessionAsync(ct) is TimeSpan linkDuration) _retry.SessionEnded(linkDuration);
+            }
             catch (Exception ex) when (!ct.IsCancellationRequested)
             {
                 _log($"buds: {ex.GetType().Name}: {ex.Message}");
             }
             SnapshotChanged?.Invoke(this, Array.Empty<DeviceReading>());
-            if (hadSession) _backoff.Reset();
 
-            CancellationTokenSource wake;
-            lock (_gate)
-            {
-                _wake?.Dispose();
-                _wake = wake = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            }
-            try { await Task.Delay(_backoff.NextDelay(), wake.Token); }
+            try { await _retry.WaitAsync(ct); }
             catch (OperationCanceledException) { }
         }
     }
 
-    /// <returns>true if a link was opened (so the backoff restarts from its initial delay).</returns>
-    async Task<bool> RunSessionAsync(CancellationToken ct)
+    /// <returns>How long the link stayed open, or null if no link was opened.</returns>
+    async Task<TimeSpan?> RunSessionAsync(CancellationToken ct)
     {
-        var paired = await DeviceInformation.FindAllAsync(BluetoothDevice.GetDeviceSelectorFromPairingState(true)).AsTask(ct);
-        var info = paired.FirstOrDefault(d => SamsungBuds.IsGalaxyBudsName(d.Name));
-        if (info is null) return false;
-
-        using var device = await BluetoothDevice.FromIdAsync(info.Id).AsTask(ct);
-        // Never open RFCOMM to buds that aren't connected: it could pull them away from the phone.
-        if (device is null || device.ConnectionStatus != BluetoothConnectionStatus.Connected) return false;
+        using var device = await FindConnectedBudsAsync(ct);
+        if (device is null) return null;
         _deviceName = device.Name;
 
         var services = await device.GetRfcommServicesForIdAsync(
             RfcommServiceId.FromUuid(ServiceUuid), BluetoothCacheMode.Uncached).AsTask(ct);
         var service = services.Services.FirstOrDefault();
-        if (service is null) return false;
+        if (service is null) return null;
 
         using var socket = new StreamSocket();
         await socket.ConnectAsync(service.ConnectionHostName, service.ConnectionServiceName).AsTask(ct);
+        var openedAt = _clock.Elapsed;
         _log($"buds: link open to {_deviceName}");
+        try { await ReadLinkAsync(socket, ct); }
+        finally { _log("buds: link closed"); }
+        return _clock.Elapsed - openedAt;
+    }
+
+    /// <summary>
+    /// Any paired device named "…Buds…" may be an old or other-brand pair; take the first one that is
+    /// actually connected. Never open RFCOMM to disconnected buds: it could pull them away from the phone.
+    /// </summary>
+    async Task<BluetoothDevice?> FindConnectedBudsAsync(CancellationToken ct)
+    {
+        var paired = await DeviceInformation.FindAllAsync(BluetoothDevice.GetDeviceSelectorFromPairingState(true)).AsTask(ct);
+        foreach (var info in paired.Where(d => SamsungBuds.IsGalaxyBudsName(d.Name)))
+        {
+            var device = await BluetoothDevice.FromIdAsync(info.Id).AsTask(ct);
+            if (device?.ConnectionStatus == BluetoothConnectionStatus.Connected) return device;
+            device?.Dispose();
+        }
+        return null;
+    }
+
+    async Task ReadLinkAsync(StreamSocket socket, CancellationToken ct)
+    {
 
         var decoder = new FrameDecoder();
         using var reader = new DataReader(socket.InputStream) { InputStreamOptions = InputStreamOptions.Partial };
@@ -109,11 +119,7 @@ public sealed class GalaxyBudsSource : IDeviceSource, IDisposable
         while (!ct.IsCancellationRequested)
         {
             uint count = await reader.LoadAsync(1024).AsTask(ct);
-            if (count == 0)
-            {
-                _log("buds: link closed");
-                break;
-            }
+            if (count == 0) return;
             var chunk = new byte[count];
             reader.ReadBytes(chunk);
 
@@ -133,15 +139,14 @@ public sealed class GalaxyBudsSource : IDeviceSource, IDisposable
             {
                 if (!_failures.Record(_clock.Elapsed)) continue;
                 _log("buds: too many bad frames, resetting link");
-                return true;
+                return;
             }
         }
-        return true;
     }
 
     DeviceReading ToReading(BudsDetail detail) =>
         new(DeviceKey.ForName(_deviceName), _deviceName, DeviceKind.Earbuds, true,
             detail.Lowest, detail, DateTimeOffset.Now, Name);
 
-    public void Dispose() => Wake();
+    public void Dispose() => _retry.Wake();
 }

@@ -34,13 +34,14 @@ public static class PnpNodeMerger
             if (withBattery.Count == 0) continue;
 
             bool connected = group.Any(IsConnected);
-            var batteryNode = withBattery.FirstOrDefault(IsConnected) ?? withBattery[0];
+            // A connected device only takes battery from a connected node; disconnected siblings hold stale values.
+            var batteryNode = connected ? withBattery.FirstOrDefault(IsConnected) : withBattery[0];
             string name = group.First().DisplayName;
             uint? cod = group.Select(p => p.Node.ClassOfDevice).FirstOrDefault(c => c is not null);
 
             readings.Add(new DeviceReading(
                 group.Key, name, DeviceKindClassifier.Classify(name, cod), connected,
-                batteryNode.Node.Battery, null, now, SourceName));
+                batteryNode?.Node.Battery, null, now, SourceName));
         }
         return readings;
     }

@@ -26,7 +26,12 @@ public sealed class FrameDecoder
             int length = header & 0x3FF;
             int total = 3 + length + 1;
             if (length < MinBodyLength) { Reject(); continue; }
-            if (_buffer.Count < total) break;
+            if (_buffer.Count < total)
+            {
+                // A stray 0xFD can declare up to 1023 bytes; don't wait for them if a real frame follows.
+                if (ValidFrameStartsAfter(0)) { Reject(); continue; }
+                break;
+            }
             if (_buffer[total - 1] != EndOfMessage) { Reject(); continue; }
 
             byte[] body = _buffer.GetRange(3, length).ToArray();
@@ -37,6 +42,19 @@ public sealed class FrameDecoder
             _buffer.RemoveRange(0, total);
         }
         return frames;
+    }
+
+    bool ValidFrameStartsAfter(int position)
+    {
+        for (int i = _buffer.IndexOf(StartOfMessage, position + 1); i >= 0 && i + 3 <= _buffer.Count; i = _buffer.IndexOf(StartOfMessage, i + 1))
+        {
+            int length = (_buffer[i + 1] | (_buffer[i + 2] << 8)) & 0x3FF;
+            int total = 3 + length + 1;
+            if (length < MinBodyLength || i + total > _buffer.Count || _buffer[i + total - 1] != EndOfMessage) continue;
+            byte[] body = _buffer.GetRange(i + 3, length).ToArray();
+            if (Crc16.Compute(body.AsSpan(0, length - 2)) == (ushort)(body[^2] | (body[^1] << 8))) return true;
+        }
+        return false;
     }
 
     void Reject()

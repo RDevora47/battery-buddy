@@ -81,6 +81,20 @@ public class PnpNodeMergerTests
     }
 
     [Fact]
+    public void Connected_device_never_shows_a_stale_sibling_battery()
+    {
+        // Right after connecting, the Hands-Free node may not carry a battery yet; the stale LE 100 must not leak.
+        var nodes = new[]
+        {
+            Le("7F0383EC8468", "Buds3 Pro de Roberto", 100, false),
+            Classic("A0562CAC1879", "Buds3 Pro de Roberto", true),
+        };
+        var buds = Assert.Single(PnpNodeMerger.Merge(nodes, TestReadings.T0));
+        Assert.True(buds.IsConnected);
+        Assert.Null(buds.BatteryPercent);
+    }
+
+    [Fact]
     public void Hands_free_suffix_is_stripped_for_phone()
     {
         var phone = MergeScan()["S25 Ultra de Roberto"];

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>BatteryBuddy</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- WinForms is only used for the tray icon; keep its names out of the WPF code. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Skins\axolotl\sprites.txt" LogicalName="skins.axolotl.sprites.txt" />
+    <EmbeddedResource Include="Skins\axolotl\skin.json" LogicalName="skins.axolotl.skin.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BatteryBuddy.Core\BatteryBuddy.Core.csproj" />
+    <ProjectReference Include="..\BatteryBuddy.Bluetooth\BatteryBuddy.Bluetooth.csproj" />
+  </ItemGroup>
+</Project>

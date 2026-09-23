@@ -1,0 +1,31 @@
+<Window x:Class="BatteryBuddy.App.PetWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Battery Buddy"
+        Width="220" Height="300"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ResizeMode="NoResize" Topmost="True" ShowInTaskbar="False" ShowActivated="False">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Border x:Name="Bubble" Grid.Row="0" Visibility="Collapsed"
+                VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,4,6" MaxWidth="212"
+                Background="#141824" BorderBrush="#E8E8F0" BorderThickness="3" Padding="8,6">
+            <Border.Effect>
+                <DropShadowEffect Color="Black" Direction="315" ShadowDepth="4" BlurRadius="0" Opacity="1" />
+            </Border.Effect>
+            <TextBlock x:Name="BubbleLabel" Foreground="#E8E8F0" FontFamily="Consolas" FontSize="12"
+                       TextWrapping="Wrap" LineHeight="17" />
+        </Border>
+
+        <Image x:Name="PetImage" Grid.Row="1" HorizontalAlignment="Right" Stretch="Fill"
+               RenderOptions.BitmapScalingMode="NearestNeighbor"
+               MouseLeftButtonDown="PetImage_MouseLeftButtonDown"
+               MouseMove="PetImage_MouseMove"
+               MouseLeftButtonUp="PetImage_MouseLeftButtonUp"
+               MouseRightButtonUp="PetImage_MouseRightButtonUp" />
+    </Grid>
+</Window>

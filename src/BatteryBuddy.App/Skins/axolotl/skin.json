@@ -4,7 +4,7 @@
   "places": {
     "gills":  { "points": [[7, 10], [34, 10]], "bar": [16, 4],  "followsBody": true },
     "neck":   { "points": [[16, 18], [25, 18]], "bar": [0, 1],  "followsBody": true },
-    "hands":  { "points": [[19, 19]],           "bar": [16, 26], "followsBody": true },
+    "hands":  { "points": [[18, 20]],           "bar": [16, 26], "followsBody": true },
     "lap":    { "points": [[28, 21]],           "bar": [28, 18], "followsBody": true },
     "seat":   { "points": [[8, 29]],            "bar": [16, 35], "followsBody": false },
     "side":   { "points": [[39, 18]],           "bar": [33, 26], "followsBody": false },

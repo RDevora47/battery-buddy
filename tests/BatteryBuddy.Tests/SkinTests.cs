@@ -145,8 +145,32 @@ public class SkinTests
         {
             int x = paw.X + Sprites["paw"].ArtWidth / 2;   // the paw's middle column is over the keys
             Assert.InRange(x, at.X, at.X + keyboard.ArtWidth - 1);
-            Assert.Equal(at.Y, paw.Y + Sprites["paw"].ArtHeight);   // resting just above the keys, a press lands on them
+            // Resting a row above the keys, clear of their outline ring; a press lands on the ring's edge.
+            Assert.Equal(at.Y, paw.Y + Sprites["paw"].ArtHeight + 1);
         }
+    }
+
+    [Theory, MemberData(nameof(Skins))]
+    public void Resting_paws_leave_the_desk_devices_and_their_outline_rings_uncovered(string skin)
+    {
+        var (_, Layout, Sprites) = TestSkin.Load(skin);
+        var devices = new[]
+        {
+            new DevicePlacement(TestReadings.Make("Keys", DeviceKind.Keyboard, battery: 80), "seat", "keyboard"),
+            new DevicePlacement(TestReadings.Make("Mouse", DeviceKind.Mouse, battery: 80), "righthand", "mouse"),
+        };
+        var idle = new FrameSpec("body_idle", 0, Array.Empty<Overlay>());
+        var pawless = FrameComposer.Compose(Layout with { Paws = null }, Sprites, devices, idle, BatteryStyle.Outline);
+        var frame = FrameComposer.Compose(Layout, Sprites, devices, idle, BatteryStyle.Outline);
+        int shown = 0;
+        for (int y = 0; y < frame.Height; y++)
+            for (int x = 0; x < frame.Width; x++)
+                if (pawless.HitTest(x, y, out _) == HitTarget.Device)
+                {
+                    Assert.True(frame.HitTest(x, y, out _) == HitTarget.Device, $"a paw covers a desk device at frame pixel ({x}, {y})");
+                    shown++;
+                }
+        Assert.True(shown > 0, "the desk devices weren't drawn");
     }
 
     [Theory, MemberData(nameof(Skins))]

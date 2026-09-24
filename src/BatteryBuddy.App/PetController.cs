@@ -89,6 +89,7 @@ sealed class PetController : IDisposable
             _layout.Overlays["magnifier"])
         {
             Hat = _settings.Hat,
+            Hops = _layout.Perched,
         };
         int resolution = FrameComposer.ResolutionOf(_sprites);
         _bitmap = new WriteableBitmap(_layout.CanvasWidth * resolution, _layout.CanvasHeight * resolution, 96, 96, PixelFormats.Bgra32, null);

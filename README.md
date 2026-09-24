@@ -13,6 +13,7 @@ and, at ≤ 10 %, shakes the device to squeeze out the last energy.
 - **Right-click or tray icon** — Rescan, Pet, Full-charge hat, Battery display, Start with Windows, Quit.
 - **Full-charge hat** — what the pet wears while every device is at 95 % or more: Super Saiyan hair,
   a straw hat (One Piece), or none. Maple and the dogs also wag their tails when they're happy.
+- **Mango** is small enough to stand on the keyboard, and hops from key to key as you type.
 
 ## Setup
 

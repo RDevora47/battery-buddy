@@ -6,6 +6,8 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>BatteryBuddy</AssemblyName>
+    <!-- Generated from the skin by tools/MakeIcon; rerun it after changing the pet's art. -->
+    <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <!-- WinForms is only used for the tray icon; keep its names out of the WPF code. -->

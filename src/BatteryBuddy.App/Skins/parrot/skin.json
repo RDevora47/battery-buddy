@@ -5,7 +5,7 @@
   "paws": { "left": [15, 29], "right": [21, 29] },
   "desk": [5, 33],
   "places": {
-    "gills":     { "points": [[12, 24], [26, 24]], "bar": [15, 7],  "followsBody": true },
+    "gills":     { "points": [[11, 21], [26, 21]], "bar": [15, 7],  "followsBody": true },
     "neck":      { "points": [[15, 26], [24, 26]], "bar": [0, 10],  "followsBody": true },
     "hands":     { "points": [[16, 26]],           "bar": [16, 44], "followsBody": true },
     "righthand": { "points": [[30, 33]],           "bar": [30, 41], "followsBody": false, "followsClick": true, "icons": "right" },

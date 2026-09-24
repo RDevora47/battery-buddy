@@ -1,3 +1,4 @@
+using BatteryBuddy.Devices;
 using BatteryBuddy.Pet.Animation;
 using BatteryBuddy.Pet.Scene;
 
@@ -468,27 +469,22 @@ public class SkinTests
     public void Full_charge_hats_leave_the_earbuds_and_their_full_badges_visible(string skin, string hatSprite)
     {
         var (_, Layout, Sprites) = TestSkin.Load(skin);
-        // A hat shows when every device is nearly full, so the gills' earbuds may wear a "full" badge above them.
-        var hair = Sprites[hatSprite];
-        var at = Layout.Overlays[hatSprite];   // bobs with the pet, like the gills' earbuds
-        var earbud = Sprites["earbud"];
-        var full = Sprites["full"];
-        foreach (var pt in Layout.Places["gills"].Points)
-        {
-            var clear = new[]
-            {
-                (pt.X, pt.Y, earbud.ArtWidth, earbud.ArtHeight),
-                (pt.X + earbud.ArtWidth - full.ArtWidth, pt.Y - full.ArtHeight, full.ArtWidth, full.ArtHeight),
-            };
-            foreach (var (x, y, w, h) in clear)
-                for (int py = y * hair.Density; py < (y + h) * hair.Density; py++)
-                    for (int px = x * hair.Density; px < (x + w) * hair.Density; px++)
-                    {
-                        int hx = px - at.X * hair.Density, hy = py - at.Y * hair.Density;
-                        bool covered = hx >= 0 && hy >= 0 && hx < hair.Width && hy < hair.Height && hair.Pixels[hy * hair.Width + hx] != 0;
-                        Assert.False(covered, $"{hatSprite} covers ({px / 2.0}, {py / 2.0}) near the earbud at ({pt.X}, {pt.Y})");
-                    }
-        }
+        // A hat shows when every device is nearly full, so the earbuds on the ears may wear a "full" badge. The ears
+        // are often under the hat, so the earbuds and their badges are drawn over it.
+        var earbuds = new DevicePlacement(TestReadings.Make("Buds", DeviceKind.Earbuds, battery: 100), "gills", "earbud");
+        var at = Layout.Overlays[hatSprite];
+        var bare = FrameComposer.Compose(Layout, Sprites, new[] { earbuds }, new FrameSpec("body_idle", 0, Array.Empty<Overlay>(), Gills: "gills_perky"));
+        var hatted = FrameComposer.Compose(Layout, Sprites, new[] { earbuds }, new FrameSpec("body_idle", 0, new[] { new Overlay(hatSprite, at.X, at.Y) }, Gills: "gills_perky"));
+        int shown = 0;
+        for (int y = 0; y < bare.Height; y++)
+            for (int x = 0; x < bare.Width; x++)
+                if (bare.HitTest(x, y, out _) == HitTarget.Device)
+                {
+                    Assert.True(bare.Pixels[y * bare.Width + x] == hatted.Pixels[y * bare.Width + x],
+                        $"{hatSprite} covers the earbuds at frame pixel ({x}, {y})");
+                    shown++;
+                }
+        Assert.True(shown > 0, "the earbuds weren't drawn");
     }
 
     [Theory]

@@ -6,7 +6,7 @@
   "tail": [24, 21],
   "mousePaw": [30, 30],
   "places": {
-    "gills":     { "points": [[8, 21], [33, 21]], "bar": [16, 13],  "followsBody": true },
+    "gills":     { "points": [[13, 15], [27, 15]], "bar": [16, 13],  "followsBody": true },
     "neck":      { "points": [[16, 27], [25, 27]], "bar": [0, 10],  "followsBody": true },
     "hands":     { "points": [[18, 29]],           "bar": [16, 44], "followsBody": true },
     "righthand": { "points": [[30, 33]],           "bar": [30, 41], "followsBody": false, "followsClick": true, "icons": "right" },

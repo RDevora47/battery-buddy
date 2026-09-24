@@ -10,7 +10,8 @@ static class SkinLoader
     /// <summary>The pets to choose from: skin folder and menu name.</summary>
     public static readonly (string Skin, string Name)[] Pets =
     {
-        ("axolotl", "Axolotl"),
+        ("axolotl", "Mochi"),
+        ("redpanda", "Maple"),
         ("choppa", "Choppa"),
         ("missy", "Missy"),
     };

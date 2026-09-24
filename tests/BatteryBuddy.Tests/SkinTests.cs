@@ -50,8 +50,8 @@ public class SkinTests
     };
 
     [Fact]
-    public void Ships_the_axolotl_and_the_dogs() =>
-        Assert.Equal(new[] { "axolotl", "choppa", "missy" }, TestSkin.Names);
+    public void Ships_the_axolotl_the_red_panda_and_the_dogs() =>
+        Assert.Equal(new[] { "axolotl", "choppa", "missy", "redpanda" }, TestSkin.Names);
 
     [Theory, MemberData(nameof(Skins))]
     public void Has_all_required_sprites(string skin)
@@ -173,6 +173,7 @@ public class SkinTests
     [InlineData("axolotl", 0)]   // body_idle art row of the top of the head
     [InlineData("choppa", 7)]    // rows 0-6 are for the ears
     [InlineData("missy", 3)]
+    [InlineData("redpanda", 3)]
     public void Saiyan_hair_flames_up_high_above_the_head(string skin, int headTop)
     {
         // Classic Super Saiyan: the spikes rise above the head by more than the axolotl's whole head is tall
@@ -190,7 +191,8 @@ public class SkinTests
     [Theory]
     [InlineData("choppa")]
     [InlineData("missy")]
-    public void Dogs_have_a_tail_that_wags_within_the_canvas(string skin)
+    [InlineData("redpanda")]
+    public void Tailed_pets_have_a_tail_that_wags_within_the_canvas(string skin)
     {
         var (_, Layout, Sprites) = TestSkin.Load(skin);
         Assert.NotNull(Layout.Tail);
@@ -205,6 +207,7 @@ public class SkinTests
     [Theory]
     [InlineData("choppa")]
     [InlineData("missy")]
+    [InlineData("redpanda")]
     public void Every_tail_pose_stays_attached_to_the_body(string skin)
     {
         // The tail is drawn behind the body: every pixel that shows must connect, through other showing
@@ -247,6 +250,7 @@ public class SkinTests
     [Theory]
     [InlineData("choppa")]
     [InlineData("missy")]
+    [InlineData("redpanda")]
     public void Wagging_swings_the_tail_about_a_base_tucked_behind_the_body(string skin)
     {
         // The bottom rows (the base) are the same in every pose, and all of them sit behind the body.
@@ -274,6 +278,7 @@ public class SkinTests
     [Theory]
     [InlineData("choppa")]
     [InlineData("missy")]
+    [InlineData("redpanda")]
     public void Tails_are_open_curls_not_rings(string skin)
     {
         // A see-through hole enclosed by the tail itself reads as a loose ring once it swings clear of the body.
@@ -368,7 +373,8 @@ public class SkinTests
     [Theory]
     [InlineData("choppa")]
     [InlineData("missy")]
-    public void Dog_ears_sink_as_the_battery_drains(string skin)
+    [InlineData("redpanda")]
+    public void Furry_ears_sink_as_the_battery_drains(string skin)
     {
         // The ears fill the "gills" slot: each mood is its own pose, and the lower the battery, the lower the ears sit.
         var sprites = TestSkin.Load(skin).Sprites;
@@ -424,6 +430,7 @@ public class SkinTests
     [InlineData("axolotl", 0, 8)]
     [InlineData("choppa", 7, 12)]
     [InlineData("missy", 3, 8)]
+    [InlineData("redpanda", 3, 8)]
     public void Straw_hat_sits_on_the_head_above_the_eyes(string skin, int headTop, int eyeRow)
     {
         var (_, Layout, Sprites) = TestSkin.Load(skin);

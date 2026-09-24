@@ -13,7 +13,8 @@ gets sleepy (≤ 20 %) and, at ≤ 10 %, shakes the device to squeeze out the la
 ## Setup
 
 1. Install the .NET 8 SDK: `winget install --id Microsoft.DotNet.SDK.8 -e`
-2. Build: `.\build\build.ps1` (runs the tests, then publishes; add `-SkipTests` to skip them)
+2. Build: `.\build\build.ps1` (runs the tests, then publishes; add `-SkipTests` to skip them,
+   or `-SelfContained` to bundle the .NET runtime so the exe runs on PCs without .NET 8)
 3. Run: `build\out\BatteryBuddy.exe`
 
 ### Logitech devices

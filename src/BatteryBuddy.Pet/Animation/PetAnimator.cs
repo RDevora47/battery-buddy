@@ -8,8 +8,8 @@ public sealed class PetAnimator
     public static readonly TimeSpan FrameInterval = TimeSpan.FromTicks(TimeSpan.TicksPerSecond / Fps);
 
     static readonly int[] HappyBob = { 0, 1, 1, 0, 1, 0 };
-    // Critical devices get shaken for a second, then rest for a second (frames at Fps).
-    static readonly int[] Shake = { -1, 1, -1, 1, -1, 1, 0, 0, 0, 0, 0, 0 };
+    // With a critical device the idle burst shakes it instead (frames at Fps).
+    static readonly int[] Shake = { -1, 1, -1, 1, -1, 1 };
     static readonly TimeSpan BurstLength = TimeSpan.FromTicks(FrameInterval.Ticks * HappyBob.Length);
     static readonly TimeSpan MinSniff = TimeSpan.FromSeconds(1);
     static readonly TimeSpan EffectLength = TimeSpan.FromTicks(TimeSpan.TicksPerSecond / 2);
@@ -42,6 +42,7 @@ public sealed class PetAnimator
     }
 
     public Mood Mood { get; set; }
+    /// <summary>A device is at ≤ 10 %: the idle burst shakes it instead of bobbing, blinking or drifting the Zzz.</summary>
     public bool HasCritical { get; set; }
 
     /// <summary>Lowest connected battery; drives gill droop and color fade.</summary>
@@ -82,21 +83,36 @@ public sealed class PetAnimator
         _offMouse = now + MouseHold;
     }
 
+    /// <summary>
+    /// The mouse wheel turned: the right paw goes to the mouse and flicks, at most every other frame,
+    /// so a long scroll wiggles the paw instead of holding it down.
+    /// </summary>
+    public void Scroll(TimeSpan now)
+    {
+        _offMouse = now + MouseHold;
+        if (now < _clickUp + FrameInterval) return;
+        _rightPawUp = _clickUp = now + FrameInterval;
+    }
+
     public bool NeedsTicks(TimeSpan now) =>
-        now < _leftPawUp || now < _rightPawUp || now < _offMouse || HasCritical || IsSniffing(now) || InBurst(now) || _effects.Any(e => now - e.Start < EffectLength);
+        now < _leftPawUp || now < _rightPawUp || now < _offMouse || IsSniffing(now) || InBurst(now) || _effects.Any(e => now - e.Start < EffectLength);
 
     public FrameSpec FrameAt(TimeSpan now)
     {
+        _effects.RemoveAll(e => now - e.Start >= EffectLength);
+        // The idle burst only plays when nothing else is animating: it waits for the next slot and stops if interrupted.
+        bool busy = OtherAnimationRunning(now);
+        if (busy) _burstStart = null;
         if (now >= NextIdleAt)
         {
-            _burstStart = now;
+            if (!busy) _burstStart = now;
             ScheduleIdle(now);
         }
-        _effects.RemoveAll(e => now - e.Start >= EffectLength);
 
         var overlays = new List<Overlay>();
         string body;
         int dy = 0;
+        int criticalDx = 0;
 
         if (IsSniffing(now))
         {
@@ -106,6 +122,11 @@ public sealed class PetAnimator
         {
             _sniffStart = null;
             int? burst = InBurst(now) ? FrameIndex(now, _burstStart!.Value) : null;
+            if (HasCritical && burst is int s)
+            {
+                criticalDx = Shake[s];
+                burst = null;
+            }
             switch (Mood)
             {
                 case Mood.Happy:
@@ -140,8 +161,7 @@ public sealed class PetAnimator
             }
         }
 
-        long frameNo = now.Ticks * Fps / TimeSpan.TicksPerSecond;
-        return new FrameSpec(body, dy, overlays, Shake[frameNo % Shake.Length],
+        return new FrameSpec(body, dy, overlays, criticalDx,
             MoodCalculator.GillsFor(LowestBattery), MoodCalculator.FadeFor(LowestBattery),
             now < _leftPawUp ? 1 : 0, now < _rightPawUp ? 1 : 0, now < _clickUp ? 1 : 0, now < _offMouse);
     }
@@ -149,6 +169,9 @@ public sealed class PetAnimator
     bool IsSniffing(TimeSpan now) =>
         _sniffStart is TimeSpan start &&
         !(_sniffEndRequested is TimeSpan end && now >= Max(end, start + MinSniff));
+
+    bool OtherAnimationRunning(TimeSpan now) =>
+        now < _leftPawUp || now < _rightPawUp || now < _offMouse || IsSniffing(now) || _effects.Count > 0;
 
     bool InBurst(TimeSpan now) => _burstStart is TimeSpan start && now - start < BurstLength;
 

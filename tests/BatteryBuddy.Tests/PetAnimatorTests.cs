@@ -103,15 +103,28 @@ public class PetAnimatorTests
     }
 
     [Fact]
-    public void Critical_devices_shake_for_a_second_then_rest()
+    public void Critical_devices_are_shaken_instead_of_the_idle_bounce()
     {
         var animator = New();
         animator.HasCritical = true;
-        Assert.True(animator.NeedsTicks(Ms(100)));
-        Assert.Equal(-1, animator.FrameAt(Ms(100)).CriticalDx);
-        Assert.Equal(1, animator.FrameAt(Ms(250)).CriticalDx);
-        Assert.Equal(0, animator.FrameAt(Ms(1500)).CriticalDx);
-        Assert.Equal(-1, animator.FrameAt(Ms(2100)).CriticalDx);
+        Assert.Equal(0, animator.FrameAt(Ms(100)).CriticalDx);   // no shaking between idle bursts
+        Assert.False(animator.NeedsTicks(Ms(100)));
+
+        var start = animator.FrameAt(Ms(3000));
+        var mid = animator.FrameAt(Ms(3200));
+        Assert.Equal((-1, 1), (start.CriticalDx, mid.CriticalDx));
+        Assert.Equal((0, "body_idle"), (animator.FrameAt(Ms(3340)).BodyDy, animator.FrameAt(Ms(3340)).BodySprite)); // no bob or blink
+        Assert.Equal(0, animator.FrameAt(Ms(4100)).CriticalDx);
+    }
+
+    [Fact]
+    public void Critical_shake_waits_while_the_paws_are_busy()
+    {
+        var animator = New();
+        animator.HasCritical = true;
+        animator.Click(Ms(2900));
+        animator.FrameAt(Ms(3000));
+        Assert.Equal(0, animator.FrameAt(Ms(3200)).CriticalDx);
     }
 
     [Theory]
@@ -178,6 +191,65 @@ public class PetAnimatorTests
 
         Assert.False(animator.FrameAt(Ms(1100)).RightPawOnMouse);
         Assert.False(animator.NeedsTicks(Ms(1100)));
+    }
+
+    [Fact]
+    public void Scrolling_flicks_the_right_paw_on_the_mouse()
+    {
+        var animator = New();
+        animator.Scroll(Ms(500));
+        var frame = animator.FrameAt(Ms(500));
+        Assert.Equal((0, 1, 1, true), (frame.PawLeftDy, frame.PawRightDy, frame.ClickDy, frame.RightPawOnMouse));
+        Assert.True(animator.FrameAt(Ms(1400)).RightPawOnMouse);
+        Assert.False(animator.FrameAt(Ms(1600)).RightPawOnMouse);
+    }
+
+    [Fact]
+    public void Continuous_scrolling_wiggles_instead_of_holding_the_paw_down()
+    {
+        var animator = New();
+        animator.Scroll(Ms(500));
+        animator.Scroll(Ms(550));   // still pressed from the first notch
+        animator.Scroll(Ms(700));   // one frame of rest before the next flick
+        Assert.Equal(0, animator.FrameAt(Ms(700)).PawRightDy);
+        animator.Scroll(Ms(850));
+        Assert.Equal(1, animator.FrameAt(Ms(850)).PawRightDy);
+    }
+
+    [Fact]
+    public void Idle_bounce_waits_while_the_paws_are_busy()
+    {
+        var animator = New();
+        animator.KeyTap(Ms(2950));
+        animator.FrameAt(Ms(3000));                        // bounce was due, but a paw is down
+        Assert.Equal(0, animator.FrameAt(Ms(3200)).BodyDy); // would be mid-bob otherwise
+        Assert.True(animator.NextIdleAt >= Ms(6000));
+    }
+
+    [Fact]
+    public void Idle_bounce_stops_when_another_animation_starts()
+    {
+        var animator = New();
+        animator.FrameAt(Ms(3000));
+        Assert.Equal(1, animator.FrameAt(Ms(3200)).BodyDy);
+        animator.Click(Ms(3250));
+        Assert.Equal(0, animator.FrameAt(Ms(3400)).BodyDy);
+        Assert.Equal(0, animator.FrameAt(Ms(3700)).BodyDy); // not resumed once the click is over
+    }
+
+    [Fact]
+    public void Idle_bounce_waits_for_connect_effects_and_sniffing()
+    {
+        var whoosh = New();
+        whoosh.AddWhoosh(10, 10, Ms(2900));
+        whoosh.FrameAt(Ms(3000));
+        Assert.Equal(0, whoosh.FrameAt(Ms(3200)).BodyDy);
+
+        var sniff = New();
+        sniff.BeginSniff(Ms(2900));
+        sniff.EndSniff(Ms(2950));
+        sniff.FrameAt(Ms(3000));
+        Assert.Equal(0, sniff.FrameAt(Ms(4000)).BodyDy);
     }
 
     [Fact]

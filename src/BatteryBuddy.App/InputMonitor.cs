@@ -5,9 +5,9 @@ using System.Windows.Interop;
 namespace BatteryBuddy.App;
 
 /// <summary>
-/// Notices key presses and mouse clicks anywhere on the desktop via Raw Input sent to the pet window
+/// Notices key presses, mouse clicks and wheel turns anywhere on the desktop via Raw Input sent to the pet window
 /// (no global hook in everyone's input path). Only "a key went down" / "a button went down" leaves
-/// this class: which key is never exposed or logged. Held keys are remembered only to skip auto-repeat.
+/// this class (plus "the wheel turned"): which key is never exposed or logged. Held keys are remembered only to skip auto-repeat.
 /// </summary>
 sealed class InputMonitor : IDisposable
 {
@@ -17,8 +17,9 @@ sealed class InputMonitor : IDisposable
     const uint RIDEV_REMOVE = 0x00000001, RIDEV_INPUTSINK = 0x00000100;
     const ushort HID_USAGE_PAGE_GENERIC = 0x01, HID_USAGE_MOUSE = 0x02, HID_USAGE_KEYBOARD = 0x06;
     const ushort RI_KEY_BREAK = 0x01, RI_KEY_E0 = 0x02;
-    // Left, right, middle, X1 and X2 button-down flags; up flags, wheel and movement don't count.
+    // Left, right, middle, X1 and X2 button-down flags; up flags and movement don't count.
     const ushort AnyButtonDown = 0x0001 | 0x0004 | 0x0010 | 0x0040 | 0x0100;
+    const ushort AnyWheel = 0x0400 | 0x0800;   // vertical and horizontal wheel
 
     static readonly int HeaderSize = Marshal.SizeOf<RAWINPUTHEADER>();
 
@@ -29,6 +30,7 @@ sealed class InputMonitor : IDisposable
 
     public event Action? KeyPressed;
     public event Action? MouseClicked;
+    public event Action? MouseScrolled;
 
     public void Start(Window window)
     {
@@ -74,6 +76,7 @@ sealed class InputMonitor : IDisposable
         {
             ushort buttonFlags = BitConverter.ToUInt16(_buffer, HeaderSize + 4);   // RAWMOUSE: usFlags, padding, usButtonFlags
             if ((buttonFlags & AnyButtonDown) != 0) MouseClicked?.Invoke();
+            else if ((buttonFlags & AnyWheel) != 0) MouseScrolled?.Invoke();
         }
         else if (type == RIM_TYPEKEYBOARD)
         {

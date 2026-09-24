@@ -4,10 +4,12 @@
 .EXAMPLE
     .\build\build.ps1              # test + publish Release
     .\build\build.ps1 -SkipTests   # publish only
+    .\build\build.ps1 -SelfContained   # bundle the .NET runtime so the exe runs without .NET installed
 #>
 param(
     [string]$Configuration = "Release",
-    [switch]$SkipTests
+    [switch]$SkipTests,
+    [switch]$SelfContained
 )
 
 $ErrorActionPreference = "Stop"
@@ -27,8 +29,15 @@ try {
     # Start from a clean out\ so removed files don't linger; keep the placeholder that keeps the folder in git.
     if (Test-Path $out) { Get-ChildItem $out -Exclude .gitkeep | Remove-Item -Recurse -Force }
 
-    dotnet publish src/BatteryBuddy.App -c $Configuration -r win-x64 --self-contained false `
-        -p:PublishSingleFile=true -o $out --nologo
+    $publishArgs = @("src/BatteryBuddy.App", "-c", $Configuration, "-r", "win-x64", "-p:PublishSingleFile=true", "-o", $out, "--nologo")
+    if ($SelfContained) {
+        # The runtime and WPF make the exe much larger; compression keeps it manageable.
+        $publishArgs += "--self-contained", "true", "-p:IncludeNativeLibrariesForSelfExtract=true", "-p:EnableCompressionInSingleFile=true"
+    }
+    else {
+        $publishArgs += "--self-contained", "false"
+    }
+    dotnet publish @publishArgs
     if ($LASTEXITCODE -ne 0) { throw "Publish failed." }
 
     Write-Host ""

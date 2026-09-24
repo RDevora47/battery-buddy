@@ -63,6 +63,11 @@ public sealed class PetAnimator
 
     public FullChargeHat Hat { get; set; } = FullChargeHat.SaiyanHair;
 
+    /// <summary>A perched pet types by hopping on the keys: up with each press, a pixel toward that press's side.</summary>
+    public bool Hops { get; init; }
+
+    public const int HopHeight = 2;
+
     public TimeSpan NextIdleAt { get; private set; }
 
     public void BeginSniff(TimeSpan now)
@@ -161,10 +166,14 @@ public sealed class PetAnimator
             }
         }
 
+        int dx = 0;
+        if (Hops && now < _leftPawUp) (dx, dy) = (-1, -HopHeight);
+        else if (Hops && now < _rightPawUp && now >= _clickUp) (dx, dy) = (1, -HopHeight);
+
         if (SuperSaiyan && Hat != FullChargeHat.None)
         {
             var (sprite, at) = Hat == FullChargeHat.StrawHat ? ("strawhat", _strawHat) : ("saiyan", _saiyan);
-            overlays.Insert(0, new Overlay(sprite, at.X, at.Y + dy));
+            overlays.Insert(0, new Overlay(sprite, at.X + dx, at.Y + dy));
         }
 
         foreach (var (kind, x, y, start) in _effects)
@@ -183,7 +192,7 @@ public sealed class PetAnimator
 
         return new FrameSpec(body, dy, overlays, criticalDx,
             MoodCalculator.GillsFor(LowestBattery), MoodCalculator.FadeFor(LowestBattery),
-            now < _leftPawUp ? 1 : 0, now < _rightPawUp ? 1 : 0, now < _clickUp ? 1 : 0, now < _offMouse, tail);
+            now < _leftPawUp ? 1 : 0, now < _rightPawUp ? 1 : 0, now < _clickUp ? 1 : 0, now < _offMouse, tail, dx);
     }
 
     bool IsSniffing(TimeSpan now) =>

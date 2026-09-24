@@ -146,9 +146,10 @@ public static class FrameComposer
             var place = layout.Places[placement.PlaceName];
             var sprite = sprites[placement.SpriteName];
             int dy = (place.FollowsBody ? spec.BodyDy : 0) + (place.FollowsClick ? spec.ClickDy : 0);
+            int bodyDx = place.FollowsBody ? spec.BodyDx : 0;
             short owner = (short)(index + 1);
             int? battery = placement.Device.EffectiveBattery;
-            int dx = battery <= BatteryBar.CriticalAtOrBelow ? spec.CriticalDx : 0;
+            int dx = bodyDx + (battery <= BatteryBar.CriticalAtOrBelow ? spec.CriticalDx : 0);
 
             if (style == BatteryStyle.Outline)
                 foreach (var point in place.Points)
@@ -156,7 +157,7 @@ public static class FrameComposer
             foreach (var point in place.Points)
                 Blit(sprite, point.X + dx, point.Y + dy, owner);
             if (style == BatteryStyle.Bar)
-                DrawBar(battery, place.Bar.X, place.Bar.Y + dy, owner);
+                DrawBar(battery, place.Bar.X + bodyDx, place.Bar.Y + dy, owner);
 
             var last = place.Points[^1];
             if (style == BatteryStyle.Gauge)
@@ -197,22 +198,42 @@ public static class FrameComposer
             }
         }
 
+        void DrawPet()
+        {
+            int x = layout.Body.X + spec.BodyDx, y = layout.Body.Y + spec.BodyDy;
+            if (layout.Tail is PixelPoint tail && spec.Tail is not null)
+                Blit(sprites[spec.Tail], tail.X + spec.BodyDx, tail.Y + spec.BodyDy, BodyOwner, spec.Fade);
+            Blit(sprites[spec.BodySprite], x, y, BodyOwner, spec.Fade);
+            if (spec.Gills is not null)
+                Blit(sprites[spec.Gills], x, y, BodyOwner, spec.Fade);
+        }
+
+        void DrawDeskAndKeyboard()
+        {
+            if (layout.Desk is PixelPoint desk)
+                Blit(sprites["desk"], desk.X, desk.Y, BodyOwner);
+            for (int i = 0; i < placements.Count; i++)
+                if (placements[i].PlaceName == "seat") DrawDevice(i);
+        }
+
         // Back to front: the tail behind the pet, pet, the desk in front of it, the keyboard on the desk,
-        // the paws tapping it, then everything the pet holds or wears.
-        if (layout.Tail is PixelPoint tail && spec.Tail is not null)
-            Blit(sprites[spec.Tail], tail.X, tail.Y + spec.BodyDy, BodyOwner, spec.Fade);
-        Blit(sprites[spec.BodySprite], layout.Body.X, layout.Body.Y + spec.BodyDy, BodyOwner, spec.Fade);
-        if (spec.Gills is not null)
-            Blit(sprites[spec.Gills], layout.Body.X, layout.Body.Y + spec.BodyDy, BodyOwner, spec.Fade);
-        if (layout.Desk is PixelPoint desk)
-            Blit(sprites["desk"], desk.X, desk.Y, BodyOwner);
-        for (int i = 0; i < placements.Count; i++)
-            if (placements[i].PlaceName == "seat") DrawDevice(i);
-        bool reaching = spec.RightPawOnMouse && layout.MousePaw is not null;
+        // the paws tapping it, then everything the pet holds or wears. A perched pet stands in front of the
+        // desk on the keyboard instead; its paws are its feet, and they hop with it rather than tapping.
+        bool reaching = spec.RightPawOnMouse && layout.MousePaw is not null && !layout.Perched;
+        if (layout.Perched)
+        {
+            DrawDeskAndKeyboard();
+            DrawPet();
+        }
+        else
+        {
+            DrawPet();
+            DrawDeskAndKeyboard();
+        }
         if (layout.Paws is not null)
             foreach (var (paw, point) in layout.Paws)
                 if (!(reaching && paw == Paw.Right))
-                    Blit(sprites["paw"], point.X, point.Y + spec.BodyDy + spec.PawDy(paw), BodyOwner, spec.Fade);
+                    Blit(sprites["paw"], point.X + spec.BodyDx, point.Y + spec.BodyDy + (layout.Perched ? 0 : spec.PawDy(paw)), BodyOwner, spec.Fade);
         for (int i = 0; i < placements.Count; i++)
             if (placements[i].PlaceName != "seat") DrawDevice(i);
         if (reaching)   // on the mouse, which sits on the desk and doesn't bob

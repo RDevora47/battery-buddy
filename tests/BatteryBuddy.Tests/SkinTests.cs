@@ -1,3 +1,4 @@
+using BatteryBuddy.Pet.Animation;
 using BatteryBuddy.Pet.Scene;
 
 namespace BatteryBuddy.Tests;
@@ -51,7 +52,7 @@ public class SkinTests
 
     [Fact]
     public void Ships_every_pet() =>
-        Assert.Equal(new[] { "axolotl", "bunny", "choppa", "missy", "panda", "redpanda" }, TestSkin.Names);
+        Assert.Equal(new[] { "axolotl", "bunny", "choppa", "missy", "panda", "parrot", "redpanda" }, TestSkin.Names);
 
     [Theory, MemberData(nameof(Skins))]
     public void Has_all_required_sprites(string skin)
@@ -101,6 +102,11 @@ public class SkinTests
     public void Right_paw_reaches_the_mouse_buttons(string skin)
     {
         var (_, Layout, Sprites) = TestSkin.Load(skin);
+        if (Layout.Perched)
+        {
+            Assert.Null(Layout.MousePaw);   // standing on the keyboard, its feet stay there
+            return;
+        }
         var paw = Layout.MousePaw!.Value;
         var mouse = Layout.Places["righthand"].Points[0];
         Assert.InRange(paw.X, mouse.X, mouse.X + Sprites["mouse"].ArtWidth - Sprites["paw"].ArtWidth);
@@ -165,6 +171,25 @@ public class SkinTests
             AssertFits(Layout, $"overlay {name}", pt.X, pt.Y + 1, Sprites[name].ArtWidth, Sprites[name].ArtHeight);
     }
 
+    [Fact]
+    public void Only_mango_is_perched() =>
+        Assert.Equal(new[] { "parrot" }, TestSkin.Names.Where(n => TestSkin.Load(n).Layout.Perched));
+
+    [Fact]
+    public void Mango_stands_on_the_keyboard_and_hops_within_the_canvas()
+    {
+        var (_, Layout, Sprites) = TestSkin.Load("parrot");
+        var body = Sprites["body_idle"];
+        var keyboard = Layout.Places["seat"].Points[0];
+        Assert.True(Layout.Body.Y + body.ArtHeight <= keyboard.Y, "the body stays above the keys; the feet stand on them");
+        Assert.InRange(Layout.Body.X * 2 + body.Width / 2, keyboard.X * 2 + Sprites["keyboard"].Width / 2 - 1,
+            keyboard.X * 2 + Sprites["keyboard"].Width / 2 + 1);   // centred on the keyboard, in half art pixels
+        foreach (var dx in new[] { -1, 1 })
+            foreach (var sprite in new[] { "body_idle", "gills_perky" })
+                AssertFits(Layout, $"{sprite} mid-hop", Layout.Body.X + dx, Layout.Body.Y - PetAnimator.HopHeight,
+                    Sprites[sprite].ArtWidth, Sprites[sprite].ArtHeight);
+    }
+
     [Theory, MemberData(nameof(Skins))]
     public void Every_sprite_is_drawn_at_2x(string skin) =>
         Assert.All(TestSkin.Load(skin).Sprites.Values, s => Assert.True(s.Density == 2, $"sprite {s.Name} is @{s.Density}x"));
@@ -176,6 +201,7 @@ public class SkinTests
     [InlineData("redpanda", 3)]
     [InlineData("bunny", 9)]     // rows 0-8 are for the long ears
     [InlineData("panda", 4)]
+    [InlineData("parrot", 5)]     // small and perched on the keyboard
     public void Saiyan_hair_flames_up_high_above_the_head(string skin, int headTop)
     {
         // Classic Super Saiyan: the spikes rise above the head by more than the axolotl's whole head is tall
@@ -373,6 +399,7 @@ public class SkinTests
     [InlineData("axolotl")]
     [InlineData("bunny")]   // the cottontail hides behind the body
     [InlineData("panda")]
+    [InlineData("parrot")]
     public void Some_pets_have_no_tail(string skin) => Assert.Null(TestSkin.Load(skin).Layout.Tail);
 
     [Theory]
@@ -381,7 +408,8 @@ public class SkinTests
     [InlineData("redpanda")]
     [InlineData("bunny")]
     [InlineData("panda")]
-    public void Furry_ears_sink_as_the_battery_drains(string skin)
+    [InlineData("parrot")]
+    public void Ears_and_crests_sink_as_the_battery_drains(string skin)
     {
         // The ears fill the "gills" slot: each mood is its own pose, and the lower the battery, the lower the ears sit.
         var sprites = TestSkin.Load(skin).Sprites;
@@ -440,6 +468,7 @@ public class SkinTests
     [InlineData("redpanda", 3, 8)]
     [InlineData("bunny", 9, 14)]
     [InlineData("panda", 4, 11)]
+    [InlineData("parrot", 5, 9)]
     public void Straw_hat_sits_on_the_head_above_the_eyes(string skin, int headTop, int eyeRow)
     {
         var (_, Layout, Sprites) = TestSkin.Load(skin);

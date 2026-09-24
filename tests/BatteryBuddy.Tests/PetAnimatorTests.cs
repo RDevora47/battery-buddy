@@ -328,4 +328,43 @@ public class PetAnimatorTests
         animator.KeyTap(Ms(400));
         Assert.False(animator.FrameAt(Ms(400)).RightPawOnMouse);
     }
+
+    [Fact]
+    public void A_perched_pet_hops_from_key_to_key_as_it_types()
+    {
+        var animator = new PetAnimator(() => 0, TimeSpan.Zero, new PixelPoint(37, 5), new PixelPoint(36, 10), new PixelPoint(12, 1))
+        {
+            Hops = true,
+            SuperSaiyan = true,
+        };
+        animator.KeyTap(Ms(100));
+        var left = animator.FrameAt(Ms(100));
+        Assert.Equal((-1, -PetAnimator.HopHeight), (left.BodyDx, left.BodyDy));
+        Assert.Contains(new Overlay("saiyan", 11, 1 - PetAnimator.HopHeight), left.Overlays);   // the hair hops along
+
+        animator.KeyTap(Ms(150));
+        var right = animator.FrameAt(Ms(150));
+        Assert.Equal((1, -PetAnimator.HopHeight), (right.BodyDx, right.BodyDy));
+
+        var landed = animator.FrameAt(Ms(150) + PetAnimator.FrameInterval);
+        Assert.Equal((0, 0), (landed.BodyDx, landed.BodyDy));
+    }
+
+    [Fact]
+    public void A_perched_pet_stays_put_when_clicking()
+    {
+        var animator = new PetAnimator(() => 0, TimeSpan.Zero, new PixelPoint(37, 5), new PixelPoint(36, 10)) { Hops = true };
+        animator.Click(Ms(100));
+        var frame = animator.FrameAt(Ms(100));
+        Assert.Equal((0, 0, 1), (frame.BodyDx, frame.BodyDy, frame.ClickDy));   // only the mouse dips
+    }
+
+    [Fact]
+    public void Other_pets_type_without_hopping()
+    {
+        var animator = New();
+        animator.KeyTap(Ms(100));
+        var frame = animator.FrameAt(Ms(100));
+        Assert.Equal((0, 0, 1), (frame.BodyDx, frame.BodyDy, frame.PawLeftDy));
+    }
 }

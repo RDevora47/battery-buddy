@@ -137,6 +137,39 @@ public class FrameComposerTests
     }
 
     [Fact]
+    public void A_perched_pet_stands_in_front_of_the_desk_and_hops_with_its_feet_and_devices()
+    {
+        // The same desk and keyboard, but the 2x2 body stands in front of them; a foot at (0,3); the hands'
+        // device at (5,5) follows the body.
+        var layout = Layout with
+        {
+            Desk = new PixelPoint(0, 1),
+            Paws = new Dictionary<Paw, PixelPoint> { [Paw.Left] = new(0, 3), [Paw.Right] = new(15, 3) },
+            MousePaw = new PixelPoint(12, 3),
+            Perched = true,
+        };
+        var sprites = new Dictionary<string, Sprite>(Sprites)
+        {
+            ["desk"] = new("desk", 4, 1, new[] { Yellow, Yellow, Yellow, Yellow }),
+            ["paw"] = new("paw", 1, 1, new[] { Green }),
+        };
+        var keyboard = new DevicePlacement(TestReadings.Make("Keys", DeviceKind.Keyboard), "seat", "keyboard");
+
+        var rest = FrameComposer.Compose(layout, sprites, new[] { keyboard, Mouse() }, Spec(), BatteryStyle.Bar);
+        Assert.Equal(Red, Pixel(rest, 1, 1));      // the body covers the keyboard and desk
+        Assert.Equal(Yellow, Pixel(rest, 3, 1));
+
+        var hop = FrameComposer.Compose(layout, sprites, new[] { keyboard, Mouse() },
+            Spec(dy: -1) with { BodyDx = 1, PawLeftDy = 1, RightPawOnMouse = true }, BatteryStyle.Bar);
+        Assert.Equal(Red, Pixel(hop, 1, 0));       // up one, right one
+        Assert.Equal(Blue, Pixel(hop, 0, 1));      // the keyboard shows where the body was
+        Assert.Equal(Green, Pixel(hop, 1, 2));     // the foot hops along instead of pressing down
+        Assert.Equal(Green, Pixel(hop, 16, 2));    // and neither foot goes to the mouse
+        Assert.Equal(0u, Pixel(hop, 12, 3));
+        Assert.Equal(Blue, Pixel(hop, 6, 4));      // a device the pet holds hops with it
+    }
+
+    [Fact]
     public void Overlays_are_drawn_and_clipped()
     {
         var frame = Compose(Array.Empty<DevicePlacement>(),

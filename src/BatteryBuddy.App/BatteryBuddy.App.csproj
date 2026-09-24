@@ -15,8 +15,14 @@
     <Using Remove="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
+    <!-- skins.<pet>.<file>; "common" holds the sprites every pet shares. -->
+    <EmbeddedResource Include="Skins\common\sprites.txt" LogicalName="skins.common.sprites.txt" />
     <EmbeddedResource Include="Skins\axolotl\sprites.txt" LogicalName="skins.axolotl.sprites.txt" />
     <EmbeddedResource Include="Skins\axolotl\skin.json" LogicalName="skins.axolotl.skin.json" />
+    <EmbeddedResource Include="Skins\choppa\sprites.txt" LogicalName="skins.choppa.sprites.txt" />
+    <EmbeddedResource Include="Skins\choppa\skin.json" LogicalName="skins.choppa.skin.json" />
+    <EmbeddedResource Include="Skins\missy\sprites.txt" LogicalName="skins.missy.sprites.txt" />
+    <EmbeddedResource Include="Skins\missy\skin.json" LogicalName="skins.missy.skin.json" />
   </ItemGroup>
   <ItemGroup>
     <!-- Frontend + contract; the backend projects are referenced only by Backends.cs, the composition root. -->

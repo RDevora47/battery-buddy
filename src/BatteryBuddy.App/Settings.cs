@@ -1,12 +1,14 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using BatteryBuddy.Pet.Animation;
 using BatteryBuddy.Pet.Scene;
 using BatteryBuddy.Backend;
 
 namespace BatteryBuddy.App;
 
-sealed record Settings(double? Left, double? Top, BatteryStyle BatteryStyle = BatteryStyle.Outline)
+sealed record Settings(double? Left, double? Top, BatteryStyle BatteryStyle = BatteryStyle.Outline, string Skin = SkinLoader.Default,
+    FullChargeHat Hat = FullChargeHat.SaiyanHair)
 {
     static readonly string FilePath = AppDataFile("settings.json");
 

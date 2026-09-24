@@ -2,10 +2,20 @@ namespace BatteryBuddy.Pet.Scene;
 
 public static class SpriteSheetParser
 {
-    public static IReadOnlyDictionary<string, Sprite> Parse(string text)
+    /// <summary>
+    /// Sheets are read in order, sharing one palette: a later sheet can add or redefine colors for its own
+    /// sprites without recoloring those already read, and replaces any sprite of the same name.
+    /// </summary>
+    public static IReadOnlyDictionary<string, Sprite> Parse(params string[] sheets)
     {
         var palette = new Dictionary<char, uint>();
         var sprites = new Dictionary<string, Sprite>();
+        foreach (var sheet in sheets) ParseInto(sheet, palette, sprites);
+        return sprites;
+    }
+
+    static void ParseInto(string text, Dictionary<char, uint> palette, Dictionary<string, Sprite> sprites)
+    {
         var rows = new List<string>();
         string? mode = null;
         string? name = null;
@@ -59,7 +69,6 @@ public static class SpriteSheetParser
         }
 
         if (mode == "sprite") throw new FormatException($"sprite '{name}' missing 'end'");
-        return sprites;
     }
 
     static Sprite Build(string name, List<string> rows, Dictionary<char, uint> palette, int density)

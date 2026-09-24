@@ -27,11 +27,10 @@ public class IconCanvasTests
         Assert.Equal(0u, pixels[13 * 64]);
     }
 
-    [Fact]
-    public void Axolotl_tray_icon_fits()
+    [Theory, MemberData(nameof(SkinTests.Skins), MemberType = typeof(SkinTests))]
+    public void Tray_icon_fits(string skin)
     {
-        var dir = Path.Combine(AppContext.BaseDirectory, "Skins", "axolotl");
-        var sprites = SpriteSheetParser.Parse(File.ReadAllText(Path.Combine(dir, "sprites.txt")));
+        var sprites = TestSkin.Load(skin).Sprites;
         var (size, pixels) = IconCanvas.Square(sprites["body_idle"]);
         Assert.Equal(size * size, pixels.Length);
         Assert.True(size >= sprites["body_idle"].Width && size >= sprites["body_idle"].Height);

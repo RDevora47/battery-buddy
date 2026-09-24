@@ -4,10 +4,12 @@ using System.IO.Compression;
 using BatteryBuddy.Pet.Scene;
 
 var root = FindRoot();
-var skin = Path.Combine(root, "src", "BatteryBuddy.App", "Skins", "axolotl", "sprites.txt");
+var skins = Path.Combine(root, "src", "BatteryBuddy.App", "Skins");
 var output = Path.Combine(root, "src", "BatteryBuddy.App", "app.ico");
 
-var sprites = SpriteSheetParser.Parse(File.ReadAllText(skin));
+// The default pet (the axolotl), read over the shared sheet like the app does.
+var sprites = SpriteSheetParser.Parse(File.ReadAllText(Path.Combine(skins, "common", "sprites.txt")),
+    File.ReadAllText(Path.Combine(skins, "axolotl", "sprites.txt")));
 var (size, pixels) = IconCanvas.Square(Stack(sprites["body_idle"], sprites["gills_perky"]));
 
 // Bigger sizes repeat pixels so the art stays crisp; smaller ones average them.

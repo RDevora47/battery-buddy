@@ -49,4 +49,17 @@ public class SpriteSheetParserTests
     [Fact]
     public void Missing_end_is_rejected() =>
         Assert.Throws<FormatException>(() => SpriteSheetParser.Parse("palette\nk #000000\nsprite bad\nkk"));
+
+    [Fact]
+    public void Later_sheets_extend_the_palette_without_recoloring_earlier_sprites()
+    {
+        // A skin is the shared sheet plus the pet's own, which may reuse a palette letter for its own color.
+        var sprites = SpriteSheetParser.Parse(Sheet, "palette\nk #405060\nx #708090\nsprite pet\nkx\nend");
+        Assert.Equal(0xFF102030u, sprites["dot"].Pixels[1]);
+        Assert.Equal(new[] { 0xFF405060u, 0xFF708090u }, sprites["pet"].Pixels);
+    }
+
+    [Fact]
+    public void A_sprite_left_open_in_one_sheet_is_rejected() =>
+        Assert.Throws<FormatException>(() => SpriteSheetParser.Parse("palette\nk #000000\nsprite bad\nkk", "end"));
 }

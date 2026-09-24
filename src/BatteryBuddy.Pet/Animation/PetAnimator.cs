@@ -8,6 +8,8 @@ public sealed class PetAnimator
     public static readonly TimeSpan FrameInterval = TimeSpan.FromTicks(TimeSpan.TicksPerSecond / Fps);
 
     static readonly int[] HappyBob = { 0, 1, 1, 0, 1, 0 };
+    // A happy pet with a tail swings it through the same burst, coming to rest on the last frame.
+    static readonly string[] HappyWag = { "tail_wag1", "tail_wag2", "tail_wag1", "tail_wag2", "tail_wag1", "tail" };
     // With a critical device the idle burst shakes it instead (frames at Fps).
     static readonly int[] Shake = { -1, 1, -1, 1, -1, 1 };
     static readonly TimeSpan BurstLength = TimeSpan.FromTicks(FrameInterval.Ticks * HappyBob.Length);
@@ -20,6 +22,7 @@ public sealed class PetAnimator
     readonly PixelPoint _zzz;
     readonly PixelPoint _sweat;
     readonly PixelPoint _saiyan;
+    readonly PixelPoint _strawHat;
     readonly List<(Effect Kind, int X, int Y, TimeSpan Start)> _effects = new();
     TimeSpan? _sniffStart;
     TimeSpan? _sniffEndRequested;
@@ -32,8 +35,9 @@ public sealed class PetAnimator
 
     enum Effect { Ploof, Whoosh }
 
-    public PetAnimator(Func<double> random, TimeSpan now, PixelPoint zzz, PixelPoint sweat, PixelPoint saiyan = default)
+    public PetAnimator(Func<double> random, TimeSpan now, PixelPoint zzz, PixelPoint sweat, PixelPoint saiyan = default, PixelPoint strawHat = default)
     {
+        _strawHat = strawHat;
         _random = random;
         _zzz = zzz;
         _sweat = sweat;
@@ -48,8 +52,10 @@ public sealed class PetAnimator
     /// <summary>Lowest connected battery; drives gill droop and color fade.</summary>
     public int? LowestBattery { get; set; }
 
-    /// <summary>Every connected device is nearly full (see <see cref="MoodCalculator.SuperSaiyan"/>): Super Saiyan hair.</summary>
+    /// <summary>Every connected device is nearly full (see <see cref="MoodCalculator.SuperSaiyan"/>): the pet wears its <see cref="Hat"/>.</summary>
     public bool SuperSaiyan { get; set; }
+
+    public FullChargeHat Hat { get; set; } = FullChargeHat.SaiyanHair;
 
     public TimeSpan NextIdleAt { get; private set; }
 
@@ -111,6 +117,7 @@ public sealed class PetAnimator
 
         var overlays = new List<Overlay>();
         string body;
+        string tail = "tail";
         int dy = 0;
         int criticalDx = 0;
 
@@ -132,6 +139,7 @@ public sealed class PetAnimator
                 case Mood.Happy:
                     body = burst == BlinkBurstFrame ? "body_blink" : "body_idle";
                     dy = burst is int f ? HappyBob[f] : 0;
+                    if (burst is int w) tail = HappyWag[w];
                     break;
                 case Mood.Sleepy:
                     body = "body_sleepy";
@@ -145,7 +153,11 @@ public sealed class PetAnimator
             }
         }
 
-        if (SuperSaiyan) overlays.Insert(0, new Overlay("saiyan", _saiyan.X, _saiyan.Y + dy));
+        if (SuperSaiyan && Hat != FullChargeHat.None)
+        {
+            var (sprite, at) = Hat == FullChargeHat.StrawHat ? ("strawhat", _strawHat) : ("saiyan", _saiyan);
+            overlays.Insert(0, new Overlay(sprite, at.X, at.Y + dy));
+        }
 
         foreach (var (kind, x, y, start) in _effects)
         {
@@ -163,7 +175,7 @@ public sealed class PetAnimator
 
         return new FrameSpec(body, dy, overlays, criticalDx,
             MoodCalculator.GillsFor(LowestBattery), MoodCalculator.FadeFor(LowestBattery),
-            now < _leftPawUp ? 1 : 0, now < _rightPawUp ? 1 : 0, now < _clickUp ? 1 : 0, now < _offMouse);
+            now < _leftPawUp ? 1 : 0, now < _rightPawUp ? 1 : 0, now < _clickUp ? 1 : 0, now < _offMouse, tail);
     }
 
     bool IsSniffing(TimeSpan now) =>

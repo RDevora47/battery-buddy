@@ -53,6 +53,31 @@ public class PetAnimatorTests
     }
 
     [Fact]
+    public void Happy_burst_wags_the_tail_then_rests_it()
+    {
+        var animator = New();
+        Assert.Equal("tail", animator.FrameAt(Ms(100)).Tail);
+
+        // One tail pose per frame of the burst, swinging side to side, back to rest at the end.
+        animator.FrameAt(TimeSpan.FromSeconds(3));   // the burst starts
+        var tails = Enumerable.Range(0, 6).Select(f => animator.FrameAt(TimeSpan.FromSeconds(3) + Ms((f + 0.5) * 1000.0 / PetAnimator.Fps)).Tail).ToList();
+        Assert.Equal(new[] { "tail_wag1", "tail_wag2", "tail_wag1", "tail_wag2", "tail_wag1", "tail" }, tails);
+        Assert.Equal("tail", animator.FrameAt(TimeSpan.FromSeconds(3) + Ms(1100)).Tail);
+    }
+
+    [Theory]
+    [InlineData(Mood.Sleepy)]
+    [InlineData(Mood.Worried)]
+    public void Only_a_happy_pet_wags(Mood mood)
+    {
+        var animator = New();
+        animator.Mood = mood;
+        animator.FrameAt(TimeSpan.FromSeconds(3));
+        Assert.Equal("tail", animator.FrameAt(TimeSpan.FromSeconds(3) + Ms(10)).Tail);
+        Assert.Equal("tail", animator.FrameAt(TimeSpan.FromSeconds(3) + Ms(200)).Tail);
+    }
+
+    [Fact]
     public void Sniff_alternates_and_lasts_at_least_one_second()
     {
         var animator = New();
@@ -103,6 +128,33 @@ public class PetAnimatorTests
     }
 
     [Fact]
+    public void Full_charge_hat_can_be_a_straw_hat_or_none()
+    {
+        var animator = new PetAnimator(() => 0, TimeSpan.Zero, new PixelPoint(37, 5), new PixelPoint(36, 10),
+            new PixelPoint(12, 1), strawHat: new PixelPoint(10, 6));
+        animator.SuperSaiyan = true;
+        Assert.Equal(FullChargeHat.SaiyanHair, animator.Hat);
+
+        animator.Hat = FullChargeHat.StrawHat;
+        Assert.Contains(new Overlay("strawhat", 10, 6), animator.FrameAt(Ms(100)).Overlays);
+        Assert.DoesNotContain(animator.FrameAt(Ms(100)).Overlays, o => o.Sprite == "saiyan");
+        animator.FrameAt(TimeSpan.FromSeconds(3));
+        var bob = animator.FrameAt(TimeSpan.FromSeconds(3) + Ms(340));
+        Assert.Contains(new Overlay("strawhat", 10, 6 + bob.BodyDy), bob.Overlays);   // bobs with the pet
+
+        animator.Hat = FullChargeHat.None;
+        Assert.Empty(animator.FrameAt(TimeSpan.FromSeconds(5)).Overlays);
+    }
+
+    [Fact]
+    public void No_hat_until_every_device_is_nearly_full()
+    {
+        var animator = new PetAnimator(() => 0, TimeSpan.Zero, new PixelPoint(37, 5), new PixelPoint(36, 10),
+            new PixelPoint(12, 1), strawHat: new PixelPoint(10, 6)) { Hat = FullChargeHat.StrawHat };
+        Assert.Empty(animator.FrameAt(Ms(100)).Overlays);
+    }
+
+    [Fact]
     public void Critical_devices_are_shaken_instead_of_the_idle_bounce()
     {
         var animator = New();
@@ -114,6 +166,7 @@ public class PetAnimatorTests
         var mid = animator.FrameAt(Ms(3200));
         Assert.Equal((-1, 1), (start.CriticalDx, mid.CriticalDx));
         Assert.Equal((0, "body_idle"), (animator.FrameAt(Ms(3340)).BodyDy, animator.FrameAt(Ms(3340)).BodySprite)); // no bob or blink
+        Assert.Equal("tail", mid.Tail);   // nor a wag
         Assert.Equal(0, animator.FrameAt(Ms(4100)).CriticalDx);
     }
 

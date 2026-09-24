@@ -23,10 +23,12 @@ public sealed record SkinLayout(
     IReadOnlyDictionary<string, PixelPoint> Overlays,
     IReadOnlyDictionary<Paw, PixelPoint>? Paws = null,
     PixelPoint? Desk = null,
-    PixelPoint? MousePaw = null)
+    PixelPoint? MousePaw = null,
+    PixelPoint? Tail = null)
 {
     // Paws: the "paw" sprite drawn over the body at these points. Desk: the "desk" sprite in front of the
     // body, which the seat's device lies on. MousePaw: where the right paw goes to click the mouse.
+    // Tail: the tail sprites ("tail", "tail_wag1", "tail_wag2"), drawn behind the body and bobbing with it.
     // All are canvas positions like Body.
     public static readonly string[] RequiredPlaces = { "gills", "neck", "hands", "righthand", "seat", "side", "float1", "float2" };
 
@@ -59,7 +61,8 @@ public sealed record SkinLayout(
                 ? paws.EnumerateObject().ToDictionary(p => Enum.Parse<Paw>(p.Name, ignoreCase: true), p => Point(p.Value))
                 : null,
             root.TryGetProperty("desk", out var desk) ? Point(desk) : null,
-            root.TryGetProperty("mousePaw", out var mousePaw) ? Point(mousePaw) : null);
+            root.TryGetProperty("mousePaw", out var mousePaw) ? Point(mousePaw) : null,
+            root.TryGetProperty("tail", out var tail) ? Point(tail) : null);
     }
 
     static PixelPoint Point(JsonElement e) => new(e[0].GetInt32(), e[1].GetInt32());

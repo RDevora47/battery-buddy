@@ -1,7 +1,8 @@
 # Battery Buddy
 
 A pixel-art pet that lives above your taskbar and wears your Bluetooth devices: Mochi the
-axolotl, Maple the red panda, or the dogs Choppa and Missy. Each device shows its charge
+axolotl, Maple the red panda, Bebonio the bunny, Bao the giant panda, or the dogs Choppa and
+Missy. Each device shows its charge
 (colored outline, bar or mini battery) and a bolt while it charges. As your lowest device
 drains, Mochi's gills (or the others' ears) droop and its color fades; it gets sleepy (≤ 20 %)
 and, at ≤ 10 %, shakes the device to squeeze out the last energy.

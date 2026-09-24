@@ -12,6 +12,8 @@ static class SkinLoader
     {
         ("axolotl", "Mochi"),
         ("redpanda", "Maple"),
+        ("bunny", "Bebonio"),
+        ("panda", "Bao"),
         ("choppa", "Choppa"),
         ("missy", "Missy"),
     };

@@ -144,7 +144,7 @@ public class AxolotlSkinTests
     [Fact]
     public void Saiyan_hair_leaves_the_earbuds_and_their_full_badges_visible()
     {
-        // The hair only shows when every device is full, so the gills' earbuds all wear a "full" badge above them.
+        // The hair shows when every device is nearly full, so the gills' earbuds may wear a "full" badge above them.
         var hair = Sprites["saiyan"];
         var at = Layout.Overlays["saiyan"];   // bobs with the pet, like the gills' earbuds
         var earbud = Sprites["earbud"];

@@ -47,8 +47,8 @@ public sealed class PetAnimator
     /// <summary>Lowest connected battery; drives gill droop and color fade.</summary>
     public int? LowestBattery { get; set; }
 
-    /// <summary>Every connected device is at 100 %: Super Saiyan hair.</summary>
-    public bool AllFull { get; set; }
+    /// <summary>Every connected device is nearly full (see <see cref="MoodCalculator.SuperSaiyan"/>): Super Saiyan hair.</summary>
+    public bool SuperSaiyan { get; set; }
 
     public TimeSpan NextIdleAt { get; private set; }
 
@@ -124,7 +124,7 @@ public sealed class PetAnimator
             }
         }
 
-        if (AllFull) overlays.Insert(0, new Overlay("saiyan", _saiyan.X, _saiyan.Y + dy));
+        if (SuperSaiyan) overlays.Insert(0, new Overlay("saiyan", _saiyan.X, _saiyan.Y + dy));
 
         foreach (var (kind, x, y, start) in _effects)
         {

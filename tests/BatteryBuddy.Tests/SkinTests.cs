@@ -339,6 +339,20 @@ public class SkinTests
     }
 
     [Fact]
+    public void Choppas_fluffy_cheeks_are_15_percent_bigger()
+    {
+        // Her silhouette over the cheek rows (below the eyes, above the chin: art rows 14-18) grew by 15 %
+        // from the 320 half-pixels of the first slim redraw.
+        const int before = 320;
+        var body = TestSkin.Load("choppa").Sprites["body_idle"];
+        int area = 0;
+        for (int y = 14 * body.Density; y < 19 * body.Density; y++)
+            for (int x = 0; x < body.Width; x++)
+                if (body.Pixels[y * body.Width + x] != 0) area++;
+        Assert.Equal((int)Math.Ceiling(before * 1.15), area);
+    }
+
+    [Fact]
     public void Choppas_upright_ears_are_eleven_rows_long()
     {
         // 20 % longer than the first long ears' 9 rows, rounded up; they reach down to where they meet the crown.

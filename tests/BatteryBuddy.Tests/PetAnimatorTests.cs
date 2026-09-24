@@ -92,6 +92,21 @@ public class PetAnimatorTests
     }
 
     [Fact]
+    public void Scanning_sweeps_a_magnifying_glass_that_the_eyes_follow()
+    {
+        var animator = new PetAnimator(() => 0, TimeSpan.Zero, new PixelPoint(37, 5), new PixelPoint(36, 10), magnifier: new PixelPoint(0, 22));
+        animator.BeginSniff(TimeSpan.Zero);
+        var frames = Enumerable.Range(0, 8).Select(f => animator.FrameAt(Ms((f + 0.5) * 1000.0 / PetAnimator.Fps))).ToList();
+        var glass = frames.Select(f => Assert.Single(f.Overlays, o => o.Sprite == "magnifier")).ToList();
+        Assert.Equal(new[] { 0, 1, 2, 3, 3, 2, 1, 0 }, glass.Select(o => o.X));   // out and back
+        Assert.Equal(new[] { 22, 21, 21, 22, 22, 21, 21, 22 }, glass.Select(o => o.Y));   // along an arc
+        Assert.Equal(glass.Select(o => o.X < 2 ? "body_sniff_l" : "body_sniff_r"), frames.Select(f => f.BodySprite));
+
+        animator.EndSniff(Ms(10));
+        Assert.DoesNotContain(animator.FrameAt(Ms(1400)).Overlays, o => o.Sprite == "magnifier");
+    }
+
+    [Fact]
     public void Ploof_plays_three_smoke_frames_with_text()
     {
         var animator = New();

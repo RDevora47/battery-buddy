@@ -199,7 +199,7 @@ public class SkinTests
     [InlineData("choppa", 7)]    // rows 0-6 are for the ears
     [InlineData("missy", 3)]
     [InlineData("redpanda", 3)]
-    [InlineData("bunny", 9)]     // rows 0-8 are for the long ears
+    [InlineData("bunny", 11)]    // rows 0-10 are for the long ears
     [InlineData("panda", 4)]
     [InlineData("parrot", 5)]     // small and perched on the keyboard
     public void Saiyan_hair_flames_up_high_above_the_head(string skin, int headTop)
@@ -466,7 +466,7 @@ public class SkinTests
     [InlineData("choppa", 7, 12)]
     [InlineData("missy", 3, 8)]
     [InlineData("redpanda", 3, 8)]
-    [InlineData("bunny", 9, 14)]
+    [InlineData("bunny", 11, 16)]
     [InlineData("panda", 4, 11)]
     [InlineData("parrot", 5, 9)]
     public void Straw_hat_sits_on_the_head_above_the_eyes(string skin, int headTop, int eyeRow)

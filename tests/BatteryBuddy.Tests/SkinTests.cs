@@ -175,7 +175,7 @@ public class SkinTests
     [InlineData("missy", 3)]
     [InlineData("redpanda", 3)]
     [InlineData("bunny", 9)]     // rows 0-8 are for the long ears
-    [InlineData("panda", 3)]
+    [InlineData("panda", 4)]
     public void Saiyan_hair_flames_up_high_above_the_head(string skin, int headTop)
     {
         // Classic Super Saiyan: the spikes rise above the head by more than the axolotl's whole head is tall
@@ -439,7 +439,7 @@ public class SkinTests
     [InlineData("missy", 3, 8)]
     [InlineData("redpanda", 3, 8)]
     [InlineData("bunny", 9, 14)]
-    [InlineData("panda", 3, 8)]
+    [InlineData("panda", 4, 11)]
     public void Straw_hat_sits_on_the_head_above_the_eyes(string skin, int headTop, int eyeRow)
     {
         var (_, Layout, Sprites) = TestSkin.Load(skin);

@@ -1,3 +1,4 @@
+using BatteryBuddy.Devices;
 using BatteryBuddy.Pet.Animation;
 using BatteryBuddy.Pet.Scene;
 
@@ -212,6 +213,36 @@ public class SkinTests
         int top = Layout.Body.Y + headTop;
         Assert.True(top - hair.Y > risesAbove, $"hair top {hair.Y} is only {top - hair.Y} rows above the head");
         Assert.True(hair.Y + Sprites["saiyan"].ArtHeight > top, "hair must reach down onto the head");
+    }
+
+    [Theory]
+    [InlineData("axolotl", 0)]   // body_idle art row of the top of the head, below any ears
+    [InlineData("choppa", 7)]
+    [InlineData("missy", 3)]
+    [InlineData("redpanda", 3)]
+    [InlineData("bunny", 11)]
+    [InlineData("panda", 4)]
+    [InlineData("parrot", 5)]
+    public void Saiyan_hairline_sits_on_the_head_with_no_gap(string skin, int headTop)
+    {
+        // Across the forehead (the bangs and the notches between them) the hair's lowest pixel touches or
+        // overlaps the head, so the hair never floats above it.
+        const int foreheadFrom = 14, foreheadTo = 41;   // saiyan sprite columns
+        var (_, Layout, Sprites) = TestSkin.Load(skin);
+        var hair = Sprites["saiyan"];
+        var body = Sprites["body_idle"];
+        int d = hair.Density;
+        var at = Layout.Overlays["saiyan"];
+        for (int hx = foreheadFrom; hx <= foreheadTo; hx++)
+        {
+            int hairBottom = Enumerable.Range(0, hair.Height).Last(y => hair.Pixels[y * hair.Width + hx] != 0) + at.Y * d;
+            int bx = at.X * d + hx - Layout.Body.X * d;
+            if (bx < 0 || bx >= body.Width) continue;
+            var headRows = Enumerable.Range(headTop * d, body.Height - headTop * d).Where(y => body.Pixels[y * body.Width + bx] != 0);
+            if (!headRows.Any()) continue;
+            int headTopRow = headRows.First() + Layout.Body.Y * d;
+            Assert.True(hairBottom + 1 >= headTopRow, $"column {hx}: hair ends at {hairBottom / 2.0}, head starts at {headTopRow / 2.0}");
+        }
     }
 
     public static readonly string[] TailSprites = { "tail", "tail_wag1", "tail_wag2" };
@@ -438,27 +469,22 @@ public class SkinTests
     public void Full_charge_hats_leave_the_earbuds_and_their_full_badges_visible(string skin, string hatSprite)
     {
         var (_, Layout, Sprites) = TestSkin.Load(skin);
-        // A hat shows when every device is nearly full, so the gills' earbuds may wear a "full" badge above them.
-        var hair = Sprites[hatSprite];
-        var at = Layout.Overlays[hatSprite];   // bobs with the pet, like the gills' earbuds
-        var earbud = Sprites["earbud"];
-        var full = Sprites["full"];
-        foreach (var pt in Layout.Places["gills"].Points)
-        {
-            var clear = new[]
-            {
-                (pt.X, pt.Y, earbud.ArtWidth, earbud.ArtHeight),
-                (pt.X + earbud.ArtWidth - full.ArtWidth, pt.Y - full.ArtHeight, full.ArtWidth, full.ArtHeight),
-            };
-            foreach (var (x, y, w, h) in clear)
-                for (int py = y * hair.Density; py < (y + h) * hair.Density; py++)
-                    for (int px = x * hair.Density; px < (x + w) * hair.Density; px++)
-                    {
-                        int hx = px - at.X * hair.Density, hy = py - at.Y * hair.Density;
-                        bool covered = hx >= 0 && hy >= 0 && hx < hair.Width && hy < hair.Height && hair.Pixels[hy * hair.Width + hx] != 0;
-                        Assert.False(covered, $"{hatSprite} covers ({px / 2.0}, {py / 2.0}) near the earbud at ({pt.X}, {pt.Y})");
-                    }
-        }
+        // A hat shows when every device is nearly full, so the earbuds on the ears may wear a "full" badge. The ears
+        // are often under the hat, so the earbuds and their badges are drawn over it.
+        var earbuds = new DevicePlacement(TestReadings.Make("Buds", DeviceKind.Earbuds, battery: 100), "gills", "earbud");
+        var at = Layout.Overlays[hatSprite];
+        var bare = FrameComposer.Compose(Layout, Sprites, new[] { earbuds }, new FrameSpec("body_idle", 0, Array.Empty<Overlay>(), Gills: "gills_perky"));
+        var hatted = FrameComposer.Compose(Layout, Sprites, new[] { earbuds }, new FrameSpec("body_idle", 0, new[] { new Overlay(hatSprite, at.X, at.Y) }, Gills: "gills_perky"));
+        int shown = 0;
+        for (int y = 0; y < bare.Height; y++)
+            for (int x = 0; x < bare.Width; x++)
+                if (bare.HitTest(x, y, out _) == HitTarget.Device)
+                {
+                    Assert.True(bare.Pixels[y * bare.Width + x] == hatted.Pixels[y * bare.Width + x],
+                        $"{hatSprite} covers the earbuds at frame pixel ({x}, {y})");
+                    shown++;
+                }
+        Assert.True(shown > 0, "the earbuds weren't drawn");
     }
 
     [Theory]

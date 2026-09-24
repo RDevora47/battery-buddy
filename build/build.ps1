@@ -2,9 +2,9 @@
 .SYNOPSIS
     Builds Battery Buddy into build\out\BatteryBuddy.exe.
 .EXAMPLE
-    .\build\build.ps1              # test + publish Release
+    .\build\build.ps1              # test + publish Release, with the rolling 5-minute logs\diag.log
     .\build\build.ps1 -SkipTests   # publish only
-    .\build\build.ps1 -SelfContained   # bundle the .NET runtime so the exe runs without .NET installed
+    .\build\build.ps1 -SelfContained   # bundle the .NET runtime so the exe runs without .NET installed; no diag.log
 #>
 param(
     [string]$Configuration = "Release",
@@ -35,7 +35,7 @@ try {
         $publishArgs += "--self-contained", "true", "-p:IncludeNativeLibrariesForSelfExtract=true", "-p:EnableCompressionInSingleFile=true"
     }
     else {
-        $publishArgs += "--self-contained", "false"
+        $publishArgs += "--self-contained", "false", "-p:DiagLog=true"
     }
     dotnet publish @publishArgs
     if ($LASTEXITCODE -ne 0) { throw "Publish failed." }

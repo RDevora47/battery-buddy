@@ -45,6 +45,8 @@ public static class FrameComposer
 {
     internal const short NoOwner = -1;
     internal const short BodyOwner = 0;
+    // The place the earbuds go: the gills on the axolotl, the ears on every other pet.
+    const string EarPlace = "gills";
 
     /// <summary>Frame pixels per art pixel: the highest sprite density, which every other density must divide.</summary>
     public static int ResolutionOf(IReadOnlyDictionary<string, Sprite> sprites)
@@ -235,11 +237,14 @@ public static class FrameComposer
                 if (!(reaching && paw == Paw.Right))
                     Blit(sprites["paw"], point.X + spec.BodyDx, point.Y + spec.BodyDy + (layout.Perched ? 0 : spec.PawDy(paw)), BodyOwner, spec.Fade);
         for (int i = 0; i < placements.Count; i++)
-            if (placements[i].PlaceName != "seat") DrawDevice(i);
+            if (placements[i].PlaceName is not ("seat" or EarPlace)) DrawDevice(i);
         if (reaching)   // on the mouse, which sits on the desk and doesn't bob
             Blit(sprites["paw"], layout.MousePaw!.Value.X, layout.MousePaw.Value.Y + spec.PawRightDy, BodyOwner, spec.Fade);
         foreach (var overlay in spec.Overlays)
             Blit(sprites[overlay.Sprite], overlay.X, overlay.Y, BodyOwner);
+        // Earbuds sit in the ears, which a hat often covers; they stay in view over it.
+        for (int i = 0; i < placements.Count; i++)
+            if (placements[i].PlaceName == EarPlace) DrawDevice(i);
 
         return new ComposedFrame(w, h, res, pixels, owners, placements);
     }

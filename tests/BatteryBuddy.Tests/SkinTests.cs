@@ -434,6 +434,29 @@ public class SkinTests
         Assert.InRange(centre, body - 1, body + 1);   // centred on the pet, in half art pixels
     }
 
+    [Theory, MemberData(nameof(Skins))]
+    public void The_scanning_magnifier_stays_on_the_canvas_and_off_the_earbuds(string skin)
+    {
+        // It swings up to 3 right and 1 up from its spot (PetAnimator's sweep); the pet doesn't bob while scanning.
+        var (_, Layout, Sprites) = TestSkin.Load(skin);
+        var glass = Sprites["magnifier"];
+        var earbud = Sprites["earbud"];
+        var at = Layout.Overlays["magnifier"];
+        for (int dx = 0; dx <= 3; dx++)
+            for (int dy = -1; dy <= 0; dy++)
+            {
+                AssertFits(Layout, "magnifier", at.X + dx, at.Y + dy, glass.ArtWidth, glass.ArtHeight);
+                foreach (var bud in Layout.Places["gills"].Points)
+                    for (int py = bud.Y * 2; py < (bud.Y + earbud.ArtHeight) * 2; py++)
+                        for (int px = bud.X * 2; px < (bud.X + earbud.ArtWidth) * 2; px++)
+                        {
+                            int gx = px - (at.X + dx) * 2, gy = py - (at.Y + dy) * 2;
+                            bool covered = gx >= 0 && gy >= 0 && gx < glass.Width && gy < glass.Height && glass.Pixels[gy * glass.Width + gx] != 0;
+                            Assert.False(covered, $"the magnifier covers the earbud at ({bud.X}, {bud.Y})");
+                        }
+            }
+    }
+
     static void AssertFits(SkinLayout Layout, string what, int x, int y, int w, int h) =>
         Assert.True(x >= 0 && y >= 0 && x + w <= Layout.CanvasWidth && y + h <= Layout.CanvasHeight,
             $"{what} at ({x},{y}) size {w}x{h} exceeds canvas {Layout.CanvasWidth}x{Layout.CanvasHeight}");

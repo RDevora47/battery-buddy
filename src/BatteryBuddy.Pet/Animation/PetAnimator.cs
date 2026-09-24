@@ -12,6 +12,9 @@ public sealed class PetAnimator
     static readonly string[] HappyWag = { "tail_wag1", "tail_wag2", "tail_wag1", "tail_wag2", "tail_wag1", "tail" };
     // With a critical device the idle burst shakes it instead (frames at Fps).
     static readonly int[] Shake = { -1, 1, -1, 1, -1, 1 };
+    // While scanning, the magnifying glass swings along a small arc beside the pet and back (frames at Fps);
+    // the pet's eyes follow it, looking left on the near half of the swing and right on the far half.
+    static readonly PixelPoint[] MagnifierSweep = { new(0, 0), new(1, -1), new(2, -1), new(3, 0), new(3, 0), new(2, -1), new(1, -1), new(0, 0) };
     static readonly TimeSpan BurstLength = TimeSpan.FromTicks(FrameInterval.Ticks * HappyBob.Length);
     static readonly TimeSpan MinSniff = TimeSpan.FromSeconds(1);
     static readonly TimeSpan EffectLength = TimeSpan.FromTicks(TimeSpan.TicksPerSecond / 2);
@@ -23,6 +26,7 @@ public sealed class PetAnimator
     readonly PixelPoint _sweat;
     readonly PixelPoint _saiyan;
     readonly PixelPoint _strawHat;
+    readonly PixelPoint _magnifier;
     readonly List<(Effect Kind, int X, int Y, TimeSpan Start)> _effects = new();
     TimeSpan? _sniffStart;
     TimeSpan? _sniffEndRequested;
@@ -35,9 +39,11 @@ public sealed class PetAnimator
 
     enum Effect { Ploof, Whoosh }
 
-    public PetAnimator(Func<double> random, TimeSpan now, PixelPoint zzz, PixelPoint sweat, PixelPoint saiyan = default, PixelPoint strawHat = default)
+    public PetAnimator(Func<double> random, TimeSpan now, PixelPoint zzz, PixelPoint sweat, PixelPoint saiyan = default, PixelPoint strawHat = default,
+        PixelPoint magnifier = default)
     {
         _strawHat = strawHat;
+        _magnifier = magnifier;
         _random = random;
         _zzz = zzz;
         _sweat = sweat;
@@ -123,7 +129,9 @@ public sealed class PetAnimator
 
         if (IsSniffing(now))
         {
-            body = FrameIndex(now, _sniffStart!.Value) % 4 < 2 ? "body_sniff_l" : "body_sniff_r";
+            var sweep = MagnifierSweep[FrameIndex(now, _sniffStart!.Value) % MagnifierSweep.Length];
+            body = sweep.X < 2 ? "body_sniff_l" : "body_sniff_r";
+            overlays.Add(new Overlay("magnifier", _magnifier.X + sweep.X, _magnifier.Y + sweep.Y));
         }
         else
         {

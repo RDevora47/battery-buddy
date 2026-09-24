@@ -1,9 +1,9 @@
 {
   "canvas": { "width": 44, "height": 44 },
   "body": [6, 10],
-  "paws": { "left": [15, 26], "right": [25, 26] },
+  "paws": { "left": [14, 25], "right": [24, 25] },
   "desk": [5, 30],
-  "mousePaw": [30, 27],
+  "mousePaw": [30, 26],
   "places": {
     "gills":     { "points": [[7, 16], [34, 16]], "bar": [16, 10],  "followsBody": true },
     "neck":      { "points": [[16, 24], [25, 24]], "bar": [0, 7],  "followsBody": true },

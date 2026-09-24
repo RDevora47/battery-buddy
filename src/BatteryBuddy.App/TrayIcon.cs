@@ -8,10 +8,12 @@ sealed class TrayIcon : IDisposable
 {
     readonly WinForms.NotifyIcon _icon;
     readonly WinForms.ContextMenuStrip _menu;
+    readonly Func<string> _petName;
 
     public TrayIcon(Sprite iconSprite, Func<Task> rescan, Func<BatteryStyle> getStyle, Action<BatteryStyle> setStyle,
         IReadOnlyList<(string Skin, string Name)> pets, Func<string> getSkin, Action<string> setSkin, Action quit)
     {
+        _petName = () => pets.FirstOrDefault(p => p.Skin == getSkin()).Name ?? "";
         _menu = new WinForms.ContextMenuStrip();
         _menu.Items.Add("Rescan", null, (_, _) => _ = rescan());
 
@@ -61,7 +63,7 @@ sealed class TrayIcon : IDisposable
         _icon = new WinForms.NotifyIcon
         {
             Icon = ToIcon(iconSprite),
-            Text = "Battery Buddy",
+            Text = Tooltip(),
             ContextMenuStrip = _menu,
             Visible = true,
         };
@@ -70,13 +72,16 @@ sealed class TrayIcon : IDisposable
     /// <summary>Shows the tray menu at the cursor (used for right-click on the pet).</summary>
     public void ShowMenu() => _menu.Show(WinForms.Cursor.Position);
 
-    /// <summary>Shows a new pet in the tray.</summary>
+    /// <summary>Shows a new pet in the tray: its picture and its name in the tooltip.</summary>
     public void SetIcon(Sprite iconSprite)
     {
         var old = _icon.Icon;
         _icon.Icon = ToIcon(iconSprite);
+        _icon.Text = Tooltip();
         Release(old);
     }
+
+    string Tooltip() => _petName() is { Length: > 0 } name ? $"Battery Buddy — {name}" : "Battery Buddy";
 
     static void Release(Drawing.Icon? icon)
     {

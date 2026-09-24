@@ -171,7 +171,7 @@ public class SkinTests
 
     [Theory]
     [InlineData("axolotl", 0, 10)]   // body_idle art rows 0-9: the head down to the chin
-    [InlineData("choppa", 4, 11)]    // the ears overlay rows 0-3; the head is rows 4-14
+    [InlineData("choppa", 3, 12)]    // the domed crown starts at row 3; the chin is row 14
     [InlineData("missy", 3, 12)]     // curls from row 3, beard down to row 14
     public void Saiyan_hair_flames_up_higher_than_the_head_is_tall(string skin, int headTop, int headRows)
     {
@@ -260,7 +260,7 @@ public class SkinTests
 
     [Theory]
     [InlineData("axolotl", 0)]
-    [InlineData("choppa", 4)]
+    [InlineData("choppa", 3)]
     [InlineData("missy", 3)]
     public void Straw_hat_sits_on_the_head_above_the_eyes(string skin, int headTop)
     {

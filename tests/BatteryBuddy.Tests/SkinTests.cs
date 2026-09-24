@@ -171,7 +171,7 @@ public class SkinTests
 
     [Theory]
     [InlineData("axolotl", 0, 10)]   // body_idle art rows 0-9: the head down to the chin
-    [InlineData("choppa", 3, 12)]    // the domed crown starts at row 3; the chin is row 14
+    [InlineData("choppa", 6, 12)]    // three rows of headroom for the tall ears; crown at row 6, chin at row 17
     [InlineData("missy", 3, 12)]     // curls from row 3, beard down to row 14
     public void Saiyan_hair_flames_up_higher_than_the_head_is_tall(string skin, int headTop, int headRows)
     {
@@ -259,15 +259,15 @@ public class SkinTests
     }
 
     [Theory]
-    [InlineData("axolotl", 0)]
-    [InlineData("choppa", 3)]
-    [InlineData("missy", 3)]
-    public void Straw_hat_sits_on_the_head_above_the_eyes(string skin, int headTop)
+    [InlineData("axolotl", 0, 8)]
+    [InlineData("choppa", 6, 11)]
+    [InlineData("missy", 3, 8)]
+    public void Straw_hat_sits_on_the_head_above_the_eyes(string skin, int headTop, int eyeRow)
     {
         var (_, Layout, Sprites) = TestSkin.Load(skin);
         var hat = Layout.Overlays["strawhat"];
         int top = Layout.Body.Y + headTop, bottom = hat.Y + Sprites["strawhat"].ArtHeight;
-        Assert.InRange(bottom, top + 1, Layout.Body.Y + 8 - 1);   // brim on the head; every pet's eyes start at body art row 8
+        Assert.InRange(bottom, top + 1, Layout.Body.Y + eyeRow - 1);   // brim on the head, above the eyes (body art rows)
         int centre = hat.X * 2 + Sprites["strawhat"].Width / 2, body = Layout.Body.X * 2 + Sprites["body_idle"].Width / 2;
         Assert.InRange(centre, body - 1, body + 1);   // centred on the pet, in half art pixels
     }

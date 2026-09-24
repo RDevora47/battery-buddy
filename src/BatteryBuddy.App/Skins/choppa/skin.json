@@ -1,6 +1,6 @@
 {
   "canvas": { "width": 44, "height": 44 },
-  "body": [6, 7],
+  "body": [6, 5],
   "paws": { "left": [14, 25], "right": [24, 25] },
   "desk": [5, 30],
   "tail": [25, 18],

@@ -171,7 +171,7 @@ public class SkinTests
 
     [Theory]
     [InlineData("axolotl", 0)]   // body_idle art row of the top of the head
-    [InlineData("choppa", 5)]    // rows 0-4 are for the ears
+    [InlineData("choppa", 7)]    // rows 0-6 are for the ears
     [InlineData("missy", 3)]
     public void Saiyan_hair_flames_up_high_above_the_head(string skin, int headTop)
     {
@@ -303,6 +303,51 @@ public class SkinTests
         }
     }
 
+    // Choppa's body_idle, in art rows: the head runs from the crown to the chin; her shoulders are below it.
+    const int ChoppaCrown = 7, ChoppaChin = 19, ChoppaShoulders = 22;
+
+    // First and last opaque sprite pixel columns over a range of art rows (@2x sprite rows).
+    static (int Left, int Right) Extent(Sprite s, int fromRow, int toRow)
+    {
+        int left = int.MaxValue, right = int.MinValue;
+        for (int y = fromRow * s.Density; y < Math.Min((toRow + 1) * s.Density, s.Height); y++)
+            for (int x = 0; x < s.Width; x++)
+                if (s.Pixels[y * s.Width + x] != 0) { left = Math.Min(left, x); right = Math.Max(right, x); }
+        return (left, right);
+    }
+
+    [Fact]
+    public void Choppas_shoulders_are_as_wide_as_her_head()
+    {
+        var body = TestSkin.Load("choppa").Sprites["body_idle"];
+        var head = Extent(body, ChoppaCrown, ChoppaChin);
+        var shoulders = Extent(body, ChoppaShoulders, body.ArtHeight - 1);
+        Assert.Equal(head, shoulders);
+    }
+
+    [Fact]
+    public void Choppas_ears_stay_within_the_sides_of_her_head()
+    {
+        var sprites = TestSkin.Load("choppa").Sprites;
+        var head = Extent(sprites["body_idle"], ChoppaCrown, ChoppaChin);
+        foreach (var ears in new[] { "gills_perky", "gills_droopy", "gills_limp" })
+        {
+            var e = Extent(sprites[ears], 0, sprites[ears].ArtHeight - 1);
+            Assert.True(e.Left >= head.Left && e.Right <= head.Right,
+                $"{ears} spans columns {e.Left}-{e.Right}, the head only {head.Left}-{head.Right}");
+        }
+    }
+
+    [Fact]
+    public void Choppas_upright_ears_are_eleven_rows_long()
+    {
+        // 20 % longer than the first long ears' 9 rows, rounded up; they reach down to where they meet the crown.
+        var perky = TestSkin.Load("choppa").Sprites["gills_perky"];
+        int top = Enumerable.Range(0, perky.Height).First(y => Enumerable.Range(0, perky.Width).Any(x => perky.Pixels[y * perky.Width + x] != 0));
+        int bottom = Enumerable.Range(0, perky.Height).Last(y => Enumerable.Range(0, perky.Width).Any(x => perky.Pixels[y * perky.Width + x] != 0));
+        Assert.Equal(11, (bottom - top + 1) / perky.Density);
+    }
+
     [Fact]
     public void The_axolotl_has_no_tail() => Assert.Null(TestSkin.Load("axolotl").Layout.Tail);
 
@@ -363,7 +408,7 @@ public class SkinTests
 
     [Theory]
     [InlineData("axolotl", 0, 8)]
-    [InlineData("choppa", 5, 10)]
+    [InlineData("choppa", 7, 12)]
     [InlineData("missy", 3, 8)]
     public void Straw_hat_sits_on_the_head_above_the_eyes(string skin, int headTop, int eyeRow)
     {

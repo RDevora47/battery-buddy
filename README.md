@@ -1,17 +1,17 @@
 # Battery Buddy
 
-A pixel-art pet that lives above your taskbar and wears your Bluetooth devices: an axolotl,
-or the dogs Choppa and Missy. Each device shows its charge (colored outline, bar or mini
-battery) and a bolt while it charges. As your lowest device drains, the axolotl's gills (or the
-dog's ears) droop and its color fades; it gets sleepy (≤ 20 %) and, at ≤ 10 %, shakes the
-device to squeeze out the last energy.
+A pixel-art pet that lives above your taskbar and wears your Bluetooth devices: Mochi the
+axolotl, Maple the red panda, or the dogs Choppa and Missy. Each device shows its charge
+(colored outline, bar or mini battery) and a bolt while it charges. As your lowest device
+drains, Mochi's gills (or the others' ears) droop and its color fades; it gets sleepy (≤ 20 %)
+and, at ≤ 10 %, shakes the device to squeeze out the last energy.
 
 - **Click a device** — speech bubble with its latest charge (Galaxy Buds: left / right / case).
-- **Click the axolotl** — rescan now.
+- **Click the pet** — rescan now.
 - **Drag** — move it; the position is remembered.
 - **Right-click or tray icon** — Rescan, Pet, Full-charge hat, Battery display, Start with Windows, Quit.
 - **Full-charge hat** — what the pet wears while every device is at 95 % or more: Super Saiyan hair,
-  a straw hat (One Piece), or none. The dogs also wag their tails when they're happy.
+  a straw hat (One Piece), or none. Maple and the dogs also wag their tails when they're happy.
 
 ## Setup
 

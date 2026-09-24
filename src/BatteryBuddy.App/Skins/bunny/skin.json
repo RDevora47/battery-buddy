@@ -3,13 +3,13 @@
   "body": [6, 3],
   "paws": { "left": [15, 29], "right": [25, 29] },
   "desk": [5, 33],
-  "mousePaw": [30, 30],
+  "mousePaw": [30, 31],
   "places": {
     "gills":     { "points": [[14, 13], [26, 13]], "bar": [16, 13],  "followsBody": true },
     "neck":      { "points": [[16, 27], [25, 27]], "bar": [0, 10],  "followsBody": true },
     "hands":     { "points": [[18, 29]],           "bar": [16, 44], "followsBody": true },
-    "righthand": { "points": [[30, 33]],           "bar": [30, 41], "followsBody": false, "followsClick": true, "icons": "right" },
-    "seat":      { "points": [[12, 33]],           "bar": [15, 41], "followsBody": false, "icons": "left" },
+    "righthand": { "points": [[30, 34]],           "bar": [30, 41], "followsBody": false, "followsClick": true, "icons": "right" },
+    "seat":      { "points": [[12, 34]],           "bar": [15, 41], "followsBody": false, "icons": "left" },
     "side":      { "points": [[39, 27]],           "bar": [33, 25], "followsBody": false },
     "float1":    { "points": [[0, 29]],            "bar": [0, 35],  "followsBody": false },
     "float2":    { "points": [[0, 20]],            "bar": [0, 26],  "followsBody": false }

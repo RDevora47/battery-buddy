@@ -32,7 +32,8 @@ public partial class App : Application
         var controller = _controller;
         _tray = new TrayIcon(controller.IconSprite, controller.RescanAsync,
             () => controller.BatteryStyle, style => controller.BatteryStyle = style,
-            SkinLoader.Pets, () => controller.Skin, skin => controller.Skin = skin, Shutdown);
+            SkinLoader.Pets, () => controller.Skin, skin => controller.Skin = skin,
+            () => controller.Hat, hat => controller.Hat = hat, Shutdown);
         var tray = _tray;
         controller.SkinChanged += () => tray.SetIcon(controller.IconSprite);
         window.MenuRequested += _tray.ShowMenu;

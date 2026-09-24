@@ -1,3 +1,4 @@
+using BatteryBuddy.Pet.Animation;
 using BatteryBuddy.Pet.Scene;
 using Drawing = System.Drawing;
 using WinForms = System.Windows.Forms;
@@ -11,7 +12,8 @@ sealed class TrayIcon : IDisposable
     readonly Func<string> _petName;
 
     public TrayIcon(Sprite iconSprite, Func<Task> rescan, Func<BatteryStyle> getStyle, Action<BatteryStyle> setStyle,
-        IReadOnlyList<(string Skin, string Name)> pets, Func<string> getSkin, Action<string> setSkin, Action quit)
+        IReadOnlyList<(string Skin, string Name)> pets, Func<string> getSkin, Action<string> setSkin,
+        Func<FullChargeHat> getHat, Action<FullChargeHat> setHat, Action quit)
     {
         _petName = () => pets.FirstOrDefault(p => p.Skin == getSkin()).Name ?? "";
         _menu = new WinForms.ContextMenuStrip();
@@ -30,6 +32,26 @@ sealed class TrayIcon : IDisposable
         }
         SyncPet();
         _menu.Items.Add(pet);
+
+        // Worn while every device is nearly full.
+        var hat = new WinForms.ToolStripMenuItem("Full-charge hat");
+        var hatItems = new[]
+        {
+            (Hat: FullChargeHat.SaiyanHair, Item: new WinForms.ToolStripMenuItem("Super Saiyan hair")),
+            (Hat: FullChargeHat.StrawHat, Item: new WinForms.ToolStripMenuItem("Straw hat")),
+            (Hat: FullChargeHat.None, Item: new WinForms.ToolStripMenuItem("None")),
+        };
+        void SyncHat()
+        {
+            foreach (var (h, item) in hatItems) item.Checked = getHat() == h;
+        }
+        foreach (var (h, item) in hatItems)
+        {
+            item.Click += (_, _) => { setHat(h); SyncHat(); };
+            hat.DropDownItems.Add(item);
+        }
+        SyncHat();
+        _menu.Items.Add(hat);
 
         var display = new WinForms.ToolStripMenuItem("Battery display");
         var outline = new WinForms.ToolStripMenuItem("Colored outline");

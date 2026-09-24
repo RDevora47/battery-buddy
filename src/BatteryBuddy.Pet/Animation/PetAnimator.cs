@@ -22,6 +22,7 @@ public sealed class PetAnimator
     readonly PixelPoint _zzz;
     readonly PixelPoint _sweat;
     readonly PixelPoint _saiyan;
+    readonly PixelPoint _strawHat;
     readonly List<(Effect Kind, int X, int Y, TimeSpan Start)> _effects = new();
     TimeSpan? _sniffStart;
     TimeSpan? _sniffEndRequested;
@@ -34,8 +35,9 @@ public sealed class PetAnimator
 
     enum Effect { Ploof, Whoosh }
 
-    public PetAnimator(Func<double> random, TimeSpan now, PixelPoint zzz, PixelPoint sweat, PixelPoint saiyan = default)
+    public PetAnimator(Func<double> random, TimeSpan now, PixelPoint zzz, PixelPoint sweat, PixelPoint saiyan = default, PixelPoint strawHat = default)
     {
+        _strawHat = strawHat;
         _random = random;
         _zzz = zzz;
         _sweat = sweat;
@@ -50,8 +52,10 @@ public sealed class PetAnimator
     /// <summary>Lowest connected battery; drives gill droop and color fade.</summary>
     public int? LowestBattery { get; set; }
 
-    /// <summary>Every connected device is nearly full (see <see cref="MoodCalculator.SuperSaiyan"/>): Super Saiyan hair.</summary>
+    /// <summary>Every connected device is nearly full (see <see cref="MoodCalculator.SuperSaiyan"/>): the pet wears its <see cref="Hat"/>.</summary>
     public bool SuperSaiyan { get; set; }
+
+    public FullChargeHat Hat { get; set; } = FullChargeHat.SaiyanHair;
 
     public TimeSpan NextIdleAt { get; private set; }
 
@@ -149,7 +153,11 @@ public sealed class PetAnimator
             }
         }
 
-        if (SuperSaiyan) overlays.Insert(0, new Overlay("saiyan", _saiyan.X, _saiyan.Y + dy));
+        if (SuperSaiyan && Hat != FullChargeHat.None)
+        {
+            var (sprite, at) = Hat == FullChargeHat.StrawHat ? ("strawhat", _strawHat) : ("saiyan", _saiyan);
+            overlays.Insert(0, new Overlay(sprite, at.X, at.Y + dy));
+        }
 
         foreach (var (kind, x, y, start) in _effects)
         {

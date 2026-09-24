@@ -36,7 +36,7 @@ public class SkinTests
         "body_idle", "body_blink", "body_sleepy", "body_worried", "body_sniff_l", "body_sniff_r",
         "earbud", "mouse", "gamepad", "keyboard", "phone", "gadget",
         "smoke1", "smoke2", "smoke3", "ploof_text", "zzz", "sweat",
-        "bolt", "full", "whoosh1", "whoosh2", "whoosh3", "saiyan",
+        "bolt", "full", "whoosh1", "whoosh2", "whoosh3", "saiyan", "strawhat",
         "gills_perky", "gills_droopy", "gills_limp", "paw", "desk",
     };
 
@@ -76,6 +76,7 @@ public class SkinTests
         Assert.True(Layout.Overlays.ContainsKey("zzz"));
         Assert.True(Layout.Overlays.ContainsKey("sweat"));
         Assert.True(Layout.Overlays.ContainsKey("saiyan"));
+        Assert.True(Layout.Overlays.ContainsKey("strawhat"));
         Assert.NotNull(Layout.Paws);
         Assert.Equal(new[] { Paw.Left, Paw.Right }, Layout.Paws!.Keys.Order());
     }
@@ -218,13 +219,25 @@ public class SkinTests
         Assert.True(Top("gills_droopy") < Top("gills_limp"), "limp ears must sit lower than droopy ones");
     }
 
-    [Theory, MemberData(nameof(Skins))]
-    public void Saiyan_hair_leaves_the_earbuds_and_their_full_badges_visible(string skin)
+    /// <summary>Every skin crossed with every full-charge hat's sprite.</summary>
+    public static TheoryData<string, string> SkinsAndHats
+    {
+        get
+        {
+            var data = new TheoryData<string, string>();
+            foreach (var name in TestSkin.Names)
+                foreach (var hat in new[] { "saiyan", "strawhat" }) data.Add(name, hat);
+            return data;
+        }
+    }
+
+    [Theory, MemberData(nameof(SkinsAndHats))]
+    public void Full_charge_hats_leave_the_earbuds_and_their_full_badges_visible(string skin, string hatSprite)
     {
         var (_, Layout, Sprites) = TestSkin.Load(skin);
-        // The hair shows when every device is nearly full, so the gills' earbuds may wear a "full" badge above them.
-        var hair = Sprites["saiyan"];
-        var at = Layout.Overlays["saiyan"];   // bobs with the pet, like the gills' earbuds
+        // A hat shows when every device is nearly full, so the gills' earbuds may wear a "full" badge above them.
+        var hair = Sprites[hatSprite];
+        var at = Layout.Overlays[hatSprite];   // bobs with the pet, like the gills' earbuds
         var earbud = Sprites["earbud"];
         var full = Sprites["full"];
         foreach (var pt in Layout.Places["gills"].Points)
@@ -240,9 +253,23 @@ public class SkinTests
                     {
                         int hx = px - at.X * hair.Density, hy = py - at.Y * hair.Density;
                         bool covered = hx >= 0 && hy >= 0 && hx < hair.Width && hy < hair.Height && hair.Pixels[hy * hair.Width + hx] != 0;
-                        Assert.False(covered, $"hair covers ({px / 2.0}, {py / 2.0}) near the earbud at ({pt.X}, {pt.Y})");
+                        Assert.False(covered, $"{hatSprite} covers ({px / 2.0}, {py / 2.0}) near the earbud at ({pt.X}, {pt.Y})");
                     }
         }
+    }
+
+    [Theory]
+    [InlineData("axolotl", 0)]
+    [InlineData("choppa", 4)]
+    [InlineData("missy", 3)]
+    public void Straw_hat_sits_on_the_head_above_the_eyes(string skin, int headTop)
+    {
+        var (_, Layout, Sprites) = TestSkin.Load(skin);
+        var hat = Layout.Overlays["strawhat"];
+        int top = Layout.Body.Y + headTop, bottom = hat.Y + Sprites["strawhat"].ArtHeight;
+        Assert.InRange(bottom, top + 1, Layout.Body.Y + 8 - 1);   // brim on the head; every pet's eyes start at body art row 8
+        int centre = hat.X * 2 + Sprites["strawhat"].Width / 2, body = Layout.Body.X * 2 + Sprites["body_idle"].Width / 2;
+        Assert.InRange(centre, body - 1, body + 1);   // centred on the pet, in half art pixels
     }
 
     static void AssertFits(SkinLayout Layout, string what, int x, int y, int w, int h) =>

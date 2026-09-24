@@ -85,7 +85,10 @@ sealed class PetController : IDisposable
     {
         (_layout, _sprites) = SkinLoader.Load(skin);
         _animator = new PetAnimator(Random.Shared.NextDouble, _clock.Elapsed,
-            _layout.Overlays["zzz"], _layout.Overlays["sweat"], _layout.Overlays["saiyan"]);
+            _layout.Overlays["zzz"], _layout.Overlays["sweat"], _layout.Overlays["saiyan"], _layout.Overlays["strawhat"])
+        {
+            Hat = _settings.Hat,
+        };
         int resolution = FrameComposer.ResolutionOf(_sprites);
         _bitmap = new WriteableBitmap(_layout.CanvasWidth * resolution, _layout.CanvasHeight * resolution, 96, 96, PixelFormats.Bgra32, null);
         _window.SetBitmap(_bitmap, resolution);
@@ -101,6 +104,19 @@ sealed class PetController : IDisposable
                 for (int x = 0; x < s.Width; x++)
                     if (s.Pixels[y * s.Width + x] is var c and not 0) pixels[y * w + x] = c;
         return new Sprite(bottom.Name, w, h, pixels);
+    }
+
+    /// <summary>What the pet wears while every device is nearly full.</summary>
+    public FullChargeHat Hat
+    {
+        get => _settings.Hat;
+        set
+        {
+            _settings = _settings with { Hat = value };
+            _settings.Save();
+            _animator.Hat = value;
+            Render();
+        }
     }
 
     public BatteryStyle BatteryStyle

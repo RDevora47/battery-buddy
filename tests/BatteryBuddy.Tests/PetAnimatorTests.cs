@@ -128,6 +128,33 @@ public class PetAnimatorTests
     }
 
     [Fact]
+    public void Full_charge_hat_can_be_a_straw_hat_or_none()
+    {
+        var animator = new PetAnimator(() => 0, TimeSpan.Zero, new PixelPoint(37, 5), new PixelPoint(36, 10),
+            new PixelPoint(12, 1), strawHat: new PixelPoint(10, 6));
+        animator.SuperSaiyan = true;
+        Assert.Equal(FullChargeHat.SaiyanHair, animator.Hat);
+
+        animator.Hat = FullChargeHat.StrawHat;
+        Assert.Contains(new Overlay("strawhat", 10, 6), animator.FrameAt(Ms(100)).Overlays);
+        Assert.DoesNotContain(animator.FrameAt(Ms(100)).Overlays, o => o.Sprite == "saiyan");
+        animator.FrameAt(TimeSpan.FromSeconds(3));
+        var bob = animator.FrameAt(TimeSpan.FromSeconds(3) + Ms(340));
+        Assert.Contains(new Overlay("strawhat", 10, 6 + bob.BodyDy), bob.Overlays);   // bobs with the pet
+
+        animator.Hat = FullChargeHat.None;
+        Assert.Empty(animator.FrameAt(TimeSpan.FromSeconds(5)).Overlays);
+    }
+
+    [Fact]
+    public void No_hat_until_every_device_is_nearly_full()
+    {
+        var animator = new PetAnimator(() => 0, TimeSpan.Zero, new PixelPoint(37, 5), new PixelPoint(36, 10),
+            new PixelPoint(12, 1), strawHat: new PixelPoint(10, 6)) { Hat = FullChargeHat.StrawHat };
+        Assert.Empty(animator.FrameAt(Ms(100)).Overlays);
+    }
+
+    [Fact]
     public void Critical_devices_are_shaken_instead_of_the_idle_bounce()
     {
         var animator = New();

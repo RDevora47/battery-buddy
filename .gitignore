@@ -20,3 +20,6 @@ coverage*/
 
 # Tooling scratch
 .superpowers/
+
+# Local reference art
+references/

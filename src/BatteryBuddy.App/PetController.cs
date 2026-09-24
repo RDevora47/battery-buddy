@@ -17,11 +17,11 @@ sealed class PetController : IDisposable
     static readonly TimeSpan BubbleDuration = TimeSpan.FromSeconds(6);
 
     readonly PetWindow _window;
-    readonly SkinLayout _layout;
-    readonly IReadOnlyDictionary<string, Sprite> _sprites;
-    readonly PetAnimator _animator;
+    SkinLayout _layout = null!;
+    IReadOnlyDictionary<string, Sprite> _sprites = null!;
+    PetAnimator _animator = null!;
     readonly Stopwatch _clock = Stopwatch.StartNew();
-    readonly WriteableBitmap _bitmap;
+    WriteableBitmap _bitmap = null!;
     readonly DispatcherTimer _frameTimer;
     readonly DispatcherTimer _idleTimer;
     readonly DispatcherTimer _bubbleTimer;
@@ -38,12 +38,8 @@ sealed class PetController : IDisposable
     {
         _window = window;
         _backend = backend;
-        (_layout, _sprites) = SkinLoader.Load("axolotl");
-        _animator = new PetAnimator(Random.Shared.NextDouble, _clock.Elapsed,
-            _layout.Overlays["zzz"], _layout.Overlays["sweat"], _layout.Overlays["saiyan"]);
-        int resolution = FrameComposer.ResolutionOf(_sprites);
-        _bitmap = new WriteableBitmap(_layout.CanvasWidth * resolution, _layout.CanvasHeight * resolution, 96, 96, PixelFormats.Bgra32, null);
-        _window.SetBitmap(_bitmap, resolution);
+        if (!SkinLoader.Exists(_settings.Skin)) _settings = _settings with { Skin = SkinLoader.Default };
+        LoadSkin(_settings.Skin);
 
         _frameTimer = new DispatcherTimer { Interval = PetAnimator.FrameInterval };
         _frameTimer.Tick += (_, _) => Render();
@@ -66,6 +62,34 @@ sealed class PetController : IDisposable
     }
 
     public Sprite IconSprite => Stack(_sprites["body_idle"], _sprites["gills_perky"]);
+
+    /// <summary>Raised after the pet changes, so the tray can show the new one.</summary>
+    public event Action? SkinChanged;
+
+    public string Skin
+    {
+        get => _settings.Skin;
+        set
+        {
+            if (value == _settings.Skin || !SkinLoader.Exists(value)) return;
+            _settings = _settings with { Skin = value };
+            _settings.Save();
+            LoadSkin(value);
+            Rebuild();
+            SkinChanged?.Invoke();
+        }
+    }
+
+    // A fresh animator for the new skin's overlay spots; Rebuild gives it the current mood.
+    void LoadSkin(string skin)
+    {
+        (_layout, _sprites) = SkinLoader.Load(skin);
+        _animator = new PetAnimator(Random.Shared.NextDouble, _clock.Elapsed,
+            _layout.Overlays["zzz"], _layout.Overlays["sweat"], _layout.Overlays["saiyan"]);
+        int resolution = FrameComposer.ResolutionOf(_sprites);
+        _bitmap = new WriteableBitmap(_layout.CanvasWidth * resolution, _layout.CanvasHeight * resolution, 96, 96, PixelFormats.Bgra32, null);
+        _window.SetBitmap(_bitmap, resolution);
+    }
 
     // Top drawn over bottom, both anchored top-left; sized to cover both.
     static Sprite Stack(Sprite bottom, Sprite top)

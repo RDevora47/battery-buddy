@@ -6,7 +6,7 @@ using BatteryBuddy.Backend;
 
 namespace BatteryBuddy.App;
 
-sealed record Settings(double? Left, double? Top, BatteryStyle BatteryStyle = BatteryStyle.Outline)
+sealed record Settings(double? Left, double? Top, BatteryStyle BatteryStyle = BatteryStyle.Outline, string Skin = SkinLoader.Default)
 {
     static readonly string FilePath = AppDataFile("settings.json");
 

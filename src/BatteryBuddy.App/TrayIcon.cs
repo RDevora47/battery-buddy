@@ -9,10 +9,25 @@ sealed class TrayIcon : IDisposable
     readonly WinForms.NotifyIcon _icon;
     readonly WinForms.ContextMenuStrip _menu;
 
-    public TrayIcon(Sprite iconSprite, Func<Task> rescan, Func<BatteryStyle> getStyle, Action<BatteryStyle> setStyle, Action quit)
+    public TrayIcon(Sprite iconSprite, Func<Task> rescan, Func<BatteryStyle> getStyle, Action<BatteryStyle> setStyle,
+        IReadOnlyList<(string Skin, string Name)> pets, Func<string> getSkin, Action<string> setSkin, Action quit)
     {
         _menu = new WinForms.ContextMenuStrip();
         _menu.Items.Add("Rescan", null, (_, _) => _ = rescan());
+
+        var pet = new WinForms.ToolStripMenuItem("Pet");
+        var petItems = pets.Select(p => (p.Skin, Item: new WinForms.ToolStripMenuItem(p.Name))).ToList();
+        void SyncPet()
+        {
+            foreach (var (skin, item) in petItems) item.Checked = getSkin() == skin;
+        }
+        foreach (var (skin, item) in petItems)
+        {
+            item.Click += (_, _) => { setSkin(skin); SyncPet(); };
+            pet.DropDownItems.Add(item);
+        }
+        SyncPet();
+        _menu.Items.Add(pet);
 
         var display = new WinForms.ToolStripMenuItem("Battery display");
         var outline = new WinForms.ToolStripMenuItem("Colored outline");
@@ -55,6 +70,21 @@ sealed class TrayIcon : IDisposable
     /// <summary>Shows the tray menu at the cursor (used for right-click on the pet).</summary>
     public void ShowMenu() => _menu.Show(WinForms.Cursor.Position);
 
+    /// <summary>Shows a new pet in the tray.</summary>
+    public void SetIcon(Sprite iconSprite)
+    {
+        var old = _icon.Icon;
+        _icon.Icon = ToIcon(iconSprite);
+        Release(old);
+    }
+
+    static void Release(Drawing.Icon? icon)
+    {
+        if (icon is null) return;
+        NativeMethods.DestroyIcon(icon.Handle);
+        icon.Dispose();
+    }
+
     static Drawing.Icon ToIcon(Sprite sprite)
     {
         var (size, pixels) = IconCanvas.Square(sprite);
@@ -69,7 +99,9 @@ sealed class TrayIcon : IDisposable
     public void Dispose()
     {
         _icon.Visible = false;
+        var icon = _icon.Icon;
         _icon.Dispose();
+        Release(icon);
         _menu.Dispose();
     }
 }

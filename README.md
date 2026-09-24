@@ -1,14 +1,15 @@
 # Battery Buddy
 
-A pixel-art axolotl that lives above your taskbar and wears your Bluetooth devices.
-Each device shows its charge (colored outline, bar or mini battery) and a bolt while it
-charges. As your lowest device drains, the axolotl's gills droop and its color fades; it
-gets sleepy (≤ 20 %) and, at ≤ 10 %, shakes the device to squeeze out the last energy.
+A pixel-art pet that lives above your taskbar and wears your Bluetooth devices: an axolotl,
+or the dogs Choppa and Missy. Each device shows its charge (colored outline, bar or mini
+battery) and a bolt while it charges. As your lowest device drains, the axolotl's gills (or the
+dog's ears) droop and its color fades; it gets sleepy (≤ 20 %) and, at ≤ 10 %, shakes the
+device to squeeze out the last energy.
 
 - **Click a device** — speech bubble with its latest charge (Galaxy Buds: left / right / case).
 - **Click the axolotl** — rescan now.
 - **Drag** — move it; the position is remembered.
-- **Right-click or tray icon** — Rescan, Battery display, Start with Windows, Quit.
+- **Right-click or tray icon** — Rescan, Pet, Battery display, Start with Windows, Quit.
 
 ## Setup
 
@@ -45,6 +46,10 @@ Buddy shows the single Windows battery value ("L/R detail unavailable") until it
 - Hardware probes: `dotnet run --project tools/ProbeWindows` (PnP battery + events),
   `dotnet run --project tools/ProbeBuds` (Buds RFCOMM frames),
   `dotnet run --project tools/ProbeLogitech [list|hub|<seconds>]` (HID++ battery; read-only)
+- Skins: `src/BatteryBuddy.App/Skins/<pet>/` holds `skin.json` (where things go) and `sprites.txt`
+  (its palette, `body_*`, `gills_*` and `paw` sprites), drawn over the shared `Skins/common/sprites.txt`.
+  To add a pet, embed both files in `BatteryBuddy.App.csproj` and list it in `SkinLoader.Pets`;
+  `SkinTests` checks every skin folder.
 - Adding a protocol: implement `IDeviceSource` (from `BatteryBuddy.Devices`) in a new
   `src/BatteryBuddy.Backends.<Name>` project and add it to `src/BatteryBuddy.App/Backends.cs`.
   Set `ChargingKnown` if it reports charging and `Address` if it knows the Bluetooth MAC.

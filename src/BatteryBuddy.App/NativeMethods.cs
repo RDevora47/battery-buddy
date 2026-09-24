@@ -14,6 +14,10 @@ static class NativeMethods
     [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")]
     static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr newLong);
 
+    /// <summary>Frees an HICON from Bitmap.GetHicon; Icon.FromHandle doesn't take ownership of it.</summary>
+    [DllImport("user32.dll")]
+    public static extern bool DestroyIcon(IntPtr hIcon);
+
     public static void MakeToolWindowNoActivate(IntPtr hwnd)
     {
         long style = GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64();

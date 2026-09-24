@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\src\BatteryBuddy.App\Skins\axolotl\*" LinkBase="Skins\axolotl" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\BatteryBuddy.App\Skins\**\*" LinkBase="Skins" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

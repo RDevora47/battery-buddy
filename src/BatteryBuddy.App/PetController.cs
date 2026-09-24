@@ -62,6 +62,7 @@ sealed class PetController : IDisposable
         _window.Moved += SavePosition;
         _input.KeyPressed += () => { _animator.KeyTap(_clock.Elapsed); Render(); };
         _input.MouseClicked += () => { _animator.Click(_clock.Elapsed); Render(); };
+        _input.MouseScrolled += () => { _animator.Scroll(_clock.Elapsed); Render(); };
     }
 
     public Sprite IconSprite => Stack(_sprites["body_idle"], _sprites["gills_perky"]);

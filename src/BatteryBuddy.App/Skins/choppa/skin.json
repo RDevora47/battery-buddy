@@ -3,6 +3,7 @@
   "body": [6, 10],
   "paws": { "left": [14, 25], "right": [24, 25] },
   "desk": [5, 30],
+  "tail": [28, 18],
   "mousePaw": [30, 26],
   "places": {
     "gills":     { "points": [[7, 16], [34, 16]], "bar": [16, 10],  "followsBody": true },

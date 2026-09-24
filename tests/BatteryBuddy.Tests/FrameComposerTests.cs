@@ -42,6 +42,23 @@ public class FrameComposerTests
     static uint Pixel(ComposedFrame f, int x, int y) => f.Pixels[y * f.Width + x];
 
     [Fact]
+    public void Tail_is_drawn_behind_the_body_and_bobs_with_it()
+    {
+        // 2x1 tail at (1,0): its left pixel is under the body's right column.
+        var layout = Layout with { Tail = new PixelPoint(1, 0) };
+        var sprites = new Dictionary<string, Sprite>(Sprites) { ["tail_wag1"] = new("tail_wag1", 2, 1, new[] { Blue, Blue }) };
+        var frame = FrameComposer.Compose(layout, sprites, Array.Empty<DevicePlacement>(), Spec(dy: 1) with { Tail = "tail_wag1" });
+        Assert.Equal(Red, Pixel(frame, 1, 1));    // body wins
+        Assert.Equal(Blue, Pixel(frame, 2, 1));   // tail sticks out, one row down with the bob
+        Assert.Equal(0u, Pixel(frame, 2, 0));
+        Assert.Equal(HitTarget.Body, frame.HitTest(2, 1, out _));
+    }
+
+    [Fact]
+    public void A_skin_without_a_tail_ignores_the_wag() =>
+        Assert.Equal(4, Compose(Array.Empty<DevicePlacement>(), Spec() with { Tail = "tail_wag1" }).Pixels.Count(p => p != 0));
+
+    [Fact]
     public void Hit_test_distinguishes_body_device_and_empty()
     {
         var frame = Compose(new[] { Mouse() }, Spec());

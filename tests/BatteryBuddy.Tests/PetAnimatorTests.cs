@@ -53,6 +53,31 @@ public class PetAnimatorTests
     }
 
     [Fact]
+    public void Happy_burst_wags_the_tail_then_rests_it()
+    {
+        var animator = New();
+        Assert.Equal("tail", animator.FrameAt(Ms(100)).Tail);
+
+        // One tail pose per frame of the burst, swinging side to side, back to rest at the end.
+        animator.FrameAt(TimeSpan.FromSeconds(3));   // the burst starts
+        var tails = Enumerable.Range(0, 6).Select(f => animator.FrameAt(TimeSpan.FromSeconds(3) + Ms((f + 0.5) * 1000.0 / PetAnimator.Fps)).Tail).ToList();
+        Assert.Equal(new[] { "tail_wag1", "tail_wag2", "tail_wag1", "tail_wag2", "tail_wag1", "tail" }, tails);
+        Assert.Equal("tail", animator.FrameAt(TimeSpan.FromSeconds(3) + Ms(1100)).Tail);
+    }
+
+    [Theory]
+    [InlineData(Mood.Sleepy)]
+    [InlineData(Mood.Worried)]
+    public void Only_a_happy_pet_wags(Mood mood)
+    {
+        var animator = New();
+        animator.Mood = mood;
+        animator.FrameAt(TimeSpan.FromSeconds(3));
+        Assert.Equal("tail", animator.FrameAt(TimeSpan.FromSeconds(3) + Ms(10)).Tail);
+        Assert.Equal("tail", animator.FrameAt(TimeSpan.FromSeconds(3) + Ms(200)).Tail);
+    }
+
+    [Fact]
     public void Sniff_alternates_and_lasts_at_least_one_second()
     {
         var animator = New();
@@ -114,6 +139,7 @@ public class PetAnimatorTests
         var mid = animator.FrameAt(Ms(3200));
         Assert.Equal((-1, 1), (start.CriticalDx, mid.CriticalDx));
         Assert.Equal((0, "body_idle"), (animator.FrameAt(Ms(3340)).BodyDy, animator.FrameAt(Ms(3340)).BodySprite)); // no bob or blink
+        Assert.Equal("tail", mid.Tail);   // nor a wag
         Assert.Equal(0, animator.FrameAt(Ms(4100)).CriticalDx);
     }
 

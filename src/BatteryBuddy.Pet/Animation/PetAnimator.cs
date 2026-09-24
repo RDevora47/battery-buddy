@@ -8,6 +8,8 @@ public sealed class PetAnimator
     public static readonly TimeSpan FrameInterval = TimeSpan.FromTicks(TimeSpan.TicksPerSecond / Fps);
 
     static readonly int[] HappyBob = { 0, 1, 1, 0, 1, 0 };
+    // A happy pet with a tail swings it through the same burst, coming to rest on the last frame.
+    static readonly string[] HappyWag = { "tail_wag1", "tail_wag2", "tail_wag1", "tail_wag2", "tail_wag1", "tail" };
     // With a critical device the idle burst shakes it instead (frames at Fps).
     static readonly int[] Shake = { -1, 1, -1, 1, -1, 1 };
     static readonly TimeSpan BurstLength = TimeSpan.FromTicks(FrameInterval.Ticks * HappyBob.Length);
@@ -111,6 +113,7 @@ public sealed class PetAnimator
 
         var overlays = new List<Overlay>();
         string body;
+        string tail = "tail";
         int dy = 0;
         int criticalDx = 0;
 
@@ -132,6 +135,7 @@ public sealed class PetAnimator
                 case Mood.Happy:
                     body = burst == BlinkBurstFrame ? "body_blink" : "body_idle";
                     dy = burst is int f ? HappyBob[f] : 0;
+                    if (burst is int w) tail = HappyWag[w];
                     break;
                 case Mood.Sleepy:
                     body = "body_sleepy";
@@ -163,7 +167,7 @@ public sealed class PetAnimator
 
         return new FrameSpec(body, dy, overlays, criticalDx,
             MoodCalculator.GillsFor(LowestBattery), MoodCalculator.FadeFor(LowestBattery),
-            now < _leftPawUp ? 1 : 0, now < _rightPawUp ? 1 : 0, now < _clickUp ? 1 : 0, now < _offMouse);
+            now < _leftPawUp ? 1 : 0, now < _rightPawUp ? 1 : 0, now < _clickUp ? 1 : 0, now < _offMouse, tail);
     }
 
     bool IsSniffing(TimeSpan now) =>

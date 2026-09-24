@@ -10,10 +10,12 @@ public enum BatteryStyle { Outline, Bar, Gauge }
 /// Gills is drawn over the body; Fade (0..1) desaturates body, gills and paws toward grey.
 /// PawLeftDy / PawRightDy push a paw down while it taps a key or clicks; ClickDy also takes the mouse along.
 /// RightPawOnMouse moves the right paw from the body to the skin's MousePaw spot.
+/// Tail is the tail pose, drawn only for skins that have a Tail spot.
 /// </summary>
 public sealed record FrameSpec(
     string BodySprite, int BodyDy, IReadOnlyList<Overlay> Overlays,
-    int CriticalDx = 0, string? Gills = null, double Fade = 0, int PawLeftDy = 0, int PawRightDy = 0, int ClickDy = 0, bool RightPawOnMouse = false)
+    int CriticalDx = 0, string? Gills = null, double Fade = 0, int PawLeftDy = 0, int PawRightDy = 0, int ClickDy = 0, bool RightPawOnMouse = false,
+    string? Tail = null)
 {
     public int PawDy(Paw paw) => paw == Paw.Left ? PawLeftDy : PawRightDy;
 }

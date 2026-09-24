@@ -197,8 +197,10 @@ public static class FrameComposer
             }
         }
 
-        // Back to front: pet, the desk in front of it, the keyboard on the desk, the paws tapping it,
-        // then everything the pet holds or wears.
+        // Back to front: the tail behind the pet, pet, the desk in front of it, the keyboard on the desk,
+        // the paws tapping it, then everything the pet holds or wears.
+        if (layout.Tail is PixelPoint tail && spec.Tail is not null)
+            Blit(sprites[spec.Tail], tail.X, tail.Y + spec.BodyDy, BodyOwner, spec.Fade);
         Blit(sprites[spec.BodySprite], layout.Body.X, layout.Body.Y + spec.BodyDy, BodyOwner, spec.Fade);
         if (spec.Gills is not null)
             Blit(sprites[spec.Gills], layout.Body.X, layout.Body.Y + spec.BodyDy, BodyOwner, spec.Fade);

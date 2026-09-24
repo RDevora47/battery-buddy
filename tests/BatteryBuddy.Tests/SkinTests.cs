@@ -182,6 +182,26 @@ public class SkinTests
         Assert.True(hair.Y + Sprites["saiyan"].ArtHeight > top, "hair must reach down onto the head");
     }
 
+    public static readonly string[] TailSprites = { "tail", "tail_wag1", "tail_wag2" };
+
+    [Theory]
+    [InlineData("choppa")]
+    [InlineData("missy")]
+    public void Dogs_have_a_tail_that_wags_within_the_canvas(string skin)
+    {
+        var (_, Layout, Sprites) = TestSkin.Load(skin);
+        Assert.NotNull(Layout.Tail);
+        var tail = Layout.Tail!.Value;
+        Assert.All(TailSprites, name => Assert.True(Sprites.ContainsKey(name), $"missing sprite {name}"));
+        Assert.Single(TailSprites.Select(n => (Sprites[n].Width, Sprites[n].Height)).Distinct());   // swapped in place
+        Assert.Equal(3, TailSprites.Select(n => string.Join(",", Sprites[n].Pixels)).Distinct().Count());   // each pose differs
+        foreach (var name in TailSprites)
+            AssertFits(Layout, name, tail.X, tail.Y + 1, Sprites[name].ArtWidth, Sprites[name].ArtHeight);   // bobs with the pet
+    }
+
+    [Fact]
+    public void The_axolotl_has_no_tail() => Assert.Null(TestSkin.Load("axolotl").Layout.Tail);
+
     [Theory]
     [InlineData("choppa")]
     [InlineData("missy")]

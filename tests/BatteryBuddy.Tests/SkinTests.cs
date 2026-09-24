@@ -214,6 +214,36 @@ public class SkinTests
         Assert.True(hair.Y + Sprites["saiyan"].ArtHeight > top, "hair must reach down onto the head");
     }
 
+    [Theory]
+    [InlineData("axolotl", 0)]   // body_idle art row of the top of the head, below any ears
+    [InlineData("choppa", 7)]
+    [InlineData("missy", 3)]
+    [InlineData("redpanda", 3)]
+    [InlineData("bunny", 11)]
+    [InlineData("panda", 4)]
+    [InlineData("parrot", 5)]
+    public void Saiyan_hairline_sits_on_the_head_with_no_gap(string skin, int headTop)
+    {
+        // Across the forehead (the bangs and the notches between them) the hair's lowest pixel touches or
+        // overlaps the head, so the hair never floats above it.
+        const int foreheadFrom = 14, foreheadTo = 41;   // saiyan sprite columns
+        var (_, Layout, Sprites) = TestSkin.Load(skin);
+        var hair = Sprites["saiyan"];
+        var body = Sprites["body_idle"];
+        int d = hair.Density;
+        var at = Layout.Overlays["saiyan"];
+        for (int hx = foreheadFrom; hx <= foreheadTo; hx++)
+        {
+            int hairBottom = Enumerable.Range(0, hair.Height).Last(y => hair.Pixels[y * hair.Width + hx] != 0) + at.Y * d;
+            int bx = at.X * d + hx - Layout.Body.X * d;
+            if (bx < 0 || bx >= body.Width) continue;
+            var headRows = Enumerable.Range(headTop * d, body.Height - headTop * d).Where(y => body.Pixels[y * body.Width + bx] != 0);
+            if (!headRows.Any()) continue;
+            int headTopRow = headRows.First() + Layout.Body.Y * d;
+            Assert.True(hairBottom + 1 >= headTopRow, $"column {hx}: hair ends at {hairBottom / 2.0}, head starts at {headTopRow / 2.0}");
+        }
+    }
+
     public static readonly string[] TailSprites = { "tail", "tail_wag1", "tail_wag2" };
 
     [Theory]

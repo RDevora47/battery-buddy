@@ -50,8 +50,8 @@ public class SkinTests
     };
 
     [Fact]
-    public void Ships_the_axolotl_the_red_panda_and_the_dogs() =>
-        Assert.Equal(new[] { "axolotl", "choppa", "missy", "redpanda" }, TestSkin.Names);
+    public void Ships_every_pet() =>
+        Assert.Equal(new[] { "axolotl", "bunny", "choppa", "missy", "panda", "redpanda" }, TestSkin.Names);
 
     [Theory, MemberData(nameof(Skins))]
     public void Has_all_required_sprites(string skin)
@@ -174,6 +174,8 @@ public class SkinTests
     [InlineData("choppa", 7)]    // rows 0-6 are for the ears
     [InlineData("missy", 3)]
     [InlineData("redpanda", 3)]
+    [InlineData("bunny", 9)]     // rows 0-8 are for the long ears
+    [InlineData("panda", 3)]
     public void Saiyan_hair_flames_up_high_above_the_head(string skin, int headTop)
     {
         // Classic Super Saiyan: the spikes rise above the head by more than the axolotl's whole head is tall
@@ -367,13 +369,18 @@ public class SkinTests
         Assert.Equal(11, (bottom - top + 1) / perky.Density);
     }
 
-    [Fact]
-    public void The_axolotl_has_no_tail() => Assert.Null(TestSkin.Load("axolotl").Layout.Tail);
+    [Theory]
+    [InlineData("axolotl")]
+    [InlineData("bunny")]   // the cottontail hides behind the body
+    [InlineData("panda")]
+    public void Some_pets_have_no_tail(string skin) => Assert.Null(TestSkin.Load(skin).Layout.Tail);
 
     [Theory]
     [InlineData("choppa")]
     [InlineData("missy")]
     [InlineData("redpanda")]
+    [InlineData("bunny")]
+    [InlineData("panda")]
     public void Furry_ears_sink_as_the_battery_drains(string skin)
     {
         // The ears fill the "gills" slot: each mood is its own pose, and the lower the battery, the lower the ears sit.
@@ -431,6 +438,8 @@ public class SkinTests
     [InlineData("choppa", 7, 12)]
     [InlineData("missy", 3, 8)]
     [InlineData("redpanda", 3, 8)]
+    [InlineData("bunny", 9, 14)]
+    [InlineData("panda", 3, 8)]
     public void Straw_hat_sits_on_the_head_above_the_eyes(string skin, int headTop, int eyeRow)
     {
         var (_, Layout, Sprites) = TestSkin.Load(skin);

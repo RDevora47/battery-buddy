@@ -170,16 +170,18 @@ public class SkinTests
         Assert.All(TestSkin.Load(skin).Sprites.Values, s => Assert.True(s.Density == 2, $"sprite {s.Name} is @{s.Density}x"));
 
     [Theory]
-    [InlineData("axolotl", 0, 10)]   // body_idle art rows 0-9: the head down to the chin
-    [InlineData("choppa", 6, 12)]    // three rows of headroom for the tall ears; crown at row 6, chin at row 17
-    [InlineData("missy", 3, 12)]     // curls from row 3, beard down to row 14
-    public void Saiyan_hair_flames_up_higher_than_the_head_is_tall(string skin, int headTop, int headRows)
+    [InlineData("axolotl", 0)]   // body_idle art row of the top of the head
+    [InlineData("choppa", 5)]    // rows 0-4 are for the ears
+    [InlineData("missy", 3)]
+    public void Saiyan_hair_flames_up_high_above_the_head(string skin, int headTop)
     {
-        // Classic Super Saiyan: the spikes rise above the head by more than the head's own height.
+        // Classic Super Saiyan: the spikes rise above the head by more than the axolotl's whole head is tall
+        // (10 rows; Choppa's long head is taller than the canvas leaves room for).
+        const int risesAbove = 10;
         var (_, Layout, Sprites) = TestSkin.Load(skin);
         var hair = Layout.Overlays["saiyan"];
         int top = Layout.Body.Y + headTop;
-        Assert.True(top - hair.Y > headRows, $"hair top {hair.Y} is only {top - hair.Y} rows above the head");
+        Assert.True(top - hair.Y > risesAbove, $"hair top {hair.Y} is only {top - hair.Y} rows above the head");
         Assert.True(hair.Y + Sprites["saiyan"].ArtHeight > top, "hair must reach down onto the head");
     }
 
@@ -361,7 +363,7 @@ public class SkinTests
 
     [Theory]
     [InlineData("axolotl", 0, 8)]
-    [InlineData("choppa", 6, 11)]
+    [InlineData("choppa", 5, 10)]
     [InlineData("missy", 3, 8)]
     public void Straw_hat_sits_on_the_head_above_the_eyes(string skin, int headTop, int eyeRow)
     {

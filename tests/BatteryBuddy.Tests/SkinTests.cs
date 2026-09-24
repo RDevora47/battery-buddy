@@ -200,6 +200,107 @@ public class SkinTests
             AssertFits(Layout, name, tail.X, tail.Y + 1, Sprites[name].ArtWidth, Sprites[name].ArtHeight);   // bobs with the pet
     }
 
+    [Theory]
+    [InlineData("choppa")]
+    [InlineData("missy")]
+    public void Every_tail_pose_stays_attached_to_the_body(string skin)
+    {
+        // The tail is drawn behind the body: every pixel that shows must connect, through other showing
+        // tail pixels, to the body's edge, in every pose of the wag (both bob positions look the same).
+        var (_, Layout, Sprites) = TestSkin.Load(skin);
+        var body = Sprites["body_idle"];
+        var tailAt = Layout.Tail!.Value;
+        foreach (var name in TailSprites)
+        {
+            var tail = Sprites[name];
+            int d = tail.Density;
+            bool Body(int x, int y)
+            {
+                int bx = x - Layout.Body.X * d, by = y - Layout.Body.Y * d;
+                return bx >= 0 && by >= 0 && bx < body.Width && by < body.Height && body.Pixels[by * body.Width + bx] != 0;
+            }
+            bool Shows(int x, int y)
+            {
+                int tx = x - tailAt.X * d, ty = y - tailAt.Y * d;
+                return tx >= 0 && ty >= 0 && tx < tail.Width && ty < tail.Height && tail.Pixels[ty * tail.Width + tx] != 0 && !Body(x, y);
+            }
+            var showing = new List<(int X, int Y)>();
+            for (int ty = 0; ty < tail.Height; ty++)
+                for (int tx = 0; tx < tail.Width; tx++)
+                    if (Shows(tailAt.X * d + tx, tailAt.Y * d + ty)) showing.Add((tailAt.X * d + tx, tailAt.Y * d + ty));
+            var steps = new[] { (1, 0), (-1, 0), (0, 1), (0, -1) };
+            var reached = new HashSet<(int, int)>(showing.Where(p => steps.Any(s => Body(p.X + s.Item1, p.Y + s.Item2))));
+            var queue = new Queue<(int X, int Y)>(reached);
+            while (queue.Count > 0)
+            {
+                var (x, y) = queue.Dequeue();
+                foreach (var (dx, dy) in steps)
+                    if (Shows(x + dx, y + dy) && reached.Add((x + dx, y + dy))) queue.Enqueue((x + dx, y + dy));
+            }
+            var loose = showing.Where(p => !reached.Contains(p)).ToList();
+            Assert.True(loose.Count == 0, $"{name}: {loose.Count} tail pixels float free of the body, e.g. ({loose.FirstOrDefault().X / 2.0}, {loose.FirstOrDefault().Y / 2.0})");
+        }
+    }
+
+    [Theory]
+    [InlineData("choppa")]
+    [InlineData("missy")]
+    public void Wagging_swings_the_tail_about_a_base_tucked_behind_the_body(string skin)
+    {
+        // The bottom rows (the base) are the same in every pose, and all of them sit behind the body.
+        const int baseRows = 4;
+        var (_, Layout, Sprites) = TestSkin.Load(skin);
+        var rest = Sprites["tail"];
+        int from = (rest.ArtHeight - baseRows) * rest.Density * rest.Width;
+        foreach (var name in TailSprites)
+            Assert.True(Sprites[name].Pixels.Skip(from).SequenceEqual(rest.Pixels.Skip(from)), $"{name} moves the tail's base");
+
+        var body = Sprites["body_idle"];
+        var tail = Layout.Tail!.Value;
+        int d = rest.Density, hidden = 0, total = 0;
+        for (int y = (rest.ArtHeight - baseRows) * d; y < rest.Height; y++)
+            for (int x = 0; x < rest.Width; x++)
+            {
+                if (rest.Pixels[y * rest.Width + x] == 0) continue;
+                total++;
+                int bx = tail.X * d + x - Layout.Body.X * d, by = tail.Y * d + y - Layout.Body.Y * d;
+                if (bx >= 0 && by >= 0 && bx < body.Width && by < body.Height && body.Pixels[by * body.Width + bx] != 0) hidden++;
+            }
+        Assert.True(hidden * 2 >= total, $"only {hidden} of the base's {total} pixels are tucked behind the body");
+    }
+
+    [Theory]
+    [InlineData("choppa")]
+    [InlineData("missy")]
+    public void Tails_are_open_curls_not_rings(string skin)
+    {
+        // A see-through hole enclosed by the tail itself reads as a loose ring once it swings clear of the body.
+        var sprites = TestSkin.Load(skin).Sprites;
+        foreach (var name in TailSprites)
+        {
+            var t = sprites[name];
+            var outside = new HashSet<(int, int)>();
+            var queue = new Queue<(int X, int Y)>();
+            void Visit(int x, int y)
+            {
+                if (x < -1 || y < -1 || x > t.Width || y > t.Height) return;
+                bool opaque = x >= 0 && y >= 0 && x < t.Width && y < t.Height && t.Pixels[y * t.Width + x] != 0;
+                if (!opaque && outside.Add((x, y))) queue.Enqueue((x, y));
+            }
+            Visit(-1, -1);
+            while (queue.Count > 0)
+            {
+                var (x, y) = queue.Dequeue();
+                Visit(x + 1, y); Visit(x - 1, y); Visit(x, y + 1); Visit(x, y - 1);
+            }
+            int holes = 0;
+            for (int y = 0; y < t.Height; y++)
+                for (int x = 0; x < t.Width; x++)
+                    if (t.Pixels[y * t.Width + x] == 0 && !outside.Contains((x, y))) holes++;
+            Assert.True(holes == 0, $"{name} encloses {holes} see-through pixels");
+        }
+    }
+
     [Fact]
     public void The_axolotl_has_no_tail() => Assert.Null(TestSkin.Load("axolotl").Layout.Tail);
 

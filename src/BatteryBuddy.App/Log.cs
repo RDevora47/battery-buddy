@@ -5,7 +5,7 @@ namespace BatteryBuddy.App;
 static class Log
 {
     static readonly object Gate = new();
-    static readonly string Dir = Path.Combine(
+    internal static readonly string Dir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BatteryBuddy", "logs");
 
     public static void Write(string message)

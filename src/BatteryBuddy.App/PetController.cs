@@ -59,7 +59,38 @@ sealed class PetController : IDisposable
         _input.KeyPressed += () => { _animator.KeyTap(_clock.Elapsed); Render(); };
         _input.MouseClicked += () => { _animator.Click(_clock.Elapsed); Render(); };
         _input.MouseScrolled += () => { _animator.Scroll(_clock.Elapsed); Render(); };
+
+#if DIAG_LOG
+        StartDiagnostics();
+#endif
     }
+
+#if DIAG_LOG
+    // Why does the pet window sometimes go blank? A heartbeat every second into the rolling logs\diag.log.
+    DispatcherTimer? _diagTimer;
+    int _renders;
+
+    void StartDiagnostics()
+    {
+        _diagTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _diagTimer.Tick += (_, _) =>
+        {
+            int opaque = _frame is null ? -1 : _frame.Pixels.Count(p => p != 0);
+            DiagLog.Write($"heartbeat renders={_renders} opaque={opaque} visible={_window.IsVisible} state={_window.WindowState} " +
+                $"opacity={_window.Opacity} img={_window.PetImage.ActualWidth}x{_window.PetImage.ActualHeight} imgVis={_window.PetImage.IsVisible} " +
+                $"pos={_window.Left:0},{_window.Top:0} frameTimer={_frameTimer.IsEnabled} idleTimer={_idleTimer.IsEnabled} " +
+                $"tier={RenderCapability.Tier >> 16} bmp={_bitmap.PixelWidth}x{_bitmap.PixelHeight} src={ReferenceEquals(_window.PetImage.Source, _bitmap)}");
+            _renders = 0;
+            DiagLog.Flush();
+        };
+        _diagTimer.Start();
+        RenderCapability.TierChanged += (_, _) => DiagLog.Write($"render tier changed to {RenderCapability.Tier >> 16}");
+        Microsoft.Win32.SystemEvents.DisplaySettingsChanged += (_, _) => DiagLog.Write("display settings changed");
+        Microsoft.Win32.SystemEvents.PowerModeChanged += (_, e) => DiagLog.Write($"power mode {e.Mode}");
+        Microsoft.Win32.SystemEvents.SessionSwitch += (_, e) => DiagLog.Write($"session {e.Reason}");
+        _window.IsVisibleChanged += (_, _) => DiagLog.Write($"window visible={_window.IsVisible}");
+    }
+#endif
 
     public Sprite IconSprite => Stack(_sprites["body_idle"], _sprites["gills_perky"]);
 
@@ -239,6 +270,9 @@ sealed class PetController : IDisposable
         var spec = _animator.FrameAt(now);
         _frame = FrameComposer.Compose(_layout, _sprites, _placements, spec, _settings.BatteryStyle);
         _bitmap.WritePixels(new Int32Rect(0, 0, _frame.Width, _frame.Height), _frame.Pixels, _frame.Width * 4, 0);
+#if DIAG_LOG
+        _renders++;
+#endif
 
         if (_animator.NeedsTicks(now)) { if (!_frameTimer.IsEnabled) _frameTimer.Start(); }
         else _frameTimer.Stop();
@@ -271,6 +305,11 @@ sealed class PetController : IDisposable
         _frameTimer.Stop();
         _idleTimer.Stop();
         _bubbleTimer.Stop();
+#if DIAG_LOG
+        _diagTimer?.Stop();
+        DiagLog.Write("shutting down");
+        DiagLog.Flush();
+#endif
         _backend.Dispose();
     }
 }

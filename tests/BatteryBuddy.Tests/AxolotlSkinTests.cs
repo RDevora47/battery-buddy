@@ -109,7 +109,7 @@ public class AxolotlSkinTests
     public void Everything_fits_the_canvas_including_bob()
     {
         var body = Sprites["body_idle"];
-        AssertFits("body", Layout.Body.X, Layout.Body.Y + 1, body.Width, body.Height);
+        AssertFits("body", Layout.Body.X, Layout.Body.Y + 1, body.ArtWidth, body.ArtHeight);
         foreach (var gills in RequiredSprites.Where(n => n.StartsWith("gills_")))
             AssertFits(gills, Layout.Body.X, Layout.Body.Y + 1, Sprites[gills].ArtWidth, Sprites[gills].ArtHeight);
         AssertFits("desk", Layout.Desk!.Value.X, Layout.Desk.Value.Y, Sprites["desk"].ArtWidth, Sprites["desk"].ArtHeight);
@@ -122,6 +122,48 @@ public class AxolotlSkinTests
                 foreach (var pt in place.Points)
                     AssertFits($"{name}/{spriteName}", pt.X, pt.Y + dy, Sprites[spriteName].ArtWidth, Sprites[spriteName].ArtHeight);
             AssertFits($"{name}/bar", place.Bar.X, place.Bar.Y + dy, BatteryBar.Width, BatteryBar.Height);
+        }
+        foreach (var (name, pt) in Layout.Overlays)   // overlays bob with the pet
+            AssertFits($"overlay {name}", pt.X, pt.Y + 1, Sprites[name].ArtWidth, Sprites[name].ArtHeight);
+    }
+
+    [Fact]
+    public void Every_sprite_is_drawn_at_2x() =>
+        Assert.All(Sprites.Values, s => Assert.True(s.Density == 2, $"sprite {s.Name} is @{s.Density}x"));
+
+    [Fact]
+    public void Saiyan_hair_flames_up_higher_than_the_head_is_tall()
+    {
+        // Classic Super Saiyan: the spikes rise above the head by more than the head's own height.
+        const int headRows = 10;   // body_idle rows 0-9 in art pixels: the head down to the chin
+        var hair = Layout.Overlays["saiyan"];
+        Assert.True(Layout.Body.Y - hair.Y > headRows, $"hair top {hair.Y} is only {Layout.Body.Y - hair.Y} rows above the head");
+        Assert.True(hair.Y + Sprites["saiyan"].ArtHeight > Layout.Body.Y, "hair must reach down onto the head");
+    }
+
+    [Fact]
+    public void Saiyan_hair_leaves_the_earbuds_and_their_full_badges_visible()
+    {
+        // The hair shows when every device is nearly full, so the gills' earbuds may wear a "full" badge above them.
+        var hair = Sprites["saiyan"];
+        var at = Layout.Overlays["saiyan"];   // bobs with the pet, like the gills' earbuds
+        var earbud = Sprites["earbud"];
+        var full = Sprites["full"];
+        foreach (var pt in Layout.Places["gills"].Points)
+        {
+            var clear = new[]
+            {
+                (pt.X, pt.Y, earbud.ArtWidth, earbud.ArtHeight),
+                (pt.X + earbud.ArtWidth - full.ArtWidth, pt.Y - full.ArtHeight, full.ArtWidth, full.ArtHeight),
+            };
+            foreach (var (x, y, w, h) in clear)
+                for (int py = y * hair.Density; py < (y + h) * hair.Density; py++)
+                    for (int px = x * hair.Density; px < (x + w) * hair.Density; px++)
+                    {
+                        int hx = px - at.X * hair.Density, hy = py - at.Y * hair.Density;
+                        bool covered = hx >= 0 && hy >= 0 && hx < hair.Width && hy < hair.Height && hair.Pixels[hy * hair.Width + hx] != 0;
+                        Assert.False(covered, $"hair covers ({px / 2.0}, {py / 2.0}) near the earbud at ({pt.X}, {pt.Y})");
+                    }
         }
     }
 

@@ -27,12 +27,13 @@ public class MoodCalculatorTests
         Assert.Equal(Mood.Happy, MoodOf(TestReadings.Make("A", battery: null)));
 
     [Fact]
-    public void All_full_needs_every_known_battery_at_100()
+    public void Super_saiyan_needs_every_known_battery_at_95_or_more()
     {
-        Assert.True(MoodCalculator.AllFull(new[] { TestReadings.Make("A", battery: 100), TestReadings.Make("B", battery: null) }));
-        Assert.False(MoodCalculator.AllFull(new[] { TestReadings.Make("A", battery: 100), TestReadings.Make("B", battery: 99) }));
-        Assert.False(MoodCalculator.AllFull(Array.Empty<DeviceReading>()));
-        Assert.False(MoodCalculator.AllFull(new[] { TestReadings.Make("A", battery: null) }));
+        Assert.True(MoodCalculator.SuperSaiyan(new[] { TestReadings.Make("A", battery: 100), TestReadings.Make("B", battery: null) }));
+        Assert.True(MoodCalculator.SuperSaiyan(new[] { TestReadings.Make("A", battery: 100), TestReadings.Make("B", battery: 95) }));
+        Assert.False(MoodCalculator.SuperSaiyan(new[] { TestReadings.Make("A", battery: 100), TestReadings.Make("B", battery: 94) }));
+        Assert.False(MoodCalculator.SuperSaiyan(Array.Empty<DeviceReading>()));
+        Assert.False(MoodCalculator.SuperSaiyan(new[] { TestReadings.Make("A", battery: null) }));
     }
 
     [Fact]

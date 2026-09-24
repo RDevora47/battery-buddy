@@ -92,10 +92,10 @@ public class PetAnimatorTests
     }
 
     [Fact]
-    public void All_full_gives_the_pet_saiyan_hair_that_bobs_with_it()
+    public void Super_saiyan_gives_the_pet_saiyan_hair_that_bobs_with_it()
     {
         var animator = new PetAnimator(() => 0, TimeSpan.Zero, new PixelPoint(37, 5), new PixelPoint(36, 10), new PixelPoint(12, 1));
-        animator.AllFull = true;
+        animator.SuperSaiyan = true;
         Assert.Contains(new Overlay("saiyan", 12, 1), animator.FrameAt(Ms(100)).Overlays);
         animator.FrameAt(TimeSpan.FromSeconds(3));
         var bob = animator.FrameAt(TimeSpan.FromSeconds(3) + Ms(340));

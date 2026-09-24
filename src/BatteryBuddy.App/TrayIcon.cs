@@ -57,15 +57,12 @@ sealed class TrayIcon : IDisposable
 
     static Drawing.Icon ToIcon(Sprite sprite)
     {
-        using var bitmap = new Drawing.Bitmap(32, 32, Drawing.Imaging.PixelFormat.Format32bppArgb);
-        int offsetX = (32 - sprite.Width) / 2;
-        int offsetY = (32 - sprite.Height) / 2;
-        for (int y = 0; y < sprite.Height; y++)
-            for (int x = 0; x < sprite.Width; x++)
-            {
-                uint color = sprite.Pixels[y * sprite.Width + x];
-                if (color != 0) bitmap.SetPixel(x + offsetX, y + offsetY, Drawing.Color.FromArgb(unchecked((int)color)));
-            }
+        var (size, pixels) = IconCanvas.Square(sprite);
+        using var bitmap = new Drawing.Bitmap(size, size, Drawing.Imaging.PixelFormat.Format32bppArgb);
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+                if (pixels[y * size + x] is var color and not 0)
+                    bitmap.SetPixel(x, y, Drawing.Color.FromArgb(unchecked((int)color)));
         return Drawing.Icon.FromHandle(bitmap.GetHicon());
     }
 

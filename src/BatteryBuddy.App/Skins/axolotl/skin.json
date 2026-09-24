@@ -1,18 +1,18 @@
 {
-  "canvas": { "width": 44, "height": 38 },
-  "body": [6, 8],
-  "paws": { "left": [15, 20], "right": [25, 20] },
-  "desk": [5, 24],
-  "mousePaw": [30, 21],
+  "canvas": { "width": 44, "height": 44 },
+  "body": [6, 14],
+  "paws": { "left": [15, 26], "right": [25, 26] },
+  "desk": [5, 30],
+  "mousePaw": [30, 27],
   "places": {
-    "gills":     { "points": [[7, 10], [34, 10]], "bar": [16, 4],  "followsBody": true },
-    "neck":      { "points": [[16, 18], [25, 18]], "bar": [0, 1],  "followsBody": true },
-    "hands":     { "points": [[18, 20]],           "bar": [16, 35], "followsBody": true },
-    "righthand": { "points": [[30, 24]],           "bar": [30, 32], "followsBody": false, "followsClick": true, "icons": "right" },
-    "seat":      { "points": [[12, 24]],           "bar": [15, 32], "followsBody": false, "icons": "left" },
-    "side":      { "points": [[39, 18]],           "bar": [33, 16], "followsBody": false },
-    "float1":    { "points": [[0, 20]],            "bar": [0, 26],  "followsBody": false },
-    "float2":    { "points": [[0, 11]],            "bar": [0, 17],  "followsBody": false }
+    "gills":     { "points": [[7, 16], [34, 16]], "bar": [16, 10],  "followsBody": true },
+    "neck":      { "points": [[16, 24], [25, 24]], "bar": [0, 7],  "followsBody": true },
+    "hands":     { "points": [[18, 26]],           "bar": [16, 41], "followsBody": true },
+    "righthand": { "points": [[30, 30]],           "bar": [30, 38], "followsBody": false, "followsClick": true, "icons": "right" },
+    "seat":      { "points": [[12, 30]],           "bar": [15, 38], "followsBody": false, "icons": "left" },
+    "side":      { "points": [[39, 24]],           "bar": [33, 22], "followsBody": false },
+    "float1":    { "points": [[0, 26]],            "bar": [0, 32],  "followsBody": false },
+    "float2":    { "points": [[0, 17]],            "bar": [0, 23],  "followsBody": false }
   },
-  "overlays": { "zzz": [37, 5], "sweat": [36, 10], "saiyan": [11, 1] }
+  "overlays": { "zzz": [37, 11], "sweat": [36, 16], "saiyan": [8, 0] }
 }

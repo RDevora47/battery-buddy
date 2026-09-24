@@ -186,7 +186,7 @@ sealed class PetController : IDisposable
         _animator.Mood = MoodCalculator.From(connected);
         _animator.HasCritical = connected.Any(d => d.EffectiveBattery <= BatteryBar.CriticalAtOrBelow);
         _animator.LowestBattery = MoodCalculator.Lowest(connected);
-        _animator.AllFull = MoodCalculator.AllFull(connected);
+        _animator.SuperSaiyan = MoodCalculator.SuperSaiyan(connected);
         Render();
     }
 

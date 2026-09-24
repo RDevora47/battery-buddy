@@ -31,10 +31,12 @@ public static class MoodCalculator
 
     public const double MaxFade = 0.7;
 
-    /// <summary>At least one connected device reports a battery, and every one that does is at 100 %.</summary>
-    public static bool AllFull(IEnumerable<DeviceReading> devices)
+    public const int SaiyanAtOrAbove = 95;
+
+    /// <summary>At least one connected device reports a battery, and every one that does is at <see cref="SaiyanAtOrAbove"/> % or more.</summary>
+    public static bool SuperSaiyan(IEnumerable<DeviceReading> devices)
     {
         var levels = devices.Where(d => d.IsConnected).Select(d => d.EffectiveBattery).OfType<int>().ToList();
-        return levels.Count > 0 && levels.All(level => level == 100);
+        return levels.Count > 0 && levels.All(level => level >= SaiyanAtOrAbove);
     }
 }

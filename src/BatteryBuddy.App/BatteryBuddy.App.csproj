@@ -29,6 +29,8 @@
     <EmbeddedResource Include="Skins\bunny\skin.json" LogicalName="skins.bunny.skin.json" />
     <EmbeddedResource Include="Skins\panda\sprites.txt" LogicalName="skins.panda.sprites.txt" />
     <EmbeddedResource Include="Skins\panda\skin.json" LogicalName="skins.panda.skin.json" />
+    <EmbeddedResource Include="Skins\parrot\sprites.txt" LogicalName="skins.parrot.sprites.txt" />
+    <EmbeddedResource Include="Skins\parrot\skin.json" LogicalName="skins.parrot.skin.json" />
   </ItemGroup>
   <ItemGroup>
     <!-- Frontend + contract; the backend projects are referenced only by Backends.cs, the composition root. -->

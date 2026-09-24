@@ -209,14 +209,8 @@ sealed class PetController : IDisposable
     void PlaceWindow()
     {
         new WindowInteropHelper(_window).EnsureHandle();
-        var dpi = VisualTreeHelper.GetDpi(_window);
-        ScreenRect ToDip(System.Drawing.Rectangle r) =>
-            new(r.X / dpi.DpiScaleX, r.Y / dpi.DpiScaleY, r.Width / dpi.DpiScaleX, r.Height / dpi.DpiScaleY);
-
-        var areas = System.Windows.Forms.Screen.AllScreens.Select(s => ToDip(s.WorkingArea)).ToList();
-        var primary = ToDip(System.Windows.Forms.Screen.PrimaryScreen!.WorkingArea);
         (double, double)? saved = _settings is { Left: double left, Top: double top } ? (left, top) : null;
-        var (x, y) = WindowPlacement.Resolve(saved, _window.Width, _window.Height, areas, primary);
+        var (x, y) = WindowPlacement.Resolve(saved, _window.PetInWindow, _window.WorkAreas(), _window.PrimaryWorkArea());
         _window.Left = x;
         _window.Top = y;
     }

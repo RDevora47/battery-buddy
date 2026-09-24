@@ -132,14 +132,19 @@ public static class FrameComposer
                         Plot(ax * res + x * cell, top + y * cell, cell, color, owner);
         }
 
-        // Ring one sprite pixel wide just outside the sprite's opaque pixels.
-        void DrawOutline(Sprite sprite, int ox, int oy, uint color, short owner)
+        // Ring one sprite pixel wide just outside the sprite's opaque pixels, covering only the remaining
+        // share of it: clockwise from 12 o'clock, so it drains anticlockwise from the top. Unknown shows it all.
+        void DrawOutline(Sprite sprite, int ox, int oy, uint color, int? percent, short owner)
         {
+            var ring = new List<(int X, int Y)>();
             for (int y = -1; y <= sprite.Height; y++)
                 for (int x = -1; x <= sprite.Width; x++)
                     if (!Opaque(sprite, x, y) &&
                         (Opaque(sprite, x - 1, y) || Opaque(sprite, x + 1, y) || Opaque(sprite, x, y - 1) || Opaque(sprite, x, y + 1)))
-                        PlotSprite(sprite, ox, oy, x, y, color, owner);
+                        ring.Add((x, y));
+            int shown = percent is int p ? (int)Math.Ceiling(ring.Count * Math.Clamp(p, 0, 100) / 100.0) : ring.Count;
+            foreach (var (x, y) in ring.OrderBy(pt => ClockwiseFromTop(sprite, pt.X, pt.Y)).Take(shown))
+                PlotSprite(sprite, ox, oy, x, y, color, owner);
         }
 
         void DrawDevice(int index)
@@ -155,7 +160,7 @@ public static class FrameComposer
 
             if (style == BatteryStyle.Outline)
                 foreach (var point in place.Points)
-                    DrawOutline(sprite, point.X + dx, point.Y + dy, BatteryBar.ColorFor(battery), owner);
+                    DrawOutline(sprite, point.X + dx, point.Y + dy, BatteryBar.ColorFor(battery), battery, owner);
             foreach (var point in place.Points)
                 Blit(sprite, point.X + dx, point.Y + dy, owner);
             if (style == BatteryStyle.Bar)
@@ -256,6 +261,14 @@ public static class FrameComposer
         double grey = 0.3 * r + 0.59 * g + 0.11 * b;
         uint Mix(int c) => (uint)Math.Round(c + (grey - c) * amount);
         return argb & 0xFF000000u | Mix(r) << 16 | Mix(g) << 8 | Mix(b);
+    }
+
+    // Angle in [0, 2pi) of sprite pixel (x, y)'s centre around the sprite's centre: 0 at 12 o'clock, growing
+    // clockwise on screen (y points down).
+    static double ClockwiseFromTop(Sprite sprite, int x, int y)
+    {
+        double angle = Math.Atan2(x + 0.5 - sprite.Width / 2.0, sprite.Height / 2.0 - (y + 0.5));
+        return angle < 0 ? angle + 2 * Math.PI : angle;
     }
 
     static bool Opaque(Sprite sprite, int x, int y) =>

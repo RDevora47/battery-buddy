@@ -180,9 +180,9 @@ public class FrameComposerTests
     [Fact]
     public void Outline_style_rings_the_device_in_its_battery_color_and_drops_the_bar()
     {
-        var frame = Compose(new[] { Mouse(30) }, Spec(), BatteryStyle.Outline);
-        uint amber = BatteryBar.ColorFor(30);
-        Assert.Equal(new[] { amber, amber, amber, amber },
+        var frame = Compose(new[] { Mouse(80) }, Spec(), BatteryStyle.Outline);
+        uint green = BatteryBar.ColorFor(80);
+        Assert.Equal(new[] { green, green, green, green },
             new[] { Pixel(frame, 4, 5), Pixel(frame, 6, 5), Pixel(frame, 5, 4), Pixel(frame, 5, 6) });
         Assert.Equal(Blue, Pixel(frame, 5, 5));
         Assert.Equal(HitTarget.Device, frame.HitTest(6, 5, out _));
@@ -190,10 +190,35 @@ public class FrameComposerTests
     }
 
     [Fact]
+    public void Outline_covers_only_the_remaining_charge_clockwise_from_the_top()
+    {
+        // The 1x1 mouse's ring is 4 pixels: top, right, bottom, left. 30% keeps ceil(1.2) = 2 of them.
+        var frame = Compose(new[] { Mouse(30) }, Spec(), BatteryStyle.Outline);
+        uint amber = BatteryBar.ColorFor(30);
+        Assert.Equal(new[] { amber, amber, 0u, 0u },
+            new[] { Pixel(frame, 5, 4), Pixel(frame, 6, 5), Pixel(frame, 5, 6), Pixel(frame, 4, 5) });
+    }
+
+    [Fact]
+    public void Outline_drains_anticlockwise_leaving_the_top_right_quarter_at_25_percent()
+    {
+        // A 4x4 pad at (5,5): its 16-pixel ring runs x 4..9, y 4..9 (no corners).
+        var sprites = new Dictionary<string, Sprite>(Sprites) { ["pad"] = new("pad", 4, 4, Enumerable.Repeat(Blue, 16).ToArray()) };
+        var pad = new DevicePlacement(TestReadings.Make("Pad", DeviceKind.Mouse, battery: 25), "hands", "pad");
+        var frame = FrameComposer.Compose(Layout, sprites, new[] { pad }, Spec(), BatteryStyle.Outline);
+        uint color = BatteryBar.ColorFor(25);
+        // Kept: the right half of the top edge and the top half of the right edge.
+        Assert.All(new[] { (7, 4), (8, 4), (9, 5), (9, 6) }, p => Assert.Equal(color, Pixel(frame, p.Item1, p.Item2)));
+        // Drained: the top-left, the lower right edge, the bottom and the left.
+        Assert.All(new[] { (5, 4), (6, 4), (9, 7), (9, 8), (7, 9), (4, 6) }, p => Assert.Equal(0u, Pixel(frame, p.Item1, p.Item2)));
+    }
+
+    [Fact]
     public void Outline_stays_while_a_critical_device_blinks()
     {
+        // 5% keeps just the ring's top pixel, above the shaken mouse.
         var frame = Compose(new[] { Mouse(5) }, Spec(criticalDx: 1), BatteryStyle.Outline);
-        Assert.Equal(BatteryBar.Red, Pixel(frame, 5, 5));
+        Assert.Equal(BatteryBar.Red, Pixel(frame, 6, 4));
         Assert.Equal(Blue, Pixel(frame, 6, 5));
     }
 

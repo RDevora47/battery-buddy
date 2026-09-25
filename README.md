@@ -17,6 +17,18 @@
   <img src="https://img.shields.io/badge/.NET-8-512BD4?style=flat-square" alt=".NET 8">
 </p>
 
+## Get started in 1 minute
+
+1. **[Download Battery Buddy](https://github.com/RDevora47/battery-buddy/releases/latest/download/BatteryBuddy-standalone-win-x64.zip)** (Windows 10 or 11).
+2. **Right-click the zip → Extract All…** and open the folder it creates.
+3. **Double-click `BatteryBuddy.exe`.** If Windows says *"Windows protected your PC"*, click
+   **More info → Run anyway**. Battery Buddy is free and isn't signed with a paid certificate,
+   so Windows doesn't recognize it yet ([more about this](#windows-protected-your-pc-and-other-warnings)).
+4. Your pet appears **above the taskbar, bottom-right**. Right-click it for options, such as
+   **Start with Windows**.
+
+Nothing to install, and no account needed. More options and help are under [Download](#download).
+
 ## Meet the pets
 
 Pick one from the tray menu. They all type along with your keyboard and click along with your mouse.

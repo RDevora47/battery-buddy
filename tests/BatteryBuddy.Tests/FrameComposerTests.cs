@@ -198,6 +198,19 @@ public class FrameComposerTests
         Assert.Equal(0u, Pixel(frame, 0, 8));
     }
 
+    [Theory]
+    [InlineData(BatteryStyle.Outline)]
+    [InlineData(BatteryStyle.Bar)]
+    [InlineData(BatteryStyle.Gauge)]
+    public void A_device_without_a_battery_is_drawn_bare(BatteryStyle style)
+    {
+        var bare = new DevicePlacement(TestReadings.Make("Mouse", DeviceKind.Mouse, battery: null) with { NoBattery = true }, "hands", "mouse");
+        var frame = Compose(new[] { bare }, Spec(), style);
+        Assert.Equal(Blue, Pixel(frame, 5, 5));
+        Assert.Equal(HitTarget.Device, frame.HitTest(5, 5, out _));
+        Assert.Equal(4 + 1, frame.Pixels.Count(p => p != 0));   // the body and the mouse, nothing else
+    }
+
     [Fact]
     public void Outline_covers_only_the_remaining_charge_clockwise_from_the_top()
     {

@@ -32,6 +32,12 @@ public class BubbleTextTests
             BubbleText.For(TestReadings.Make("MX Master 3S", DeviceKind.Mouse, battery: 55), Now).ReplaceLineEndings("\n"));
 
     [Fact]
+    public void A_device_without_a_battery_says_so() =>
+        Assert.Equal(
+            "Gaming KB\nno battery level",
+            BubbleText.For(TestReadings.Make("Gaming KB", DeviceKind.Keyboard, battery: null) with { NoBattery = true }, Now).ReplaceLineEndings("\n"));
+
+    [Fact]
     public void Charging_is_mentioned()
     {
         var mouse = TestReadings.Make("MX Master 3S", DeviceKind.Mouse, battery: 55) with { IsCharging = true };

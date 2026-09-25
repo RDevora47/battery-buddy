@@ -4,7 +4,8 @@ namespace BatteryBuddy.Backend;
 
 /// <summary>
 /// Merges per-source snapshots into one device list: readings share a device when their keys match or
-/// their hardware addresses do (the first name seen for an address wins). Charging comes from the source
+/// their hardware addresses do (the first name seen for an address wins); a reading with a battery beats one
+/// without. Charging comes from the source
 /// when it reports it, else it's inferred. Not thread-safe: <see cref="DeviceHub"/> serializes calls.
 /// </summary>
 public sealed class DeviceRegistry
@@ -119,7 +120,8 @@ public sealed class DeviceRegistry
     {
         var list = candidates.ToList();
         return list.Where(r => r.IsConnected)
-                   .OrderByDescending(r => r.Detail is not null)
+                   .OrderByDescending(r => !r.NoBattery)
+                   .ThenByDescending(r => r.Detail is not null)
                    .ThenByDescending(r => r.ChargingKnown)
                    .ThenByDescending(r => r.ReadAt)
                    .FirstOrDefault()

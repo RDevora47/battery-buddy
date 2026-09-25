@@ -26,6 +26,7 @@ static class Backends
             new WindowsBatterySource(WindowsPollInterval, Log.Write),
             new GalaxyBudsSource(Log.Write),
             new LogitechSource(Log.Write),
+            new InputDeviceSource(Log.Write),
         };
         return new DeviceHub(sources, charge, Log.Write, new BluetoothRadioMonitor(), SynchronizationContext.Current);
     }

@@ -11,6 +11,8 @@ public class DeviceKindClassifierTests
     [InlineData("Buds3 Pro de Roberto", DeviceKind.Earbuds)]
     [InlineData("WF-C500", DeviceKind.Earbuds)]
     [InlineData("S25 Ultra de Roberto", DeviceKind.Phone)]
+    [InlineData("Gaming KB", DeviceKind.Keyboard)]
+    [InlineData("LIGHTSPEED Receiver", DeviceKind.Other)]
     [InlineData("QUE5-L10063", DeviceKind.Other)]
     public void Classifies_known_devices_by_name(string name, DeviceKind expected) =>
         Assert.Equal(expected, DeviceKindClassifier.Classify(name, null));

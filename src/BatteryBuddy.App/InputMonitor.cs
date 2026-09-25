@@ -7,7 +7,8 @@ namespace BatteryBuddy.App;
 /// <summary>
 /// Notices key presses, mouse clicks and wheel turns anywhere on the desktop via Raw Input sent to the pet window
 /// (no global hook in everyone's input path). Only "a key went down" / "a button went down" leaves
-/// this class (plus "the wheel turned"): which key is never exposed or logged. Held keys are remembered only to skip auto-repeat.
+/// this class (plus "the wheel turned", and "that key was Esc" to close the channel picker): which key is never
+/// otherwise exposed or logged. Held keys are remembered only to skip auto-repeat.
 /// </summary>
 sealed class InputMonitor : IDisposable
 {
@@ -20,6 +21,7 @@ sealed class InputMonitor : IDisposable
     // Left, right, middle, X1 and X2 button-down flags; up flags and movement don't count.
     const ushort AnyButtonDown = 0x0001 | 0x0004 | 0x0010 | 0x0040 | 0x0100;
     const ushort AnyWheel = 0x0400 | 0x0800;   // vertical and horizontal wheel
+    const ushort VK_ESCAPE = 0x1B;
 
     static readonly int HeaderSize = Marshal.SizeOf<RAWINPUTHEADER>();
 
@@ -31,6 +33,7 @@ sealed class InputMonitor : IDisposable
     public event Action? KeyPressed;
     public event Action? MouseClicked;
     public event Action? MouseScrolled;
+    public event Action? EscapePressed;
 
     public void Start(Window window)
     {
@@ -84,7 +87,11 @@ sealed class InputMonitor : IDisposable
             ushort vkey = BitConverter.ToUInt16(_buffer, HeaderSize + 6);
             int key = vkey | (flags & RI_KEY_E0) << 16;
             if ((flags & RI_KEY_BREAK) != 0) _heldKeys.Remove(key);
-            else if (_heldKeys.Add(key)) KeyPressed?.Invoke();
+            else if (_heldKeys.Add(key))
+            {
+                KeyPressed?.Invoke();
+                if (vkey == VK_ESCAPE) EscapePressed?.Invoke();
+            }
         }
     }
 

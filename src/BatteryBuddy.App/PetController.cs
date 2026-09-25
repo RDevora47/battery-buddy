@@ -33,6 +33,10 @@ sealed class PetController : IDisposable
     ComposedFrame? _frame;
     bool _bluetoothOn = true;
     bool _rescanning;
+    HostPicker _picker = null!;          // per skin: its frame width places the arc
+    DeviceReading? _pickerMouse;         // the mouse the open picker switches
+    bool _pickerVerified;
+    bool _openingPicker;                 // asking the mouse for its channels
 
     public PetController(PetWindow window, IBatteryBackend backend)
     {
@@ -60,6 +64,12 @@ sealed class PetController : IDisposable
 
         _window.PetClicked += OnPetClicked;
         _window.Moved += SavePosition;
+        _window.PetRightClicked += (x, y) => _ = OnPetRightClickedAsync(x, y);
+        _window.PetHovered += OnPetHovered;
+        _window.Moved += ClosePicker;
+        _input.EscapePressed += ClosePicker;
+        // A click anywhere off the pet closes the picker; clicks on it are handled by OnPetClicked.
+        _input.MouseClicked += () => { if (_picker.IsOpen && !_window.IsMouseOver) ClosePicker(); };
         _input.KeyPressed += () => { _animator.KeyTap(_clock.Elapsed); Render(); };
         _input.MouseClicked += () => { _animator.Click(_clock.Elapsed); Render(); };
         _input.MouseScrolled += () => { _animator.Scroll(_clock.Elapsed); Render(); };
@@ -127,6 +137,7 @@ sealed class PetController : IDisposable
             Hops = _layout.Perched,
             ReachFrames = _layout.Reach is null ? 0 : Enumerable.Range(1, 9).TakeWhile(n => _sprites.ContainsKey($"reach{n}")).Count(),
         };
+        _picker = new HostPicker(_layout.FrameWidth);
         int resolution = FrameComposer.ResolutionOf(_sprites);
         _bitmap = new WriteableBitmap(_layout.FrameWidth * resolution, _layout.CanvasHeight * resolution, 96, 96, PixelFormats.Bgra32, null);
         _window.SetBitmap(_bitmap, resolution);
@@ -201,6 +212,12 @@ sealed class PetController : IDisposable
 
     void OnDevicesChanged(object? sender, DeviceChange change)
     {
+        // The mouse left while its picker was out (not because we switched it): drop the picker.
+        if (_picker.DeviceKey is { } pickerKey && _picker.Phase != PickerPhase.Leaving && change.Removed.Any(d => d.Key == pickerKey))
+        {
+            _picker.Reset();
+            _window.SetHandCursor(false);
+        }
         var now = _clock.Elapsed;
         foreach (var gone in change.Removed)
         {
@@ -240,7 +257,14 @@ sealed class PetController : IDisposable
 
     void OnPetClicked(int x, int y)
     {
-        if (_frame is null || !_bluetoothOn) return; // keep the "Bluetooth is off" bubble up
+        if (_frame is null) return;
+        if (_picker.IsOpen)
+        {
+            if (_frame.HitTest(x, y, out _, out int channel) == HitTarget.Channel) _ = PickAsync(channel);
+            else ClosePicker();
+            return;
+        }
+        if (!_bluetoothOn) return; // keep the "Bluetooth is off" bubble up
         var target = _frame.HitTest(x, y, out var device);
         if (target == HitTarget.None) return;
 
@@ -258,6 +282,92 @@ sealed class PetController : IDisposable
         }
     }
 
+    async Task OnPetRightClickedAsync(int x, int y)
+    {
+        if (_frame is null) return;
+        var target = _frame.HitTest(x, y, out var device, out _);
+        if (target == HitTarget.Channel) return;
+        if (target != HitTarget.Device || device is not { Kind: DeviceKind.Mouse })
+        {
+            ClosePicker();
+            _window.RequestMenu();
+            return;
+        }
+        if (_picker.IsOpen)
+        {
+            ClosePicker();   // right-clicking the mouse again
+            return;
+        }
+        if (_openingPicker) return;
+        _openingPicker = true;
+        try { await OpenPickerAsync(device); }
+        catch (Exception ex) when (!_cts.IsCancellationRequested) { Log.Write($"channel picker failed: {ex.Message}"); }
+        finally { _openingPicker = false; }
+    }
+
+    async Task OpenPickerAsync(DeviceReading mouse)
+    {
+        if (!_backend.CanSwitchHost(mouse))
+        {
+            Say(SwitchText.CantSwitch);
+            return;
+        }
+        bool verified = _backend.IsVerifiedSwitcher(mouse);
+        var hosts = await _backend.GetHostsAsync(mouse, _cts.Token);
+        if (hosts is null)
+        {
+            Say(SwitchText.NoAnswer(verified));
+            return;
+        }
+        if (_placements.FirstOrDefault(p => p.Device.Key == mouse.Key) is not { } placement) return;   // left while we asked
+        _bubbleTimer.Stop();
+        _window.HideBubble();
+        _pickerMouse = mouse;
+        _pickerVerified = verified;
+        _picker.Open(mouse.Key, _layout.Places[placement.PlaceName].Points[0], hosts, _clock.Elapsed);
+        Render();
+    }
+
+    async Task PickAsync(int channel)
+    {
+        if (!_picker.CanPick(channel) || _pickerMouse is not { } mouse) return;
+        _picker.Pick(channel, _clock.Elapsed);
+        _window.SetHandCursor(false);
+        Render();
+        try
+        {
+            var result = await _backend.SwitchHostAsync(mouse, channel, _cts.Token);
+            Say(result == SwitchResult.Switched ? SwitchText.Switched(channel) : SwitchText.SwitchFailed(_pickerVerified));
+        }
+        catch (Exception ex) when (!_cts.IsCancellationRequested) { Log.Write($"channel switch failed: {ex.Message}"); }
+    }
+
+    void OnPetHovered(int x, int y)
+    {
+        if (!_picker.IsOpen || _frame is null) return;
+        int? channel = _frame.HitTest(x, y, out _, out int c) == HitTarget.Channel ? c : null;
+        if (channel == _picker.Hovered) return;
+        _picker.Hover(channel, _clock.Elapsed);
+        _window.SetHandCursor(channel is int n && _picker.CanPick(n));
+        if (channel is int hovered && _picker.Look(hovered) == BubbleLook.Empty) Say(SwitchText.Empty(hovered));
+        Render();
+    }
+
+    void ClosePicker()
+    {
+        if (!_picker.IsOpen) return;
+        _picker.Close(_clock.Elapsed);
+        _window.SetHandCursor(false);
+        Render();
+    }
+
+    void Say(string text)
+    {
+        _bubbleTimer.Stop();
+        _window.ShowBubble(text);
+        _bubbleTimer.Start();
+    }
+
     void Rebuild()
     {
         // With Bluetooth off only devices that don't need it stay: a wired or receiver keyboard or mouse.
@@ -273,18 +383,20 @@ sealed class PetController : IDisposable
     void Render()
     {
         var now = _clock.Elapsed;
-        var spec = _animator.FrameAt(now);
+        if (_picker.Tick(now) && !_picker.IsOpen) _window.SetHandCursor(false);
+        var spec = _animator.FrameAt(now) with { Picker = _picker.DrawingAt(now) };
         _frame = FrameComposer.Compose(_layout, _sprites, _placements, spec, _settings.BatteryStyle);
         _bitmap.WritePixels(new Int32Rect(0, 0, _frame.Width, _frame.Height), _frame.Pixels, _frame.Width * 4, 0);
 #if DIAG_LOG
         _renders++;
 #endif
 
-        if (_animator.NeedsTicks(now)) { if (!_frameTimer.IsEnabled) _frameTimer.Start(); }
+        if (_animator.NeedsTicks(now) || _picker.NeedsTicks) { if (!_frameTimer.IsEnabled) _frameTimer.Start(); }
         else _frameTimer.Stop();
 
         _idleTimer.Stop();
-        var untilIdle = _animator.NextIdleAt - now;
+        var wake = _picker.ClosesAt is TimeSpan closes && closes < _animator.NextIdleAt ? closes : _animator.NextIdleAt;
+        var untilIdle = wake - now;
         _idleTimer.Interval = untilIdle > TimeSpan.FromMilliseconds(50) ? untilIdle : TimeSpan.FromMilliseconds(50);
         _idleTimer.Start();
     }

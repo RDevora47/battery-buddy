@@ -57,6 +57,13 @@ public partial class PetWindow : Window
 
     /// <summary>Click on the pet in frame pixel coordinates (art pixels x resolution, not screen pixels).</summary>
     public event Action<int, int>? PetClicked;
+
+    /// <summary>Right-click on the pet, in frame pixel coordinates.</summary>
+    public event Action<int, int>? PetRightClicked;
+
+    /// <summary>The pointer moved over the pet (frame pixels), or left it (-1, -1).</summary>
+    public event Action<int, int>? PetHovered;
+
     public event Action? Moved;
     public event Action? MenuRequested;
 
@@ -176,7 +183,12 @@ public partial class PetWindow : Window
 
     void PetImage_MouseMove(object sender, MouseEventArgs e)
     {
-        if (!_pressed || e.LeftButton != MouseButtonState.Pressed) return;
+        if (!_pressed || e.LeftButton != MouseButtonState.Pressed)
+        {
+            var (hx, hy) = FramePoint(e);
+            PetHovered?.Invoke(hx, hy);
+            return;
+        }
         var delta = e.GetPosition(this) - _pressedAt;
         if (Math.Abs(delta.X) <= DragThreshold && Math.Abs(delta.Y) <= DragThreshold) return;
 
@@ -191,9 +203,26 @@ public partial class PetWindow : Window
         PetImage.ReleaseMouseCapture();
         if (!_pressed) return;
         _pressed = false;
-        var p = e.GetPosition(PetImage);
-        PetClicked?.Invoke((int)(p.X * _resolution / Scale), (int)(p.Y * _resolution / Scale));
+        var (x, y) = FramePoint(e);
+        PetClicked?.Invoke(x, y);
     }
 
-    void PetImage_MouseRightButtonUp(object sender, MouseButtonEventArgs e) => MenuRequested?.Invoke();
+    void PetImage_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        var (x, y) = FramePoint(e);
+        PetRightClicked?.Invoke(x, y);
+    }
+
+    void PetImage_MouseLeave(object sender, MouseEventArgs e) => PetHovered?.Invoke(-1, -1);
+
+    /// <summary>Opens the tray menu (the controller decides when a right-click means that).</summary>
+    public void RequestMenu() => MenuRequested?.Invoke();
+
+    public void SetHandCursor(bool hand) => PetImage.Cursor = hand ? Cursors.Hand : null;
+
+    (int X, int Y) FramePoint(MouseEventArgs e)
+    {
+        var p = e.GetPosition(PetImage);
+        return ((int)(p.X * _resolution / Scale), (int)(p.Y * _resolution / Scale));
+    }
 }

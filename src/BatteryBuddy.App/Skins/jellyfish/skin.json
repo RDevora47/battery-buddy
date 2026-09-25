@@ -1,0 +1,18 @@
+{
+  "canvas": { "width": 44, "height": 53 },
+  "body": [6, 15],
+  "paws": { "left": [15, 35], "right": [25, 35] },
+  "desk": [5, 39],
+  "mousePaw": [30, 37],
+  "places": {
+    "gills":     { "points": [[8, 22], [33, 22]], "bar": [16, 11],  "followsBody": true },
+    "neck":      { "points": [[14, 28], [27, 28]], "bar": [0, 16],  "followsBody": true },
+    "hands":     { "points": [[18, 33]],           "bar": [16, 50], "followsBody": true },
+    "righthand": { "points": [[30, 40]],           "bar": [30, 47], "followsBody": false, "followsClick": true, "icons": "right" },
+    "seat":      { "points": [[12, 40]],           "bar": [15, 47], "followsBody": false, "icons": "left" },
+    "side":      { "points": [[39, 33]],           "bar": [33, 31], "followsBody": false },
+    "float1":    { "points": [[0, 35]],            "bar": [0, 41],  "followsBody": false },
+    "float2":    { "points": [[0, 26]],            "bar": [0, 32],  "followsBody": false }
+  },
+  "overlays": { "zzz": [36, 14], "sweat": [36, 16], "saiyan": [8, 0], "strawhat": [10, 6], "magnifier": [0, 31] }
+}

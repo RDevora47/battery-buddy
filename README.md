@@ -1,10 +1,10 @@
 # Battery Buddy
 
 A pixel-art pet that lives above your taskbar and wears your Bluetooth devices: Mochi the
-axolotl, Maple the red panda, Bebonio the bunny, Bao the giant panda, Mango the parrot, or the
-dogs Choppa and Missy. Each device shows its charge (colored outline, bar or mini battery) and a
-bolt while it charges. As your lowest device drains, Mochi's gills (Mango's crest, the others'
-ears) droop and its color fades; it gets sleepy (≤ 20 %)
+axolotl, Maple the red panda, Bebonio the bunny, Bao the giant panda, Mango the parrot, Boba the
+jellyfish, or the dogs Choppa and Missy. Each device shows its charge (colored outline, bar or mini
+battery) and a bolt while it charges. As your lowest device drains, Mochi's gills (Mango's crest,
+Boba's side tentacles, the others' ears) droop and its color fades; it gets sleepy (≤ 20 %)
 and, at ≤ 10 %, shakes the device to squeeze out the last energy.
 
 - **Click a device** — speech bubble with its latest charge (Galaxy Buds: left / right / case).
@@ -14,6 +14,7 @@ and, at ≤ 10 %, shakes the device to squeeze out the last energy.
 - **Full-charge hat** — what the pet wears while every device is at 95 % or more: Super Saiyan hair,
   a straw hat (One Piece), or none. Maple and the dogs also wag their tails when they're happy.
 - **Mango** is small enough to stand on the keyboard, and hops from key to key as you type.
+- **Boba** floats above the desk and types with the tips of its two long tentacles.
 
 ## Setup
 

@@ -53,7 +53,7 @@ public class SkinTests
 
     [Fact]
     public void Ships_every_pet() =>
-        Assert.Equal(new[] { "axolotl", "bunny", "choppa", "missy", "panda", "parrot", "redpanda" }, TestSkin.Names);
+        Assert.Equal(new[] { "axolotl", "bunny", "choppa", "jellyfish", "missy", "panda", "parrot", "redpanda" }, TestSkin.Names);
 
     [Theory, MemberData(nameof(Skins))]
     public void Has_all_required_sprites(string skin)
@@ -227,6 +227,7 @@ public class SkinTests
     [InlineData("bunny", 11)]    // rows 0-10 are for the long ears
     [InlineData("panda", 4)]
     [InlineData("parrot", 5)]     // small and perched on the keyboard
+    [InlineData("jellyfish", 1)]  // floats high so its tentacles reach the keys: its skin has a taller canvas
     public void Saiyan_hair_flames_up_high_above_the_head(string skin, int headTop)
     {
         // Classic Super Saiyan: the spikes rise above the head by more than the axolotl's whole head is tall
@@ -247,6 +248,7 @@ public class SkinTests
     [InlineData("bunny", 11)]
     [InlineData("panda", 4)]
     [InlineData("parrot", 5)]
+    [InlineData("jellyfish", 1)]
     public void Saiyan_hairline_sits_on_the_head_with_no_gap(string skin, int headTop)
     {
         // Across the forehead (the bangs and the notches between them) the hair's lowest pixel touches or
@@ -455,6 +457,7 @@ public class SkinTests
     [InlineData("bunny")]   // the cottontail hides behind the body
     [InlineData("panda")]
     [InlineData("parrot")]
+    [InlineData("jellyfish")]
     public void Some_pets_have_no_tail(string skin) => Assert.Null(TestSkin.Load(skin).Layout.Tail);
 
     [Theory]
@@ -475,6 +478,21 @@ public class SkinTests
         }
         Assert.True(Top("gills_perky") < Top("gills_droopy"), "droopy ears must sit lower than perky ones");
         Assert.True(Top("gills_droopy") < Top("gills_limp"), "limp ears must sit lower than droopy ones");
+    }
+
+    [Fact]
+    public void Bobas_side_tentacles_hang_lower_as_the_battery_drains()
+    {
+        // They fill the "gills" slot, rooted under the bell in every pose: held out when charged, drooping when
+        // low, hanging straight down when drained. The lower the battery, the lower their tips reach.
+        var sprites = TestSkin.Load("jellyfish").Sprites;
+        int Bottom(string pose)
+        {
+            var s = sprites[pose];
+            return Enumerable.Range(0, s.Height).Last(y => Enumerable.Range(0, s.Width).Any(x => s.Pixels[y * s.Width + x] != 0));
+        }
+        Assert.True(Bottom("gills_perky") < Bottom("gills_droopy"), "droopy tentacles must hang lower than perky ones");
+        Assert.True(Bottom("gills_droopy") < Bottom("gills_limp"), "limp tentacles must hang lower than droopy ones");
     }
 
     /// <summary>Every skin crossed with every full-charge hat's sprite.</summary>
@@ -519,6 +537,7 @@ public class SkinTests
     [InlineData("bunny", 11, 16)]
     [InlineData("panda", 4, 11)]
     [InlineData("parrot", 5, 9)]
+    [InlineData("jellyfish", 1, 4)]
     public void Straw_hat_sits_on_the_head_above_the_eyes(string skin, int headTop, int eyeRow)
     {
         var (_, Layout, Sprites) = TestSkin.Load(skin);

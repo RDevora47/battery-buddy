@@ -42,7 +42,7 @@ public sealed class DeviceRegistry
     {
         _bySource[source] = snapshot.Select(Canonical).GroupBy(r => r.Key).ToDictionary(g => g.Key, g => g.Last());
         foreach (var reading in _bySource[source].Values)
-            if (reading.IsConnected && reading.EffectiveBattery is int level)
+            if (reading.IsConnected && !reading.BatteryStale && reading.EffectiveBattery is int level)
                 // Only plain level readings pace like a periodic reporter; buds and charge-aware sources push.
                 _charge.Observe(reading.Key, source, level, reading.ReadAt,
                     periodic: reading.Detail is null && !reading.ChargingKnown);

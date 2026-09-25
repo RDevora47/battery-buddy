@@ -94,6 +94,53 @@ public class PnpNodeMergerTests
         Assert.Null(buds.BatteryPercent);
     }
 
+    static PnpNode RkReceiver(bool present) =>
+        new(@"USB\VID_258A&PID_0150\5&230B0289&0&7", "USB Composite Device", null, null, null, present);
+
+    [Fact]
+    public void Keyboard_on_its_receiver_keeps_its_last_bluetooth_battery()
+    {
+        var keyboard = PnpNodeMerger.Merge(
+            new[] { Le("FF03000652C0", "RK-S98RGB", 91, false), RkReceiver(present: true) }, TestReadings.T0).Single();
+        Assert.True(keyboard.IsConnected);
+        Assert.True(keyboard.BatteryStale);
+        Assert.Equal(91, keyboard.BatteryPercent);
+        Assert.Equal(DeviceKind.Keyboard, keyboard.Kind);
+    }
+
+    [Fact]
+    public void Keyboard_without_its_receiver_stays_disconnected()
+    {
+        foreach (var nodes in new[]
+        {
+            new[] { Le("FF03000652C0", "RK-S98RGB", 91, false) },
+            new[] { Le("FF03000652C0", "RK-S98RGB", 91, false), RkReceiver(present: false) },
+        })
+        {
+            var keyboard = PnpNodeMerger.Merge(nodes, TestReadings.T0).Single();
+            Assert.False(keyboard.IsConnected);
+            Assert.False(keyboard.BatteryStale);
+        }
+    }
+
+    [Fact]
+    public void Keyboard_on_bluetooth_reports_live_battery_even_with_receiver_plugged_in()
+    {
+        var keyboard = PnpNodeMerger.Merge(
+            new[] { Le("FF03000652C0", "RK-S98RGB", 88, true), RkReceiver(present: true) }, TestReadings.T0).Single();
+        Assert.True(keyboard.IsConnected);
+        Assert.False(keyboard.BatteryStale);
+        Assert.Equal(88, keyboard.BatteryPercent);
+    }
+
+    [Fact]
+    public void Receiver_only_claims_its_own_brand()
+    {
+        var readings = PnpNodeMerger.Merge(
+            new[] { Le("408E2C2B8126", "Xbox Wireless Controller", 75, false), RkReceiver(present: true) }, TestReadings.T0);
+        Assert.False(readings.Single().IsConnected);
+    }
+
     [Fact]
     public void Hands_free_suffix_is_stripped_for_phone()
     {

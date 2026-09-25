@@ -39,6 +39,15 @@ public class BubbleTextTests
     }
 
     [Fact]
+    public void Stale_battery_says_it_is_the_last_bluetooth_reading()
+    {
+        var keyboard = TestReadings.Make("RK-S98RGB", DeviceKind.Keyboard, battery: 91) with { BatteryStale = true };
+        Assert.Equal(
+            "RK-S98RGB\nBattery 91% · last known\nlast Bluetooth reading",
+            BubbleText.For(keyboard, Now).ReplaceLineEndings("\n"));
+    }
+
+    [Fact]
     public void Unknown_battery_shows_question_mark() =>
         Assert.Contains("Battery ?", BubbleText.For(TestReadings.Make("Thing", battery: null), Now));
 

@@ -78,6 +78,15 @@ public class FrameComposerTests
     }
 
     [Fact]
+    public void A_stale_battery_is_drawn_dimmed()
+    {
+        var stale = new DevicePlacement(TestReadings.Make("Mouse", DeviceKind.Mouse, battery: 80) with { BatteryStale = true }, "hands", "mouse");
+        var frame = Compose(new[] { stale }, Spec());
+        Assert.Equal(BatteryBar.ColorFor(80, stale: true), Pixel(frame, 0, 8));
+        Assert.NotEqual(BatteryBar.ColorFor(80), BatteryBar.ColorFor(80, stale: true));
+    }
+
+    [Fact]
     public void Body_dy_moves_body_and_following_places()
     {
         var frame = Compose(new[] { Mouse() }, Spec(dy: 1));

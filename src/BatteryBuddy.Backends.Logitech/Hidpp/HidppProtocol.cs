@@ -28,6 +28,8 @@ public static class HidppProtocol
     public const ushort DeviceName = 0x0005;
     public const ushort BatteryStatus = 0x1000;
     public const ushort UnifiedBattery = 0x1004;
+    public const ushort ChangeHost = 0x1814;
+    public const ushort HostsInfo = 0x1815;
 
     public static byte[] Request(byte deviceIndex, byte featureIndex, byte function, params byte[] args)
     {

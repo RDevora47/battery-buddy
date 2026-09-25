@@ -6,6 +6,12 @@
     .\build\build.ps1 -SkipTests   # publish only
     .\build\build.ps1 -SelfContained   # bundle the .NET runtime so the exe runs without .NET installed; no diag.log
     .\build\build.ps1 -AutoClose -AutoLaunch   # stop any running Battery Buddy, build, then start the new one
+    .\build\build.ps1 -Branch main   # build main without asking
+.PARAMETER Branch
+    The local branch to build. Without it, a repo with more than one branch asks which one (Enter: the current
+    one). The current branch builds the working tree as it is, uncommitted changes included; any other branch
+    builds its last commit in a temporary git worktree, leaving your checkout alone. Either way the exe lands
+    in this checkout's build\out.
 .PARAMETER AutoClose
     Force-stops every running Battery Buddy (wherever it runs from) once the tests pass, instead of refusing
     to build over a copy running from build\out. A failed test run leaves it running.
@@ -13,6 +19,7 @@
     Starts build\out\BatteryBuddy.exe after a successful build.
 #>
 param(
+    [string]$Branch,
     [string]$Configuration = "Release",
     [switch]$SkipTests,
     [switch]$SelfContained,
@@ -24,7 +31,43 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
 $out = Join-Path $PSScriptRoot "out"
 
-Push-Location $root
+function Select-Branch {
+    $branches = @(git -C $root branch --format="%(refname:short)")
+    if ($LASTEXITCODE -ne 0) { throw "Couldn't list the git branches." }
+    $current = git -C $root branch --show-current   # empty on a detached HEAD
+    if ($Branch) {
+        if ($branches -notcontains $Branch) { throw "No local branch '$Branch'. Branches: $($branches -join ', ')" }
+        return $Branch
+    }
+    if ($branches.Count -le 1) { return $current }
+
+    Write-Host "Branches:"
+    for ($i = 0; $i -lt $branches.Count; $i++) {
+        $mark = if ($branches[$i] -eq $current) { " (current, working tree)" } else { "" }
+        Write-Host ("  {0}. {1}{2}" -f ($i + 1), $branches[$i], $mark)
+    }
+    while ($true) {
+        $answer = (Read-Host "Build which branch? [number or name, Enter = current]").Trim()
+        if (-not $answer -and $current) { return $current }
+        if ($answer -match '^\d+$' -and [int]$answer -ge 1 -and [int]$answer -le $branches.Count) { return $branches[[int]$answer - 1] }
+        if ($branches -contains $answer) { return $answer }
+        Write-Host "Not a branch: '$answer'" -ForegroundColor Yellow
+    }
+}
+
+$selected = Select-Branch
+$source = $root
+$worktree = $null
+if ($selected -and $selected -ne (git -C $root branch --show-current)) {
+    # Another branch: build its last commit on the side, so the checkout and any uncommitted work stay put.
+    $worktree = Join-Path ([IO.Path]::GetTempPath()) "BatteryBuddy-build-$([guid]::NewGuid().ToString('N').Substring(0, 8))"
+    git -C $root worktree add --detach --quiet $worktree $selected
+    if ($LASTEXITCODE -ne 0) { throw "Couldn't check out '$selected' into a temporary worktree." }
+    $source = $worktree
+}
+if ($selected) { Write-Host "Building $selected$(if ($worktree) { ' (last commit)' } else { ' (working tree)' })" -ForegroundColor Cyan }
+
+Push-Location $source
 try {
     if (-not $SkipTests) {
         dotnet test tests/BatteryBuddy.Tests -c $Configuration --nologo
@@ -75,4 +118,8 @@ try {
 }
 finally {
     Pop-Location
+    if ($worktree) {
+        git -C $root worktree remove --force $worktree
+        if ($LASTEXITCODE -ne 0) { Write-Warning "Couldn't remove the temporary worktree $worktree; 'git worktree prune' cleans it up once it's deleted." }
+    }
 }

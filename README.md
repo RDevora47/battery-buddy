@@ -4,7 +4,7 @@ A pixel-art pet that lives above your taskbar and wears your Bluetooth devices: 
 axolotl, Maple the red panda, Bebonio the bunny, Bao the giant panda, Mango the parrot, Boba the
 jellyfish, or the dogs Choppa and Missy. Each device shows its charge (colored outline, bar or mini
 battery) and a bolt while it charges. As your lowest device drains, Mochi's gills (Mango's crest,
-Boba's side tentacles, the others' ears) droop and its color fades; it gets sleepy (≤ 20 %)
+the others' ears) droop and its color fades; it gets sleepy (≤ 20 %)
 and, at ≤ 10 %, shakes the device to squeeze out the last energy.
 
 - **Click a device** — speech bubble with its latest charge (Galaxy Buds: left / right / case).

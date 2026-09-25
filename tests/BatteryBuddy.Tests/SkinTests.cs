@@ -522,18 +522,12 @@ public class SkinTests
     }
 
     [Fact]
-    public void Bobas_side_tentacles_hang_lower_as_the_battery_drains()
+    public void Boba_has_no_side_tentacles()
     {
-        // They fill the "gills" slot, rooted under the bell in every pose: held out when charged, drooping when
-        // low, hanging straight down when drained. The lower the battery, the lower their tips reach.
+        // Every pet has the three "gills" sprites; Boba's are blank, so only its fading color shows the battery.
         var sprites = TestSkin.Load("jellyfish").Sprites;
-        int Bottom(string pose)
-        {
-            var s = sprites[pose];
-            return Enumerable.Range(0, s.Height).Last(y => Enumerable.Range(0, s.Width).Any(x => s.Pixels[y * s.Width + x] != 0));
-        }
-        Assert.True(Bottom("gills_perky") < Bottom("gills_droopy"), "droopy tentacles must hang lower than perky ones");
-        Assert.True(Bottom("gills_droopy") < Bottom("gills_limp"), "limp tentacles must hang lower than droopy ones");
+        foreach (var mood in new[] { "gills_perky", "gills_droopy", "gills_limp" })
+            Assert.All(sprites[mood].Pixels, p => Assert.Equal(0u, p));
     }
 
     /// <summary>Every skin crossed with every full-charge hat's sprite.</summary>

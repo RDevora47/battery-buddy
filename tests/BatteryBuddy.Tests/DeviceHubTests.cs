@@ -72,4 +72,51 @@ public class DeviceHubTests
         Assert.Equal(new[] { false }, seen);
         Assert.False(_hub.IsAvailable);
     }
+
+    sealed class FakeSwitcher : IDeviceSource, IHostSwitcher
+    {
+        public string Name => "logitech";
+        public string? Switchable;
+        public int? SwitchedTo;
+        public event EventHandler<IReadOnlyList<DeviceReading>>? SnapshotChanged { add { } remove { } }
+        public Task StartAsync(CancellationToken ct) => Task.CompletedTask;
+        public Task RefreshAsync(CancellationToken ct) => Task.CompletedTask;
+        public bool CanSwitchHost(DeviceReading device) => device.Key == Switchable;
+        public bool IsVerifiedSwitcher(DeviceReading device) => true;
+        public Task<HostChannels?> GetHostsAsync(DeviceReading device, CancellationToken ct) =>
+            Task.FromResult<HostChannels?>(new HostChannels(new[] { new HostChannel(1, true), new HostChannel(2, true) }, 1));
+        public Task<SwitchResult> SwitchHostAsync(DeviceReading device, int channel, CancellationToken ct)
+        {
+            SwitchedTo = channel;
+            return Task.FromResult(SwitchResult.Switched);
+        }
+    }
+
+    [Fact]
+    public async Task Host_switching_goes_to_the_source_that_can_switch_the_device()
+    {
+        var switcher = new FakeSwitcher { Switchable = "mouse" };
+        using var hub = new DeviceHub(new IDeviceSource[] { _windows, switcher }, new ChargeTracker(), _ => { });
+        var mouse = TestReadings.Make("Mouse", DeviceKind.Mouse);
+
+        Assert.True(hub.CanSwitchHost(mouse));
+        Assert.True(hub.IsVerifiedSwitcher(mouse));
+        Assert.Equal(1, (await hub.GetHostsAsync(mouse, CancellationToken.None))!.Current);
+        Assert.Equal(SwitchResult.Switched, await hub.SwitchHostAsync(mouse, 2, CancellationToken.None));
+        Assert.Equal(2, switcher.SwitchedTo);
+    }
+
+    [Fact]
+    public async Task A_device_no_source_can_switch_is_not_switchable()
+    {
+        var switcher = new FakeSwitcher { Switchable = "other" };
+        using var hub = new DeviceHub(new IDeviceSource[] { _windows, switcher }, new ChargeTracker(), _ => { });
+        var mouse = TestReadings.Make("Mouse", DeviceKind.Mouse);
+
+        Assert.False(hub.CanSwitchHost(mouse));
+        Assert.False(hub.IsVerifiedSwitcher(mouse));
+        Assert.Null(await hub.GetHostsAsync(mouse, CancellationToken.None));
+        Assert.Equal(SwitchResult.Failed, await hub.SwitchHostAsync(mouse, 2, CancellationToken.None));
+        Assert.Null(switcher.SwitchedTo);
+    }
 }

@@ -41,6 +41,20 @@ public sealed class DeviceHub : IBatteryBackend
 
     public DeviceReading? LastKnown(string key) => _registry.LastKnown(key);
 
+    // Host switching goes to the first source that can switch this device; with none, it can't be switched.
+    IHostSwitcher? SwitcherFor(DeviceReading device) =>
+        _sources.OfType<IHostSwitcher>().FirstOrDefault(s => s.CanSwitchHost(device));
+
+    public bool CanSwitchHost(DeviceReading device) => SwitcherFor(device) is not null;
+
+    public bool IsVerifiedSwitcher(DeviceReading device) => SwitcherFor(device)?.IsVerifiedSwitcher(device) ?? false;
+
+    public Task<HostChannels?> GetHostsAsync(DeviceReading device, CancellationToken ct) =>
+        SwitcherFor(device)?.GetHostsAsync(device, ct) ?? Task.FromResult<HostChannels?>(null);
+
+    public Task<SwitchResult> SwitchHostAsync(DeviceReading device, int channel, CancellationToken ct) =>
+        SwitcherFor(device)?.SwitchHostAsync(device, channel, ct) ?? Task.FromResult(SwitchResult.Failed);
+
     public bool IsAvailable { get; private set; } = true;
 
     public event EventHandler<DeviceChange>? Changed;

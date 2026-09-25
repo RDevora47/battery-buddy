@@ -213,11 +213,15 @@ public static class FrameComposer
             }
         }
 
+        bool reaching = spec.RightPawOnMouse && layout.MousePaw is not null && !layout.Perched;
+        // A skin with a reaching limb clicks with it instead, so its right paw stays on the keys, at rest.
+        bool limb = reaching && layout.Reach is not null;
+
         void DrawPet()
         {
             int x = layout.Body.X + spec.BodyDx, y = layout.Body.Y + spec.BodyDy;
             if (layout.Tail is PixelPoint tail && spec.Tail is not null)
-                Blit(sprites[spec.Tail], tail.X + spec.BodyDx, tail.Y + spec.BodyDy, BodyOwner, spec.Fade);
+                Blit(sprites[limb ? "tail_reach" : spec.Tail], tail.X + spec.BodyDx, tail.Y + spec.BodyDy, BodyOwner, spec.Fade);
             Blit(sprites[spec.BodySprite], x, y, BodyOwner, spec.Fade);
             if (spec.Gills is not null)
                 Blit(sprites[spec.Gills], x, y, BodyOwner, spec.Fade);
@@ -234,9 +238,6 @@ public static class FrameComposer
         // Back to front: the tail behind the pet, pet, the desk in front of it, the keyboard on the desk,
         // the paws tapping it, then everything the pet holds or wears. A perched pet stands in front of the
         // desk on the keyboard instead; its paws are its feet, and they hop with it rather than tapping.
-        bool reaching = spec.RightPawOnMouse && layout.MousePaw is not null && !layout.Perched;
-        // A skin with a reaching limb clicks with it instead, so its right paw stays on the keys, at rest.
-        bool limb = reaching && layout.Reach is not null;
         if (layout.Perched)
         {
             DrawDeskAndKeyboard();
@@ -256,9 +257,11 @@ public static class FrameComposer
             if (placements[i].PlaceName is not ("seat" or EarPlace)) DrawDevice(i);
         if (reaching)   // on the mouse, which sits on the desk and doesn't bob
         {
+            // The limb stays put on a click: its paw presses the button, the tip stretching down.
             if (layout.Reach is PixelPoint reach)
-                Blit(sprites["reach"], reach.X, reach.Y + spec.PawRightDy, BodyOwner, spec.Fade);
-            Blit(sprites["paw"], layout.MousePaw!.Value.X, layout.MousePaw.Value.Y + spec.PawRightDy, BodyOwner, spec.Fade);
+                Blit(sprites[spec.ReachStep > 0 ? $"reach{spec.ReachStep}" : "reach"], reach.X, reach.Y, BodyOwner, spec.Fade);
+            if (!limb || spec.ReachStep == 0)
+                Blit(sprites["paw"], layout.MousePaw!.Value.X, layout.MousePaw.Value.Y + spec.PawRightDy, BodyOwner, spec.Fade);
         }
         foreach (var overlay in spec.Overlays)
             Blit(sprites[overlay.Sprite], overlay.X, overlay.Y, BodyOwner);

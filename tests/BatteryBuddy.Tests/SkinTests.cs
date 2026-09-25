@@ -115,28 +115,43 @@ public class SkinTests
     }
 
     [Theory, MemberData(nameof(Skins))]
-    public void A_reaching_limb_joins_the_body_to_the_paw_on_the_mouse(string skin)
+    public void A_reaching_limb_comes_from_under_the_desk_to_the_paw_on_the_mouse(string skin)
     {
-        // Only Boba reaches the mouse with a limb of its own (a third tentacle); it must never float free:
-        // its top overlaps the body however the body bobs, and its bottom runs into the paw on the mouse.
+        // Only Boba reaches the mouse with a limb of its own: its right long tentacle, which leaves the tail
+        // ("tail_reach"), comes out from under the desk and runs into the paw on the mouse, pressed or not.
         var (_, Layout, Sprites) = TestSkin.Load(skin);
         Assert.Equal(skin == "jellyfish", Layout.Reach is not null);
         if (Layout.Reach is not PixelPoint at) return;
-        var limb = Sprites["reach"];
-        var body = Sprites["body_idle"];
+        Assert.NotNull(Layout.Tail);
+        Assert.True(Sprites.ContainsKey("tail_reach"), "missing sprite tail_reach");
+        Assert.True(Sprites.ContainsKey("reach1"), "missing the limb's frames on the way (reach1...)");
         var paw = Sprites["paw"];
         var mousePaw = Layout.MousePaw!.Value;
-        int d = limb.Density;
+        int deskBottom = Layout.Desk!.Value.Y + Sprites["desk"].ArtHeight;
         bool Opaque(Sprite s, int x, int y) => x >= 0 && y >= 0 && x < s.Width && y < s.Height && s.Pixels[y * s.Width + x] != 0;
-        // Limb pixel (x, y) in frame pixels.
-        var pixels = Enumerable.Range(0, limb.Height).SelectMany(y => Enumerable.Range(0, limb.Width).Select(x => (x, y)))
-            .Where(p => Opaque(limb, p.x, p.y)).Select(p => (X: at.X * d + p.x, Y: at.Y * d + p.y)).ToList();
-        for (int bob = -1; bob <= 1; bob++)
-            Assert.True(pixels.Any(p => Opaque(body, p.X - Layout.Body.X * d, p.Y - (Layout.Body.Y + bob) * d)),
-                $"the limb doesn't reach the body when it bobs {bob}");
-        Assert.True(pixels.Any(p => Opaque(paw, p.X - mousePaw.X * d, p.Y - mousePaw.Y * d)), "the limb doesn't reach the paw on the mouse");
-        int bottom = pixels.Max(p => p.Y);
-        Assert.True(bottom < (mousePaw.Y + paw.ArtHeight) * d, "the limb pokes out below the paw on the mouse");
+        List<(int X, int Y)> Pixels(Sprite s) =>
+            Enumerable.Range(0, s.Height).SelectMany(y => Enumerable.Range(0, s.Width).Select(x => (x, y)))
+                .Where(p => Opaque(s, p.x, p.y)).Select(p => (at.X * s.Density + p.x, at.Y * s.Density + p.y)).ToList();
+
+        foreach (var name in Enumerable.Range(1, 9).Select(n => $"reach{n}").TakeWhile(Sprites.ContainsKey).Append("reach"))
+        {
+            var s = Sprites[name];
+            AssertFits(Layout, name, at.X, at.Y, s.ArtWidth, s.ArtHeight);
+            // Every frame starts on the desk's bottom border (its last two rows), as if coming from behind it.
+            int edge = deskBottom * s.Density - 2;
+            // Its leftmost columns there (the strand coming out) show nothing on the desk just above it.
+            var px = Pixels(s);
+            var onEdge = px.Where(p => p.Y == edge).Select(p => p.X).Order().ToList();
+            Assert.True(onEdge.Count > 0, $"{name} doesn't reach the desk's bottom border");
+            int strandEnd = onEdge.TakeWhile((x, i) => i == 0 || x == onEdge[i - 1] + 1).Last();
+            Assert.False(px.Any(p => p.Y < edge && p.Y >= edge - 6 && p.X >= onEdge[0] && p.X <= strandEnd),
+                $"{name} shows in front of the desk where it should come from behind it");
+        }
+        var reach = Pixels(Sprites["reach"]);
+        int d = paw.Density;
+        for (int press = 0; press <= 1; press++)
+            Assert.True(reach.Any(p => Opaque(paw, p.X - mousePaw.X * d, p.Y - (mousePaw.Y + press) * d)),
+                $"the limb doesn't reach the paw on the mouse (pressed: {press == 1})");
     }
 
     [Theory, MemberData(nameof(Skins))]
@@ -302,6 +317,7 @@ public class SkinTests
     [InlineData("choppa")]
     [InlineData("missy")]
     [InlineData("redpanda")]
+    [InlineData("jellyfish")]   // its two extra-long tentacles, swaying below the desk
     public void Tailed_pets_have_a_tail_that_wags_within_the_canvas(string skin)
     {
         var (_, Layout, Sprites) = TestSkin.Load(skin);
@@ -318,6 +334,7 @@ public class SkinTests
     [InlineData("choppa")]
     [InlineData("missy")]
     [InlineData("redpanda")]
+    [InlineData("jellyfish")]
     public void Every_tail_pose_stays_attached_to_the_body(string skin)
     {
         // The tail is drawn behind the body: every pixel that shows must connect, through other showing
@@ -482,7 +499,6 @@ public class SkinTests
     [InlineData("bunny")]   // the cottontail hides behind the body
     [InlineData("panda")]
     [InlineData("parrot")]
-    [InlineData("jellyfish")]
     public void Some_pets_have_no_tail(string skin) => Assert.Null(TestSkin.Load(skin).Layout.Tail);
 
     [Theory]

@@ -33,8 +33,9 @@ public sealed record SkinLayout(
     // Tail: the tail sprites ("tail", "tail_wag1", "tail_wag2"), drawn behind the body and bobbing with it.
     // All are canvas positions like Body. Perched: a small pet standing on the keyboard instead of sitting
     // behind the desk; it's drawn in front of the desk, its paws are its feet, and it hops as it types.
-    // Reach: where the "reach" sprite goes, a whole limb from the body down to MousePaw (Boba's third tentacle).
-    // A skin with one clicks with that limb, the paw drawn at its tip, and its right paw keeps typing.
+    // Reach: where the "reach" sprite goes, a whole limb running to MousePaw (Boba's long tentacle, out from
+    // under the desk). A skin with one clicks with that limb, the paw drawn at its tip, and its right paw keeps
+    // typing. On the way there and back it shows "reach1", "reach2"..., and its tail pose is "tail_reach".
     public static readonly string[] RequiredPlaces = { "gills", "neck", "hands", "righthand", "seat", "side", "float1", "float2" };
 
     public static SkinLayout Parse(string json)

@@ -4,7 +4,8 @@
   "paws": { "left": [15, 35], "right": [25, 35] },
   "desk": [5, 39],
   "mousePaw": [30, 37],
-  "reach": [26, 28],
+  "reach": [27, 33],
+  "tail": [6, 27],
   "places": {
     "gills":     { "points": [[8, 22], [33, 22]], "bar": [16, 11],  "followsBody": true },
     "neck":      { "points": [[14, 28], [27, 28]], "bar": [0, 16],  "followsBody": true },

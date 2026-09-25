@@ -13,11 +13,12 @@ public enum BatteryStyle { Outline, Bar, Gauge }
 /// reaches there with the limb instead, and its right paw stays on the keys).
 /// Tail is the tail pose, drawn only for skins that have a Tail spot.
 /// BodyDx moves the pet sideways with everything that follows its body (a perched pet hopping key to key).
+/// ReachStep: a skin's reaching limb on its way to or from the mouse, drawn as "reach{ReachStep}"; 0 = there.
 /// </summary>
 public sealed record FrameSpec(
     string BodySprite, int BodyDy, IReadOnlyList<Overlay> Overlays,
     int CriticalDx = 0, string? Gills = null, double Fade = 0, int PawLeftDy = 0, int PawRightDy = 0, int ClickDy = 0, bool RightPawOnMouse = false,
-    string? Tail = null, int BodyDx = 0)
+    string? Tail = null, int BodyDx = 0, int ReachStep = 0)
 {
     public int PawDy(Paw paw) => paw == Paw.Left ? PawLeftDy : PawRightDy;
 }

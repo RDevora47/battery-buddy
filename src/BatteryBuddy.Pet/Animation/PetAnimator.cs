@@ -35,6 +35,7 @@ public sealed class PetAnimator
     TimeSpan _rightPawUp;
     TimeSpan _clickUp;      // the right paw is clicking (not typing) until this time
     TimeSpan _offMouse;     // the right paw rests on the mouse until this time
+    TimeSpan _toMouse;      // when it last set out for the mouse
     Paw _nextTap = Paw.Left;
 
     enum Effect { Ploof, Whoosh }
@@ -68,6 +69,12 @@ public sealed class PetAnimator
 
     public const int HopHeight = 2;
 
+    /// <summary>
+    /// A skin with a limb that reaches the mouse (Boba's long tentacle) takes this many frames to get there, and
+    /// as many to go back once it lets go; 0 for a paw that simply moves to the mouse.
+    /// </summary>
+    public int ReachFrames { get; init; }
+
     public TimeSpan NextIdleAt { get; private set; }
 
     public void BeginSniff(TimeSpan now)
@@ -87,7 +94,7 @@ public sealed class PetAnimator
     /// <summary>A key went down: the paws take turns tapping, each press lasting one frame.</summary>
     public void KeyTap(TimeSpan now)
     {
-        _offMouse = now;
+        if (now < _offMouse) _offMouse = now;
         if (_nextTap == Paw.Left) (_leftPawUp, _rightPawUp) = (now + FrameInterval, now);
         else (_rightPawUp, _leftPawUp) = (now + FrameInterval, now);
         _nextTap = _nextTap == Paw.Left ? Paw.Right : Paw.Left;
@@ -96,6 +103,7 @@ public sealed class PetAnimator
     /// <summary>A mouse button went down: the right paw reaches for the mouse and clicks, staying there a second.</summary>
     public void Click(TimeSpan now)
     {
+        if (now >= _offMouse) _toMouse = now;
         _rightPawUp = _clickUp = now + FrameInterval;
         _offMouse = now + MouseHold;
     }
@@ -106,13 +114,14 @@ public sealed class PetAnimator
     /// </summary>
     public void Scroll(TimeSpan now)
     {
+        if (now >= _offMouse) _toMouse = now;
         _offMouse = now + MouseHold;
         if (now < _clickUp + FrameInterval) return;
         _rightPawUp = _clickUp = now + FrameInterval;
     }
 
     public bool NeedsTicks(TimeSpan now) =>
-        now < _leftPawUp || now < _rightPawUp || now < _offMouse || IsSniffing(now) || InBurst(now) || _effects.Any(e => now - e.Start < EffectLength);
+        now < _leftPawUp || now < _rightPawUp || OnMouse(now) || IsSniffing(now) || InBurst(now) || _effects.Any(e => now - e.Start < EffectLength);
 
     public FrameSpec FrameAt(TimeSpan now)
     {
@@ -192,15 +201,28 @@ public sealed class PetAnimator
 
         return new FrameSpec(body, dy, overlays, criticalDx,
             MoodCalculator.GillsFor(LowestBattery), MoodCalculator.FadeFor(LowestBattery),
-            now < _leftPawUp ? 1 : 0, now < _rightPawUp ? 1 : 0, now < _clickUp ? 1 : 0, now < _offMouse, tail, dx);
+            now < _leftPawUp ? 1 : 0, now < _rightPawUp ? 1 : 0, now < _clickUp ? 1 : 0, OnMouse(now), tail, dx, ReachStep(now));
     }
 
     bool IsSniffing(TimeSpan now) =>
         _sniffStart is TimeSpan start &&
         !(_sniffEndRequested is TimeSpan end && now >= Max(end, start + MinSniff));
 
+    // On the mouse, or a reaching limb still on its way back from it.
+    bool OnMouse(TimeSpan now) =>
+        now < _offMouse || ReachFrames > 0 && _offMouse > _toMouse && now < _offMouse + FrameInterval * ReachFrames;
+
+    // 1..ReachFrames while a reaching limb heads to the mouse (and back down in reverse); 0 once it's there.
+    int ReachStep(TimeSpan now)
+    {
+        if (ReachFrames == 0 || !OnMouse(now)) return 0;
+        if (now >= _offMouse) return ReachFrames - FrameIndex(now, _offMouse);
+        int rising = FrameIndex(now, _toMouse);
+        return rising < ReachFrames ? rising + 1 : 0;
+    }
+
     bool OtherAnimationRunning(TimeSpan now) =>
-        now < _leftPawUp || now < _rightPawUp || now < _offMouse || IsSniffing(now) || _effects.Count > 0;
+        now < _leftPawUp || now < _rightPawUp || OnMouse(now) || IsSniffing(now) || _effects.Count > 0;
 
     bool InBurst(TimeSpan now) => _burstStart is TimeSpan start && now - start < BurstLength;
 

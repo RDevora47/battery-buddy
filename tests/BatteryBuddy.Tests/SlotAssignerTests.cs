@@ -69,6 +69,24 @@ public class SlotAssignerTests
     }
 
     [Fact]
+    public void A_keyboard_with_a_battery_takes_the_desk_from_one_without()
+    {
+        var placements = SlotAssigner.Assign(new[]
+        {
+            TestReadings.Make("A Wired Keyboard", DeviceKind.Keyboard, battery: null) with { NoBattery = true },
+            TestReadings.Make("B Keyboard", DeviceKind.Keyboard),
+        });
+        var placement = Assert.Single(placements);   // the battery-less one doesn't float
+        Assert.Equal(("B Keyboard", "seat"), (placement.Device.Name, placement.PlaceName));
+    }
+
+    [Fact]
+    public void A_keyboard_and_mouse_without_a_battery_take_their_places() =>
+        Assert.Equal(new Dictionary<string, string> { ["Keys"] = "seat", ["Mouse"] = "righthand" }, PlacesOf(
+            TestReadings.Make("Keys", DeviceKind.Keyboard, battery: null) with { NoBattery = true },
+            TestReadings.Make("Mouse", DeviceKind.Mouse, battery: null) with { NoBattery = true }));
+
+    [Fact]
     public void Disconnected_devices_are_not_placed() =>
         Assert.Empty(SlotAssigner.Assign(new[] { TestReadings.Make("Mouse", DeviceKind.Mouse, connected: false) }));
 }

@@ -10,7 +10,12 @@ public static class SlotAssigner
 
     public static IReadOnlyList<DevicePlacement> Assign(IReadOnlyList<DeviceReading> devices)
     {
-        var connected = devices.Where(d => d.IsConnected).OrderBy(d => d.Key, StringComparer.Ordinal).ToList();
+        // Devices with a battery first: a battery-less keyboard or mouse only fills its own place when no
+        // device with a battery wants it, and never floats.
+        var connected = devices.Where(d => d.IsConnected)
+                               .OrderBy(d => d.NoBattery)
+                               .ThenBy(d => d.Key, StringComparer.Ordinal)
+                               .ToList();
         var used = new HashSet<string>();
         var placements = new List<DevicePlacement>();
 
@@ -26,7 +31,7 @@ public static class SlotAssigner
                 _ => Array.Empty<string>(),
             };
             // HashSet.Add returns false for taken places, so this picks the first free one.
-            string? place = preferred.Concat(FloatPlaces).FirstOrDefault(used.Add);
+            string? place = preferred.Concat(device.NoBattery ? Array.Empty<string>() : FloatPlaces).FirstOrDefault(used.Add);
             if (place is null) continue;
 
             string sprite = FloatPlaces.Contains(place) ? "gadget" : SpriteFor(device.Kind);

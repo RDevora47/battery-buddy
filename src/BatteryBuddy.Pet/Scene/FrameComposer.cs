@@ -158,6 +158,14 @@ public static class FrameComposer
             int? battery = placement.Device.EffectiveBattery;
             int dx = bodyDx + (battery <= BatteryBar.CriticalAtOrBelow ? spec.CriticalDx : 0);
 
+            // A device without a battery gets no ring, bar, gauge or status icon: just the device.
+            if (placement.Device.NoBattery)
+            {
+                foreach (var point in place.Points)
+                    Blit(sprite, point.X + dx, point.Y + dy, owner);
+                return;
+            }
+
             if (style == BatteryStyle.Outline)
                 foreach (var point in place.Points)
                     DrawOutline(sprite, point.X + dx, point.Y + dy, BatteryBar.ColorFor(battery, placement.Device.BatteryStale), battery, owner);

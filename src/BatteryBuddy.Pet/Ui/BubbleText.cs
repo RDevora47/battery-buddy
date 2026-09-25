@@ -10,6 +10,7 @@ public static class BubbleText
     public static string For(DeviceReading device, DateTimeOffset now)
     {
         var text = new StringBuilder();
+        if (device.NoBattery) return $"{device.Name}{Environment.NewLine}no battery level";
         text.AppendLine(device.Name);
         if (device.Detail is BudsDetail buds)
         {

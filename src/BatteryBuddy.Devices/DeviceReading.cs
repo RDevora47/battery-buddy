@@ -9,6 +9,8 @@ namespace BatteryBuddy.Devices;
 /// the reading it merged has none (e.g. the buds link is down and only Windows' single value is known).
 /// BatteryStale: the device is reachable but its level can't be read live, so BatteryPercent is the last value
 /// seen (e.g. a keyboard switched from Bluetooth to its USB receiver keeps its last Bluetooth reading).
+/// NoBattery: the device is attached but nothing reads a battery level from it (a wired keyboard, or a mouse on a
+/// receiver no source understands), so it has no battery indicator. Unlike a null BatteryPercent, that won't change.
 /// </summary>
 public sealed record DeviceReading(
     string Key,
@@ -23,7 +25,8 @@ public sealed record DeviceReading(
     bool ChargingKnown = false,
     string? Address = null,
     bool DetailUnavailable = false,
-    bool BatteryStale = false)
+    bool BatteryStale = false,
+    bool NoBattery = false)
 {
     public int? EffectiveBattery => Detail?.Lowest ?? BatteryPercent;
 }

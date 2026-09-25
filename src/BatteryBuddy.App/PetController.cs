@@ -259,7 +259,8 @@ sealed class PetController : IDisposable
 
     void Rebuild()
     {
-        IReadOnlyList<DeviceReading> connected = _bluetoothOn ? _backend.Connected : Array.Empty<DeviceReading>();
+        // With Bluetooth off only devices that don't need it stay: a wired or receiver keyboard or mouse.
+        IReadOnlyList<DeviceReading> connected = _bluetoothOn ? _backend.Connected : _backend.Connected.Where(d => d.NoBattery).ToList();
         _placements = SlotAssigner.Assign(connected);
         _animator.Mood = MoodCalculator.From(connected);
         _animator.HasCritical = connected.Any(d => d.EffectiveBattery <= BatteryBar.CriticalAtOrBelow);

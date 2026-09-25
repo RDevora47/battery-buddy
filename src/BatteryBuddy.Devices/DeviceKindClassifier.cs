@@ -9,7 +9,7 @@ public static class DeviceKindClassifier
         (Rule(@"controller|gamepad|dualsense|joy-?con"), DeviceKind.Gamepad),
         (Rule(@"buds|airpods|earbud|headphone|headset|\bw[fh]-"), DeviceKind.Earbuds),
         (Rule(@"mouse|\bmx (master|anywhere|ergo)"), DeviceKind.Mouse),
-        (Rule(@"keyboard|\brk-|\bkeys\b"), DeviceKind.Keyboard),
+        (Rule(@"keyboard|\bkb\b|\brk-|\bkeys\b"), DeviceKind.Keyboard),
         (Rule(@"phone|\bs\d{2}\b|pixel|galaxy [asz]\d"), DeviceKind.Phone),
     };
 

@@ -52,6 +52,22 @@ public class DeviceRegistryTests
     }
 
     [Fact]
+    public void A_reading_with_a_battery_beats_a_newer_one_without()
+    {
+        _registry.Apply("windows", new[] { Mouse(55) });
+        _registry.Apply("input", new[] { Mouse(minutes: 5) with { BatteryPercent = null, NoBattery = true, Source = "input" } });
+        var mouse = Assert.Single(_registry.Connected);
+        Assert.Equal((55, false), (mouse.BatteryPercent, mouse.NoBattery));
+    }
+
+    [Fact]
+    public void Without_a_battery_reading_the_battery_less_one_shows()
+    {
+        _registry.Apply("input", new[] { Mouse() with { BatteryPercent = null, NoBattery = true, Source = "input" } });
+        Assert.True(Assert.Single(_registry.Connected).NoBattery);
+    }
+
+    [Fact]
     public void Vanishing_from_snapshot_is_removal()
     {
         _registry.Apply("windows", new[] { Mouse() });

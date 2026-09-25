@@ -7,6 +7,7 @@
     .\build\build.ps1 -SelfContained   # bundle the .NET runtime so the exe runs without .NET installed; no diag.log
     .\build\build.ps1 -AutoClose -AutoLaunch   # stop any running Battery Buddy, build, then start the new one
     .\build\build.ps1 -Branch main   # build main without asking
+    .\build\build.ps1 -Release 1.2.0   # release: test, build, zip, bump the version, commit and tag v1.2.0
 .PARAMETER Branch
     The local branch to build. Without it, a repo with more than one branch asks which one (Enter: the current
     one), showing how many uncommitted changes each checked-out branch has. A branch checked out in this or any
@@ -18,6 +19,11 @@
     to build over a copy running from build\out. A failed test run leaves it running.
 .PARAMETER AutoLaunch
     Starts build\out\BatteryBuddy.exe after a successful build.
+.PARAMETER Release
+    Prepares release <version> (major.minor.patch, above every existing v* tag) from a clean main: runs the
+    tests, builds self-contained, zips it to build\release\BatteryBuddy-v<version>-win-x64.zip, sets <Version>
+    in Directory.Build.props, commits that and tags v<version>. It never pushes; 'git push origin main
+    --follow-tags' does, and GitHub Actions then builds the tag and publishes the GitHub release.
 #>
 param(
     [string]$Branch,
@@ -25,7 +31,8 @@ param(
     [switch]$SkipTests,
     [switch]$SelfContained,
     [switch]$AutoClose,
-    [switch]$AutoLaunch
+    [switch]$AutoLaunch,
+    [string]$Release
 )
 
 $ErrorActionPreference = "Stop"
@@ -51,6 +58,22 @@ function Get-Worktrees {
 $worktrees = @(Get-Worktrees)
 $out = Join-Path $worktrees[0].Path "build\out"
 $current = ($worktrees | Where-Object Path -eq $root).Branch   # empty on a detached HEAD
+
+if ($Release) {
+    # Check everything before building, so a refused release leaves nothing behind.
+    if ($Release -notmatch '^\d+\.\d+\.\d+$') { throw "-Release takes a version like 1.2.0, not '$Release'." }
+    if ($SkipTests) { throw "-Release always runs the tests; drop -SkipTests." }
+    if ($Branch -and $Branch -ne "main") { throw "-Release builds main, not '$Branch'." }
+    if ($current -ne "main") { throw "-Release commits and tags here, so check out main first (this checkout is on '$current')." }
+    if (@(git -C $root status --porcelain).Count) { throw "main has uncommitted changes; commit or stash them first." }
+    $tags = @(git -C $root tag --list "v*")
+    if ($tags -contains "v$Release") { throw "Tag v$Release already exists." }
+    $newest = $tags | Where-Object { $_ -match '^v\d+\.\d+\.\d+$' } | ForEach-Object { [version]$_.Substring(1) } |
+        Sort-Object | Select-Object -Last 1
+    if ($newest -and [version]$Release -le $newest) { throw "v$Release isn't newer than the last release, v$newest." }
+    $Branch = "main"
+    $SelfContained = $true   # a download has to run on PCs without .NET 8
+}
 
 # Where a branch builds from: the worktree it's checked out in (its files as they are), else its last commit.
 function Get-BuildSource([string]$name) {
@@ -133,11 +156,36 @@ try {
     else {
         $publishArgs += "--self-contained", "false", "-p:DiagLog=true"
     }
+    if ($Release) { $publishArgs += "-p:Version=$Release" }
     dotnet publish @publishArgs
     if ($LASTEXITCODE -ne 0) { throw "Publish failed." }
 
     Write-Host ""
     Write-Host "Built: $out\BatteryBuddy.exe" -ForegroundColor Green
+
+    if ($Release) {
+        $releaseDir = Join-Path $worktrees[0].Path "build\release"
+        New-Item -ItemType Directory -Force $releaseDir | Out-Null
+        $zip = Join-Path $releaseDir "BatteryBuddy-v$Release-win-x64.zip"
+        Get-ChildItem $out -Exclude .gitkeep | Compress-Archive -DestinationPath $zip -Force
+
+        # Only now that it built: record the version, commit it and tag that commit.
+        $props = Join-Path $root "Directory.Build.props"
+        $text = [IO.File]::ReadAllText($props)
+        [IO.File]::WriteAllText($props, ($text -replace '<Version>[^<]*</Version>', "<Version>$Release</Version>"))
+        git -C $root add Directory.Build.props
+        git -C $root diff --cached --quiet
+        if ($LASTEXITCODE -ne 0) {
+            git -C $root commit --quiet -m "chore: release v$Release"
+            if ($LASTEXITCODE -ne 0) { throw "Couldn't commit the version bump." }
+        }
+        git -C $root tag -a "v$Release" -m "Battery Buddy v$Release"
+        if ($LASTEXITCODE -ne 0) { throw "Couldn't create tag v$Release." }
+
+        Write-Host "Release v$Release is committed and tagged; local copy: $zip" -ForegroundColor Green
+        Write-Host "To publish it:  git push origin main --follow-tags" -ForegroundColor Cyan
+        Write-Host "(GitHub Actions then builds the tag and creates the GitHub release with the zip.)"
+    }
 
     if ($AutoLaunch) {
         # Only one copy runs at a time: with another still running, the new one would quietly exit.

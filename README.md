@@ -16,6 +16,12 @@ and, at ≤ 10 %, shakes the device to squeeze out the last energy.
 - **Mango** is small enough to stand on the keyboard, and hops from key to key as you type.
 - **Boba** floats above the desk and types with the tips of its two long tentacles.
 
+## Download
+
+Grab `BatteryBuddy-v*-win-x64.zip` from the Releases page, unzip it anywhere and run
+`BatteryBuddy.exe` (no .NET install needed). It isn't code-signed, so the first launch may show
+"Windows protected your PC": click **More info → Run anyway**.
+
 ## Setup
 
 1. Install the .NET 8 SDK: `winget install --id Microsoft.DotNet.SDK.8 -e`
@@ -61,6 +67,10 @@ Buddy shows the single Windows battery value ("L/R detail unavailable") until it
 - Adding a protocol: implement `IDeviceSource` (from `BatteryBuddy.Devices`) in a new
   `src/BatteryBuddy.Backends.<Name>` project and add it to `src/BatteryBuddy.App/Backends.cs`.
   Set `ChargingKnown` if it reports charging and `Address` if it knows the Bluetooth MAC.
+- Releasing: on a clean `main`, `.\build\build.ps1 -Release 1.2.0` runs the tests, builds a
+  self-contained exe, zips it to `build\release\`, sets the version in `Directory.Build.props`,
+  commits and tags `v1.2.0`. Pushing (`git push origin main --follow-tags`) makes GitHub Actions
+  build the tag and publish the GitHub release with the zip.
 
 ## Manual checklist
 
@@ -78,3 +88,12 @@ Buddy shows the single Windows battery value ("L/R detail unavailable") until it
       switches it to "L/R detail unavailable"; closing it brings the detail back.
 - [ ] Start with Windows toggles the `HKCU\…\Run\BatteryBuddy` value.
 - [ ] Launching a second copy exits immediately.
+
+## License
+
+[MIT](LICENSE) © 2026 Roberto Devora
+
+Battery Buddy is an independent hobby project. It is not affiliated with, endorsed by or
+sponsored by Logitech, Samsung or Microsoft; their product names are used only to say which
+devices it works with, and belong to their owners. The Galaxy Buds and HID++ support is written
+from publicly documented protocol details. Use it at your own risk.

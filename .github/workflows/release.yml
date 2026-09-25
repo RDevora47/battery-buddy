@@ -1,4 +1,4 @@
-# Pushing a v* tag (made by build.ps1 -Release) builds it and publishes a GitHub release with the zip.
+# Pushing a v* tag (made by build.ps1 -Release) builds both downloads and publishes a GitHub release with them.
 name: Release
 
 on:
@@ -17,15 +17,12 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Test and build
+      - name: Test, build and zip
         shell: pwsh
-        run: ./build/build.ps1 -SelfContained
+        run: ./build/build.ps1 -Package
 
       - name: Publish the release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          $zip = "BatteryBuddy-${{ github.ref_name }}-win-x64.zip"
-          Get-ChildItem build/out -Exclude .gitkeep | Compress-Archive -DestinationPath $zip
-          gh release create "${{ github.ref_name }}" $zip --title "Battery Buddy ${{ github.ref_name }}" --generate-notes
+        run: gh release create "${{ github.ref_name }}" (Get-ChildItem build/release/*.zip).FullName --title "Battery Buddy ${{ github.ref_name }}" --generate-notes

@@ -23,3 +23,10 @@ coverage*/
 
 # Local reference art
 references/
+
+# Claude Code session state and AI planning docs (kept locally, not published)
+.claude/
+docs/superpowers/
+
+# Release zips made by build.ps1 -Release
+build/release/

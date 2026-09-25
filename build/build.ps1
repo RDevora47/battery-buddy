@@ -9,9 +9,10 @@
     .\build\build.ps1 -Branch main   # build main without asking
 .PARAMETER Branch
     The local branch to build. Without it, a repo with more than one branch asks which one (Enter: the current
-    one). The current branch builds the working tree as it is, uncommitted changes included; any other branch
-    builds its last commit in a temporary git worktree, leaving your checkout alone. Either way the exe lands
-    in this checkout's build\out.
+    one), showing how many uncommitted changes each checked-out branch has. A branch checked out in this or any
+    other worktree builds that worktree's files as they are, uncommitted changes included; any other branch
+    builds its last commit in a temporary git worktree, leaving your checkouts alone. Either way the exe lands
+    in the main checkout's build\out, even when this script runs from another worktree.
 .PARAMETER AutoClose
     Force-stops every running Battery Buddy (wherever it runs from) once the tests pass, instead of refusing
     to build over a copy running from build\out. A failed test run leaves it running.
@@ -28,13 +29,42 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$root = Split-Path $PSScriptRoot -Parent
-$out = Join-Path $PSScriptRoot "out"
+function Normalize([string]$path) { [IO.Path]::GetFullPath($path).TrimEnd('\') }
+
+$root = Normalize (Split-Path $PSScriptRoot -Parent)   # the worktree this script runs from
+
+# Every existing worktree with the branch checked out in it (none when detached); git lists the main one first.
+function Get-Worktrees {
+    $lines = @(git -C $root worktree list --porcelain) + ""
+    if ($LASTEXITCODE -ne 0) { throw "Couldn't list the git worktrees." }
+    $entry = $null
+    foreach ($line in $lines) {
+        if ($line -like "worktree *") { $entry = [pscustomobject]@{ Path = Normalize $line.Substring(9); Branch = $null } }
+        elseif ($line -like "branch refs/heads/*" -and $entry) { $entry.Branch = $line.Substring(18) }
+        elseif (-not $line -and $entry) {
+            if (Test-Path $entry.Path) { $entry }   # a deleted worktree lingers until 'git worktree prune'
+            $entry = $null
+        }
+    }
+}
+
+$worktrees = @(Get-Worktrees)
+$out = Join-Path $worktrees[0].Path "build\out"
+$current = ($worktrees | Where-Object Path -eq $root).Branch   # empty on a detached HEAD
+
+# Where a branch builds from: the worktree it's checked out in (its files as they are), else its last commit.
+function Get-BuildSource([string]$name) {
+    $checkout = $worktrees | Where-Object Branch -eq $name | Select-Object -First 1
+    if (-not $checkout) { return [pscustomobject]@{ Path = $null; Label = "last commit" } }
+    $changes = @(git -C $checkout.Path status --porcelain).Count
+    $where = if ($checkout.Path -eq $root) { "current" } else { "worktree $($checkout.Path)" }
+    $dirty = switch ($changes) { 0 { "" } 1 { ", 1 uncommitted change" } default { ", $changes uncommitted changes" } }
+    [pscustomobject]@{ Path = $checkout.Path; Label = "$where, working tree$dirty" }
+}
 
 function Select-Branch {
     $branches = @(git -C $root branch --format="%(refname:short)")
     if ($LASTEXITCODE -ne 0) { throw "Couldn't list the git branches." }
-    $current = git -C $root branch --show-current   # empty on a detached HEAD
     if ($Branch) {
         if ($branches -notcontains $Branch) { throw "No local branch '$Branch'. Branches: $($branches -join ', ')" }
         return $Branch
@@ -43,8 +73,7 @@ function Select-Branch {
 
     Write-Host "Branches:"
     for ($i = 0; $i -lt $branches.Count; $i++) {
-        $mark = if ($branches[$i] -eq $current) { " (current, working tree)" } else { "" }
-        Write-Host ("  {0}. {1}{2}" -f ($i + 1), $branches[$i], $mark)
+        Write-Host ("  {0}. {1} ({2})" -f ($i + 1), $branches[$i], (Get-BuildSource $branches[$i]).Label)
     }
     while ($true) {
         $answer = (Read-Host "Build which branch? [number or name, Enter = current]").Trim()
@@ -57,15 +86,20 @@ function Select-Branch {
 
 $selected = Select-Branch
 $source = $root
-$worktree = $null
-if ($selected -and $selected -ne (git -C $root branch --show-current)) {
-    # Another branch: build its last commit on the side, so the checkout and any uncommitted work stay put.
-    $worktree = Join-Path ([IO.Path]::GetTempPath()) "BatteryBuddy-build-$([guid]::NewGuid().ToString('N').Substring(0, 8))"
-    git -C $root worktree add --detach --quiet $worktree $selected
-    if ($LASTEXITCODE -ne 0) { throw "Couldn't check out '$selected' into a temporary worktree." }
-    $source = $worktree
+$tempWorktree = $null
+if ($selected) {
+    $from = Get-BuildSource $selected
+    if ($from.Path) { $source = $from.Path }
+    else {
+        # Not checked out anywhere: build its last commit on the side, so every checkout stays put.
+        $tempWorktree = Join-Path ([IO.Path]::GetTempPath()) "BatteryBuddy-build-$([guid]::NewGuid().ToString('N').Substring(0, 8))"
+        git -C $root worktree add --detach --quiet $tempWorktree $selected
+        if ($LASTEXITCODE -ne 0) { throw "Couldn't check out '$selected' into a temporary worktree." }
+        $source = $tempWorktree
+    }
+    Write-Host "Building $selected ($($from.Label))" -ForegroundColor Cyan
 }
-if ($selected) { Write-Host "Building $selected$(if ($worktree) { ' (last commit)' } else { ' (working tree)' })" -ForegroundColor Cyan }
+if ($source -ne $worktrees[0].Path) { Write-Host "Output: $out" -ForegroundColor Cyan }
 
 Push-Location $source
 try {
@@ -118,8 +152,8 @@ try {
 }
 finally {
     Pop-Location
-    if ($worktree) {
-        git -C $root worktree remove --force $worktree
-        if ($LASTEXITCODE -ne 0) { Write-Warning "Couldn't remove the temporary worktree $worktree; 'git worktree prune' cleans it up once it's deleted." }
+    if ($tempWorktree) {
+        git -C $root worktree remove --force $tempWorktree
+        if ($LASTEXITCODE -ne 0) { Write-Warning "Couldn't remove the temporary worktree $tempWorktree; 'git worktree prune' cleans it up once it's deleted." }
     }
 }

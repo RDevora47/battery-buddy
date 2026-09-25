@@ -42,6 +42,19 @@ public partial class PetWindow : Window
         LocationChanged += (_, _) => PlaceBubble();
     }
 
+    /// <summary>
+    /// Windows sometimes drops a topmost window below ordinary ones (e.g. around full-screen apps) while it
+    /// keeps reporting itself as topmost, so WPF never re-applies it and the pet hides behind other windows.
+    /// Cheap enough to call on every idle animation.
+    /// </summary>
+    public void KeepOnTop()
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero || !IsVisible || !NativeMethods.LostTopmost(hwnd)) return;
+        NativeMethods.RestoreTopmost(hwnd);
+        Log.Write("pet window had dropped below other windows; put it back on top");
+    }
+
     /// <summary>Click on the pet in frame pixel coordinates (art pixels x resolution, not screen pixels).</summary>
     public event Action<int, int>? PetClicked;
     public event Action? Moved;

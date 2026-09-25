@@ -145,6 +145,14 @@ public class DeviceRegistryTests
     }
 
     [Fact]
+    public void A_stale_battery_never_counts_as_a_rise()
+    {
+        _registry.Apply("windows", new[] { Mouse(55) });
+        _registry.Apply("windows", new[] { Mouse(60, minutes: 3) with { BatteryStale = true } });
+        Assert.False(Assert.Single(_registry.Connected).IsCharging);
+    }
+
+    [Fact]
     public void Detail_unavailable_when_a_detail_source_claims_the_device_but_has_none()
     {
         var registry = new DeviceRegistry(detailExpected: d => d.Kind == DeviceKind.Earbuds);

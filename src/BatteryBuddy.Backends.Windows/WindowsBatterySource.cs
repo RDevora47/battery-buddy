@@ -10,15 +10,20 @@ public sealed class WindowsBatterySource : IDeviceSource, IDisposable
     public const string ConnectedKey = "{83DA6326-97A6-4088-9453-A1923F573B29} 15";
     public const string ClassOfDeviceKey = "{2BD67D8B-8BEB-48D5-87E0-6CDA3428040A} 10";
     public const string InstanceIdKey = "System.Devices.DeviceInstanceId";
+    public const string PresentKey = "System.Devices.Present";
 
-    // Only the node types that carry battery or connection state; never all BTH* nodes.
-    public const string Selector =
+    // Only the node types that carry battery or connection state; never all BTH* nodes. Plus the USB
+    // receivers some Bluetooth devices can switch to (see PnpNodeMerger), without their trailing backslash,
+    // which AQS would read as escaping the closing quote.
+    public static readonly string Selector =
         "System.Devices.DeviceInstanceId:~<\"BTHLE\\DEV_\" OR " +
         "System.Devices.DeviceInstanceId:~<\"BTHENUM\\DEV_\" OR " +
         "System.Devices.DeviceInstanceId:~<\"BTHENUM\\{0000111E\" OR " +
-        "System.Devices.DeviceInstanceId:~<\"BTHENUM\\{0000111F\"";
+        "System.Devices.DeviceInstanceId:~<\"BTHENUM\\{0000111F\"" +
+        string.Concat(PnpNodeMerger.ReceiverInstanceIdPrefixes.Select(prefix =>
+            $" OR System.Devices.DeviceInstanceId:~<\"{prefix.TrimEnd('\\')}\""));
 
-    static readonly string[] Properties = { InstanceIdKey, BatteryKey, ConnectedKey, ClassOfDeviceKey };
+    static readonly string[] Properties = { InstanceIdKey, BatteryKey, ConnectedKey, ClassOfDeviceKey, PresentKey };
 
     static readonly TimeSpan WatcherRestartDelay = TimeSpan.FromSeconds(30);
 
@@ -132,7 +137,8 @@ public sealed class WindowsBatterySource : IDeviceSource, IDisposable
             : null;
         bool? connected = p.TryGetValue(ConnectedKey, out var c) && c is bool isConnected ? isConnected : null;
         uint? cod = p.TryGetValue(ClassOfDeviceKey, out var d) && d is uint u ? u : null;
-        return new PnpNode(instanceId, info.Name, battery, connected, cod);
+        bool? present = p.TryGetValue(PresentKey, out var pr) && pr is bool isPresent ? isPresent : null;
+        return new PnpNode(instanceId, info.Name, battery, connected, cod, present);
     }
 
     void Trace(string what, DeviceInformation info)

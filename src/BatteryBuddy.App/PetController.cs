@@ -44,7 +44,11 @@ sealed class PetController : IDisposable
         _frameTimer = new DispatcherTimer { Interval = PetAnimator.FrameInterval };
         _frameTimer.Tick += (_, _) => Render();
         _idleTimer = new DispatcherTimer();
-        _idleTimer.Tick += (_, _) => Render();
+        _idleTimer.Tick += (_, _) =>
+        {
+            _window.KeepOnTop();
+            Render();
+        };
         _bubbleTimer = new DispatcherTimer { Interval = BubbleDuration };
         _bubbleTimer.Tick += (_, _) =>
         {

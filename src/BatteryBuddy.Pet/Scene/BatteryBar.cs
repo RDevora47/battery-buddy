@@ -14,13 +14,24 @@ public static class BatteryBar
     public const uint Unknown = 0xFF8890A0;
     public const uint Empty = 0xFF3A3D46;
 
-    public static uint ColorFor(int? percent) => percent switch
+    /// <summary>A stale level (the last value seen, not a live one) is drawn halfway to the unknown grey.</summary>
+    public static uint ColorFor(int? percent, bool stale = false)
     {
-        null => Unknown,
-        > 50 => Green,
-        > LowAtOrBelow => Amber,
-        _ => Red,
-    };
+        uint color = percent switch
+        {
+            null => Unknown,
+            > 50 => Green,
+            > LowAtOrBelow => Amber,
+            _ => Red,
+        };
+        return stale ? Mix(color, Unknown) : color;
+    }
+
+    static uint Mix(uint a, uint b)
+    {
+        uint Channel(int shift) => ((((a >> shift) & 0xFF) + ((b >> shift) & 0xFF)) / 2) << shift;
+        return 0xFF000000 | Channel(16) | Channel(8) | Channel(0);
+    }
 
     /// <summary>1–25 → 1 … 76–100 → 4; unknown shows a full grey bar.</summary>
     public static int FilledSegments(int? percent) =>

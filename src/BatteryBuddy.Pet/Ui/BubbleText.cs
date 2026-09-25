@@ -22,6 +22,13 @@ public static class BubbleText
                 _ => "not worn",
             });
         }
+        else if (device.BatteryStale)
+        {
+            // When that reading was taken isn't known, so there's no "updated … ago".
+            text.AppendLine($"Battery {Percent(device.BatteryPercent)} · last known");
+            text.Append("last Bluetooth reading");
+            return text.ToString();
+        }
         else
         {
             text.AppendLine($"Battery {Percent(device.BatteryPercent)}{Charging(device)}");

@@ -16,9 +16,29 @@ public static class PnpNodeMerger
     static readonly Regex HandsFreeId = new(@"^BTHENUM\\\{0000111[EF]-0000-1000-8000-00805F9B34FB\}.*&([0-9A-F]{12})_C", RegexOptions.IgnoreCase);
     static readonly Regex HandsFreeSuffix = new(@"\s+Hands-Free(\s+(AG|HF))?$", RegexOptions.IgnoreCase);
 
+    /// <summary>
+    /// A USB wireless receiver for dual-mode devices that expose no battery level through it. While one is
+    /// plugged in, a matching Bluetooth device that looks disconnected is on the receiver instead.
+    /// </summary>
+    sealed record Receiver(string InstanceIdPrefix, Regex DeviceName);
+
+    static readonly Receiver[] Receivers =
+    {
+        // Royal Kludge 2.4GHz dongle (Sinowealth); its keyboards pair over Bluetooth as "RK…".
+        new(@"USB\VID_258A&PID_0150\", new Regex(@"^RK", RegexOptions.IgnoreCase)),
+    };
+
+    /// <summary>Instance-id prefixes of every known receiver, for the device watcher's selector.</summary>
+    public static IEnumerable<string> ReceiverInstanceIdPrefixes => Receivers.Select(r => r.InstanceIdPrefix);
+
     public static IReadOnlyList<DeviceReading> Merge(IEnumerable<PnpNode> nodes, DateTimeOffset now)
     {
-        var parsed = nodes.Select(Parse).OfType<Parsed>().ToList();
+        var nodeList = nodes.ToList();
+        var parsed = nodeList.Select(Parse).OfType<Parsed>().ToList();
+        var pluggedIn = Receivers
+            .Where(r => nodeList.Any(n => n.IsPresent != false &&
+                                          n.InstanceId.StartsWith(r.InstanceIdPrefix, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
         var classicConnected = parsed
             .Where(p => p.Type == NodeType.ClassicMain && p.Node.IsConnected == true)
             .Select(p => p.Mac)
@@ -38,11 +58,13 @@ public static class PnpNodeMerger
             var batteryNode = connected ? withBattery.FirstOrDefault(IsConnected) : withBattery[0];
             string name = group.First().DisplayName;
             uint? cod = group.Select(p => p.Node.ClassOfDevice).FirstOrDefault(c => c is not null);
+            bool onReceiver = !connected && pluggedIn.Any(r => r.DeviceName.IsMatch(name));
 
             readings.Add(new DeviceReading(
-                group.Key, name, DeviceKindClassifier.Classify(name, cod), connected,
+                group.Key, name, DeviceKindClassifier.Classify(name, cod), connected || onReceiver,
                 batteryNode?.Node.Battery, null, now, SourceName,
-                Address: (batteryNode ?? group.First()).Mac.ToUpperInvariant()));
+                Address: (batteryNode ?? group.First()).Mac.ToUpperInvariant(),
+                BatteryStale: onReceiver));
         }
         return readings;
     }

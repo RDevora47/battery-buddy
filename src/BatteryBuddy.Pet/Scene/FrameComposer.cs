@@ -108,10 +108,10 @@ public static class FrameComposer
         void BlitCentred(Sprite sprite, int ax, int ay, int h, short owner) =>
             BlitAt(sprite, ax * res, ay * res + (h * res - sprite.Height * (res / sprite.Density)) / 2, owner);
 
-        void DrawBar(int? percent, int ox, int oy, short owner)
+        void DrawBar(int? percent, bool stale, int ox, int oy, short owner)
         {
             int filled = BatteryBar.FilledSegments(percent);
-            uint color = BatteryBar.ColorFor(percent);
+            uint color = BatteryBar.ColorFor(percent, stale);
             for (int s = 0; s < BatteryBar.SegmentCount; s++)
                 for (int y = 0; y < BatteryBar.Height; y++)
                     for (int x = 0; x < 2; x++)
@@ -124,7 +124,7 @@ public static class FrameComposer
         {
             int cell = Math.Max(1, res / 2);
             int lit = BatteryGauge.LitCells(device.EffectiveBattery);
-            uint fill = BatteryBar.ColorFor(device.EffectiveBattery);
+            uint fill = BatteryBar.ColorFor(device.EffectiveBattery, device.BatteryStale);
             int top = ay * res + (h * res - BatteryGauge.MixelHeight * cell) / 2;
             for (int y = 0; y < BatteryGauge.MixelHeight; y++)
                 for (int x = 0; x < BatteryGauge.MixelWidth; x++)
@@ -160,11 +160,11 @@ public static class FrameComposer
 
             if (style == BatteryStyle.Outline)
                 foreach (var point in place.Points)
-                    DrawOutline(sprite, point.X + dx, point.Y + dy, BatteryBar.ColorFor(battery), battery, owner);
+                    DrawOutline(sprite, point.X + dx, point.Y + dy, BatteryBar.ColorFor(battery, placement.Device.BatteryStale), battery, owner);
             foreach (var point in place.Points)
                 Blit(sprite, point.X + dx, point.Y + dy, owner);
             if (style == BatteryStyle.Bar)
-                DrawBar(battery, place.Bar.X + bodyDx, place.Bar.Y + dy, owner);
+                DrawBar(battery, placement.Device.BatteryStale, place.Bar.X + bodyDx, place.Bar.Y + dy, owner);
 
             var last = place.Points[^1];
             if (style == BatteryStyle.Gauge)

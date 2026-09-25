@@ -38,6 +38,14 @@ public sealed record SkinLayout(
     // typing. On the way there and back it shows "reach1", "reach2"..., and its tail pose is "tail_reach".
     public static readonly string[] RequiredPlaces = { "gills", "neck", "hands", "righthand", "seat", "side", "float1", "float2" };
 
+    /// <summary>
+    /// Canvas width plus room on the right for the channel bubbles over the mouse (transparent columns, so the
+    /// pet doesn't move). The bitmap is this wide; CanvasWidth stays the skin's own for icon placement.
+    /// </summary>
+    public int FrameWidth => Places.TryGetValue("righthand", out var hand)
+        ? Math.Max(CanvasWidth, ChannelArc.RequiredWidth(hand.Points[0]))
+        : CanvasWidth;
+
     public static SkinLayout Parse(string json)
     {
         using var doc = JsonDocument.Parse(json);

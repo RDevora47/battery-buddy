@@ -537,4 +537,88 @@ public class FrameComposerTests
         Assert.Equal(Yellow, Pixel(frame, boltX, 9));
         Assert.All(Enumerable.Range(0, 20), y => Assert.Equal(0u, Pixel(frame, 23, y)));   // nothing on the right
     }
+
+    // The real axolotl, mouse on the desk: the arc sits where ChannelArc says.
+    static readonly TestSkin Axolotl = TestSkin.Load("axolotl");
+    static readonly PixelPoint DeskMouse = Axolotl.Layout.Places["righthand"].Points[0];
+    static readonly IReadOnlyList<PixelPoint> Arc = ChannelArc.Positions(DeskMouse, 3, Axolotl.Layout.FrameWidth);
+
+    static ComposedFrame ComposePicker(params ChannelBubble[] bubbles) =>
+        FrameComposer.Compose(Axolotl.Layout, Axolotl.Sprites, Array.Empty<DevicePlacement>(),
+            new FrameSpec("body_idle", 0, Array.Empty<Overlay>()) { Picker = new PickerDrawing(bubbles, DeskMouse, Trail: true) });
+
+    static HitTarget HitArt(ComposedFrame f, int ax, int ay, out int channel) =>
+        f.HitTest(ax * f.Resolution, ay * f.Resolution, out _, out channel);
+
+    [Fact]
+    public void The_frame_is_as_wide_as_the_skin_needs_for_the_arc() =>
+        Assert.Equal(Axolotl.Layout.FrameWidth * 2, ComposePicker().Width);
+
+    [Fact]
+    public void Each_bubble_hit_tests_to_its_channel()
+    {
+        var frame = ComposePicker(
+            new(1, BubbleLook.Current, Arc[0]), new(2, BubbleLook.Pickable, Arc[1]), new(3, BubbleLook.Pickable, Arc[2]));
+        for (int i = 0; i < 3; i++)
+        {
+            Assert.Equal(HitTarget.Channel, HitArt(frame, Arc[i].X + 3, Arc[i].Y + 3, out int channel));
+            Assert.Equal(i + 1, channel);
+        }
+    }
+
+    [Fact]
+    public void A_hollow_empty_bubble_still_owns_its_middle()
+    {
+        var frame = ComposePicker(new ChannelBubble(3, BubbleLook.Empty, Arc[2]));
+        Assert.Equal(HitTarget.Channel, HitArt(frame, Arc[2].X + 1, Arc[2].Y + 3, out int channel));
+        Assert.Equal(3, channel);
+    }
+
+    [Fact]
+    public void The_current_channel_is_greyed()
+    {
+        // Art (4,4) of the bubble = sprite char (8,8): plain fill "A", clear of digit 2 (its row 7 is "CC....").
+        var pickable = ComposePicker(new ChannelBubble(2, BubbleLook.Pickable, Arc[1]));
+        var current = ComposePicker(new ChannelBubble(2, BubbleLook.Current, Arc[1]));
+        uint Fill(ComposedFrame f) => f.Pixels[(Arc[1].Y + 4) * 2 * f.Width + (Arc[1].X + 4) * 2];
+        Assert.Equal(0xFF8FB996u, Fill(pickable));
+        Assert.NotEqual(Fill(pickable), Fill(current));
+    }
+
+    [Fact]
+    public void A_hovered_bubble_lifts_one_pixel()
+    {
+        var resting = ComposePicker(new ChannelBubble(2, BubbleLook.Pickable, Arc[1]));
+        var hovered = ComposePicker(new ChannelBubble(2, BubbleLook.Pickable, Arc[1], Hovered: true));
+        Assert.NotEqual(HitTarget.Channel, HitArt(resting, Arc[1].X + 3, Arc[1].Y - 1, out _));
+        Assert.Equal(HitTarget.Channel, HitArt(hovered, Arc[1].X + 3, Arc[1].Y - 1, out _));
+    }
+
+    // Clicking the pet's mouse is itself a click, so the pet presses the mouse before the click is hit-tested:
+    // the mouse dips and the paw (or Boba's tentacle) lands on it. Neither may steal the mouse's pixels.
+    [Theory, MemberData(nameof(SkinTests.Skins), MemberType = typeof(SkinTests))]
+    public void The_mouse_keeps_its_resting_pixels_while_the_pet_clicks_it(string skin)
+    {
+        var (_, layout, sprites) = TestSkin.Load(skin);
+        var mouse = new DevicePlacement(TestReadings.Make("Mouse", DeviceKind.Mouse), "righthand", "mouse");
+        var resting = FrameComposer.Compose(layout, sprites, new[] { mouse }, new FrameSpec("body_idle", 0, Array.Empty<Overlay>()));
+        var clicking = FrameComposer.Compose(layout, sprites, new[] { mouse },
+            new FrameSpec("body_idle", 0, Array.Empty<Overlay>(), PawRightDy: 1, ClickDy: 1, RightPawOnMouse: true));
+
+        var lost = new List<(int, int)>();
+        for (int y = 0; y < resting.Height; y++)
+            for (int x = 0; x < resting.Width; x++)
+                if (resting.HitTest(x, y, out var d) == HitTarget.Device && d!.Kind == DeviceKind.Mouse &&
+                    !(clicking.HitTest(x, y, out var c) == HitTarget.Device && c!.Kind == DeviceKind.Mouse))
+                    lost.Add((x, y));
+        Assert.True(lost.Count == 0, $"{lost.Count} mouse pixels stop hitting the mouse while it's clicked, e.g. {string.Join(" ", lost.Take(5))}");
+    }
+
+    [Fact]
+    public void Without_a_picker_nothing_hit_tests_as_a_channel()
+    {
+        var frame = FrameComposer.Compose(Axolotl.Layout, Axolotl.Sprites, Array.Empty<DevicePlacement>(),
+            new FrameSpec("body_idle", 0, Array.Empty<Overlay>()));
+        Assert.NotEqual(HitTarget.Channel, HitArt(frame, Arc[1].X + 3, Arc[1].Y + 3, out _));
+    }
 }

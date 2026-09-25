@@ -20,6 +20,7 @@
                MouseLeftButtonDown="PetImage_MouseLeftButtonDown"
                MouseMove="PetImage_MouseMove"
                MouseLeftButtonUp="PetImage_MouseLeftButtonUp"
-               MouseRightButtonUp="PetImage_MouseRightButtonUp" />
+               MouseRightButtonUp="PetImage_MouseRightButtonUp"
+               MouseLeave="PetImage_MouseLeave" />
     </Canvas>
 </Window>

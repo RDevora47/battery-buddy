@@ -5,7 +5,7 @@ namespace BatteryBuddy.Devices;
 /// format, whatever sources produce it. Events are raised on the UI thread (the synchronization context the
 /// backend was given), and the members are meant to be used from that thread too.
 /// </summary>
-public interface IBatteryBackend : IDisposable
+public interface IBatteryBackend : IHostSwitcher, IDisposable
 {
     IReadOnlyList<DeviceReading> Connected { get; }
 

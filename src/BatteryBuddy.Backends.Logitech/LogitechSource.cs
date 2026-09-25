@@ -13,7 +13,7 @@ namespace BatteryBuddy.Backends.Logitech;
 /// devices behind a Unifying/Bolt/Lightspeed receiver (device indexes 1–6). A device without a battery
 /// feature, or that stops answering, is left out, so the hub falls back to other sources and inference.
 /// </summary>
-public sealed class LogitechSource : IDeviceSource, IConnectionObserver, IDisposable
+public sealed class LogitechSource : IDeviceSource, IConnectionObserver, IHostSwitcher, IDisposable
 {
     public const ushort VendorId = 0x046D;
     const ushort BleUsagePage = 0xFF43;
@@ -25,8 +25,12 @@ public sealed class LogitechSource : IDeviceSource, IConnectionObserver, IDispos
     static readonly byte[] DirectOnly = { HidppProtocol.DirectIndex };
     static readonly byte[] DirectOrReceiver = { HidppProtocol.DirectIndex, 1, 2, 3, 4, 5, 6 };
     static readonly Regex BleAddress = new(@"pid&[0-9a-f]{4}_rev&[0-9a-f]{4}_([0-9a-f]{12})", RegexOptions.IgnoreCase);
+    // Channel switching is proven on these (Bluetooth product ids); other mice with CHANGE_HOST are tried.
+    static readonly HashSet<ushort> VerifiedSwitchers = new() { 0xB034 };   // MX Master 3S
 
-    sealed record Device(HidChannel Channel, byte Index, byte BatteryFeature, bool Unified, DeviceReading Reading);
+    // ChangeHost / HostsInfo: feature indexes, 0 when the device doesn't have them (or didn't answer).
+    sealed record Device(HidChannel Channel, byte Index, byte BatteryFeature, bool Unified, DeviceReading Reading,
+        byte ChangeHost = 0, byte HostsInfo = 0);
 
     readonly Action<string> _log;
     readonly bool _verbose;
@@ -181,10 +185,12 @@ public sealed class LogitechSource : IDeviceSource, IConnectionObserver, IDispos
             ? AddressFromPath(channel.Interface.Path) : null;
         var reading = new DeviceReading(DeviceKey.ForName(name), name, kind, true, null, null, DateTimeOffset.Now,
             Name, ChargingKnown: true, Address: address);
-        var device = await PollAsync(new Device(channel, index, feature, isUnified, reading), ct);
+        var (changeHost, hostsInfo) = kind == DeviceKind.Mouse ? await HostFeaturesAsync(channel, index, ct) : ((byte)0, (byte)0);
+        var device = await PollAsync(new Device(channel, index, feature, isUnified, reading, changeHost, hostsInfo), ct);
         if (device is not null)
             _log($"logitech: {name} via {(isUnified ? "UNIFIED_BATTERY" : "BATTERY_STATUS")} " +
-                 $"at {device.Reading.BatteryPercent}%{(device.Reading.IsCharging ? ", charging" : "")}");
+                 $"at {device.Reading.BatteryPercent}%{(device.Reading.IsCharging ? ", charging" : "")}" +
+                 $"{(changeHost != 0 ? $", can switch channels{(Verified(device) ? "" : " (untested model)")}" : "")}");
         return device;
     }
 
@@ -243,6 +249,69 @@ public sealed class LogitechSource : IDeviceSource, IConnectionObserver, IDispos
         }
         return (name, kind ?? DeviceKindClassifier.Classify(name, null));
     }
+
+    public static bool IsVerifiedModel(ushort productId, bool directBluetooth) =>
+        directBluetooth && VerifiedSwitchers.Contains(productId);
+
+    static bool Verified(Device device) => IsVerifiedModel(device.Channel.Interface.ProductId,
+        device.Index == HidppProtocol.DirectIndex && device.Channel.Interface.UsagePage == BleUsagePage);
+
+    /// <summary>CHANGE_HOST and HOSTS_INFO indexes (0 = absent). CHANGE_HOST only counts if getHostInfo answers sensibly.</summary>
+    async Task<(byte ChangeHost, byte HostsInfo)> HostFeaturesAsync(HidChannel channel, byte index, CancellationToken ct)
+    {
+        if (await FeatureIndexAsync(channel, index, HidppProtocol.ChangeHost, ct) is not byte changeHost || changeHost == 0) return (0, 0);
+        var info = await channel.RequestAsync(HidppHosts.GetHostInfo(index, changeHost), RequestTimeout, ct);
+        if (info is null || HidppHosts.ParseHostInfo(HidppProtocol.Params(info)) is null) return (0, 0);
+        byte hostsInfo = await FeatureIndexAsync(channel, index, HidppProtocol.HostsInfo, ct) ?? 0;
+        return (changeHost, hostsInfo);
+    }
+
+    // The hub hands us its merged reading: match ours by key, or by Bluetooth address when names differ.
+    Device? Find(DeviceReading reading)
+    {
+        lock (_gate)
+            return _devices.Values.FirstOrDefault(d => d.Reading.Key == reading.Key ||
+                reading.Address is not null && string.Equals(d.Reading.Address, reading.Address, StringComparison.OrdinalIgnoreCase));
+    }
+
+    // A verified model stays switchable even if it was silent when it connected (a stale link after sleep).
+    public bool CanSwitchHost(DeviceReading device) => Find(device) is { } d && (d.ChangeHost != 0 || Verified(d));
+
+    public bool IsVerifiedSwitcher(DeviceReading device) => Find(device) is { } d && Verified(d);
+
+    public async Task<HostChannels?> GetHostsAsync(DeviceReading reading, CancellationToken ct)
+    {
+        if (Find(reading) is not { } device) return null;
+        if (device.ChangeHost == 0)
+        {
+            var (changeHost, hostsInfo) = await HostFeaturesAsync(device.Channel, device.Index, ct);
+            if (changeHost == 0)
+            {
+                _log($"logitech: {device.Reading.Name} isn't answering CHANGE_HOST");
+                return null;
+            }
+            device = device with { ChangeHost = changeHost, HostsInfo = hostsInfo };
+            var id = (device.Channel.Interface.Path, device.Index);
+            lock (_gate)
+                if (_devices.TryGetValue(id, out var stored)) _devices[id] = stored with { ChangeHost = changeHost, HostsInfo = hostsInfo };
+        }
+        var hosts = await HidppHosts.ReadAsync(device.Channel.RequestAsync, device.Index, device.ChangeHost, device.HostsInfo, RequestTimeout, ct);
+        _log($"logitech: {device.Reading.Name} channels -> {(hosts is null ? "no reply" : Describe(hosts))}" +
+             $"{(Verified(device) ? "" : " (untested model)")}");
+        return hosts;
+    }
+
+    public async Task<SwitchResult> SwitchHostAsync(DeviceReading reading, int channel, CancellationToken ct)
+    {
+        if (Find(reading) is not { ChangeHost: not 0 } device) return SwitchResult.Failed;
+        var result = await HidppHosts.SwitchAsync(device.Channel.RequestAsync, device.Index, device.ChangeHost, channel, Task.Delay, ct);
+        _log($"logitech: {device.Reading.Name} switch to channel {channel} -> {result}{(Verified(device) ? "" : " (untested model)")}");
+        return result;
+    }
+
+    // "1* 2 3(empty)": * marks the current channel.
+    static string Describe(HostChannels hosts) => string.Join(" ", hosts.Channels.Select(c =>
+        $"{c.Number}{(c.Number == hosts.Current ? "*" : c.Paired ? "" : "(empty)")}"));
 
     void OnReport(HidChannel channel, byte[] report)
     {

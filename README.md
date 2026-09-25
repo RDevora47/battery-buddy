@@ -65,16 +65,61 @@ battery, your choice), and a lightning bolt while it charges. The pet's mood fol
 
 ## Download
 
-Two builds of the same app; both are a single `BatteryBuddy.exe` inside a zip, nothing to install:
+Two builds of the same app; each is a single `BatteryBuddy.exe` inside a zip, nothing to install:
 
 | | Size | Runs on |
 |---|---|---|
 | **[Standalone](https://github.com/RDevora47/battery-buddy/releases/latest/download/BatteryBuddy-standalone-win-x64.zip)** | ~70 MB | Any 64-bit Windows 10 or 11. Pick this one if unsure. |
-| **[Small](https://github.com/RDevora47/battery-buddy/releases/latest/download/BatteryBuddy-dotnet8-win-x64.zip)** | ~7 MB | PCs with the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) installed. |
+| **[Small](https://github.com/RDevora47/battery-buddy/releases/latest/download/BatteryBuddy-dotnet8-win-x64.zip)** | ~7 MB | PCs with the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) installed (`winget install Microsoft.DotNet.DesktopRuntime.8`). |
 
-Unzip it anywhere and run `BatteryBuddy.exe`. It isn't code-signed, so the first launch may show
-"Windows protected your PC": click **More info → Run anyway**. Older versions are on the
-[Releases](https://github.com/RDevora47/battery-buddy/releases) page.
+The links above always fetch the newest version.
+
+### From the Releases page
+
+1. Open [**Releases**](https://github.com/RDevora47/battery-buddy/releases) (also in the right-hand
+   column of the repo's main page). The newest version is at the top, marked **Latest**.
+2. Scroll to that release's **Assets** (click it to expand if it's folded) and click
+   **`BatteryBuddy-standalone-win-x64.zip`**, or **`BatteryBuddy-dotnet8-win-x64.zip`** for the small build.
+   The two *Source code* files are the code itself, not the app; you don't need them.
+
+### Run it
+
+1. **Extract the zip**: right-click it → **Extract All…**, and pick a folder to keep it in for good,
+   such as `C:\Users\<you>\Apps\BatteryBuddy`. (Running the exe from inside the zip works, but
+   Windows deletes that copy later.)
+2. **Double-click `BatteryBuddy.exe`.** The first time, Windows will warn you; see below.
+3. **Look above the taskbar**, bottom-right: your pet appears there with your connected devices, and
+   its icon shows up in the tray. Drag it wherever you like.
+4. **Want it every time you sign in?** Right-click the pet → **Start with Windows**. This remembers
+   where the exe is, so move it to its final folder before turning this on.
+
+If a Bluetooth device is missing, make sure it's connected in Windows first, then click the pet to rescan.
+
+### "Windows protected your PC" and other warnings
+
+Battery Buddy isn't **code-signed**: signing needs a paid certificate, which this free hobby
+project doesn't have. Windows and browsers are cautious about any unsigned app that few people
+have downloaded yet, so you may see one or more of these the first time:
+
+| Where | What it says | What to do |
+|---|---|---|
+| **Edge / Chrome**, while downloading | *"…isn't commonly downloaded"* or *"may be dangerous"* | Open the downloads list, click **⋯** next to the file → **Keep** (Edge: then **Show more → Keep anyway**). |
+| **SmartScreen**, first launch | *"Windows protected your PC. Microsoft Defender SmartScreen prevented an unrecognized app from starting."* | Click **More info**, check the publisher reads *Unknown publisher*, then **Run anyway**. It only asks once. |
+| **Smart App Control** (some Windows 11 PCs) | *"Part of this app has been blocked"*, with no way to run it | Smart App Control blocks every unsigned app and has no per-app exception. Use a PC without it, or [build it yourself](#build-from-source). |
+
+These warnings mean *"unknown"*, not *"harmful"*. If you'd rather check before running it: the full
+source code is in this repo, every release is built from it by the public
+[Release workflow](.github/workflows/release.yml) (its logs are on the
+[Actions](https://github.com/RDevora47/battery-buddy/actions) tab), and you can scan the zip at
+[VirusTotal](https://www.virustotal.com/) or [build it yourself](#build-from-source).
+
+### Update or remove it
+
+- **Update:** right-click the pet → **Quit**, replace `BatteryBuddy.exe` with the new one, and start
+  it again. Your pet, its position and your choices are kept. A new exe may show the SmartScreen
+  warning once more.
+- **Remove:** turn off **Start with Windows**, **Quit**, and delete the folder. To also clear its
+  settings and logs, delete `%APPDATA%\BatteryBuddy` and `%LOCALAPPDATA%\BatteryBuddy`.
 
 ## Supported devices
 

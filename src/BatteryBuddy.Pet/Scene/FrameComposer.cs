@@ -2,7 +2,7 @@ using BatteryBuddy.Devices;
 
 namespace BatteryBuddy.Pet.Scene;
 
-public enum HitTarget { None, Body, Device }
+public enum HitTarget { None, Body, Device, Channel }
 
 public sealed class ComposedFrame
 {
@@ -29,13 +29,22 @@ public sealed class ComposedFrame
     public IReadOnlyList<DevicePlacement> Placements { get; }
 
     /// <summary>(x, y) in frame pixels, not art pixels.</summary>
-    public HitTarget HitTest(int x, int y, out DeviceReading? device)
+    public HitTarget HitTest(int x, int y, out DeviceReading? device) => HitTest(x, y, out device, out _);
+
+    /// <summary>As above; for a channel bubble, its number in <paramref name="channel"/>.</summary>
+    public HitTarget HitTest(int x, int y, out DeviceReading? device, out int channel)
     {
         device = null;
+        channel = 0;
         if (x < 0 || y < 0 || x >= Width || y >= Height) return HitTarget.None;
         short owner = _owners[y * Width + x];
         if (owner < 0) return HitTarget.None;
         if (owner == FrameComposer.BodyOwner) return HitTarget.Body;
+        if (owner >= FrameComposer.ChannelOwnerBase)
+        {
+            channel = owner - FrameComposer.ChannelOwnerBase;
+            return HitTarget.Channel;
+        }
         device = Placements[owner - 1].Device;
         return HitTarget.Device;
     }
@@ -45,6 +54,10 @@ public static class FrameComposer
 {
     internal const short NoOwner = -1;
     internal const short BodyOwner = 0;
+    // Channel bubble n is owned by ChannelOwnerBase + n, well past any device index.
+    internal const short ChannelOwnerBase = 1000;
+    const double GreyedFade = 0.7;
+    static readonly double[] TrailDots = { 0.3, 0.5, 0.7 };
     // The place the earbuds go: the gills on the axolotl, the ears on every other pet.
     const string EarPlace = "gills";
 
@@ -145,6 +158,54 @@ public static class FrameComposer
             int shown = percent is int p ? (int)Math.Ceiling(ring.Count * Math.Clamp(p, 0, 100) / 100.0) : ring.Count;
             foreach (var (x, y) in ring.OrderBy(pt => ClockwiseFromTop(sprite, pt.X, pt.Y)).Take(shown))
                 PlotSprite(sprite, ox, oy, x, y, color, owner);
+        }
+
+        // Channel bubbles over everything: trail dots first, then each disc and its digit. A bubble owns its whole
+        // disc, even a hollow one, so hovering and clicking find it.
+        void DrawPicker(PickerDrawing picker)
+        {
+            var disc = sprites["channel_bubble"];
+            int cell = res / disc.Density;
+            if (picker.Trail)
+            {
+                var dot = sprites["channel_trail"];
+                double fx = (picker.Mouse.X + sprites["mouse"].ArtWidth / 2.0) * res, fy = picker.Mouse.Y * res;
+                foreach (var bubble in picker.Bubbles)
+                {
+                    double tx = (bubble.At.X + ChannelArc.BubbleSize / 2.0) * res, ty = (bubble.At.Y + ChannelArc.BubbleSize) * res;
+                    foreach (double t in TrailDots)
+                        BlitAt(dot, (int)Math.Round(fx + (tx - fx) * t), (int)Math.Round(fy + (ty - fy) * t), NoOwner,
+                            bubble.Look == BubbleLook.Pickable ? 0 : GreyedFade);
+                }
+            }
+            foreach (var bubble in picker.Bubbles)
+            {
+                short owner = (short)(ChannelOwnerBase + bubble.Number);
+                int x = bubble.At.X, y = bubble.At.Y - (bubble.Hovered && bubble.Look == BubbleLook.Pickable ? 1 : 0);
+                double fade = bubble.Look == BubbleLook.Pickable ? 0 : GreyedFade;
+                if (bubble.Look == BubbleLook.Empty)
+                {
+                    Claim(disc, x, y, owner);
+                    Blit(sprites["channel_empty"], x, y, owner);
+                }
+                else Blit(disc, x, y, owner, fade);
+                if (sprites.TryGetValue($"channel_digit{bubble.Number}", out var digit))
+                    BlitAt(digit, x * res + (disc.Width - digit.Width) / 2 * cell, y * res + cell, owner, fade);
+            }
+        }
+
+        // Owns a sprite's opaque pixels without drawing them.
+        void Claim(Sprite sprite, int ox, int oy, short owner)
+        {
+            int cell = res / sprite.Density;
+            for (int y = 0; y < sprite.Height; y++)
+                for (int x = 0; x < sprite.Width; x++)
+                {
+                    if (sprite.Pixels[y * sprite.Width + x] == 0) continue;
+                    for (int py = Math.Max(oy * res + y * cell, 0); py < Math.Min(oy * res + (y + 1) * cell, h); py++)
+                        for (int px = Math.Max(ox * res + x * cell, 0); px < Math.Min(ox * res + (x + 1) * cell, w); px++)
+                            owners[py * w + px] = owner;
+                }
         }
 
         void DrawDevice(int index)
@@ -268,6 +329,7 @@ public static class FrameComposer
         // Earbuds sit in the ears, which a hat often covers; they stay in view over it.
         for (int i = 0; i < placements.Count; i++)
             if (placements[i].PlaceName == EarPlace) DrawDevice(i);
+        if (spec.Picker is { } picker) DrawPicker(picker);
 
         return new ComposedFrame(w, h, res, pixels, owners, placements);
     }

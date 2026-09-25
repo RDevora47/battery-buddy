@@ -65,7 +65,7 @@ public static class FrameComposer
         BatteryStyle style = BatteryStyle.Outline)
     {
         int res = ResolutionOf(sprites);
-        int w = layout.CanvasWidth * res, h = layout.CanvasHeight * res;
+        int w = layout.FrameWidth * res, h = layout.CanvasHeight * res;
         var pixels = new uint[w * h];
         var owners = new short[w * h];
         Array.Fill(owners, NoOwner);

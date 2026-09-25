@@ -128,7 +128,7 @@ sealed class PetController : IDisposable
             ReachFrames = _layout.Reach is null ? 0 : Enumerable.Range(1, 9).TakeWhile(n => _sprites.ContainsKey($"reach{n}")).Count(),
         };
         int resolution = FrameComposer.ResolutionOf(_sprites);
-        _bitmap = new WriteableBitmap(_layout.CanvasWidth * resolution, _layout.CanvasHeight * resolution, 96, 96, PixelFormats.Bgra32, null);
+        _bitmap = new WriteableBitmap(_layout.FrameWidth * resolution, _layout.CanvasHeight * resolution, 96, 96, PixelFormats.Bgra32, null);
         _window.SetBitmap(_bitmap, resolution);
     }
 

@@ -40,6 +40,7 @@ public class SkinTests
         "smoke1", "smoke2", "smoke3", "ploof_text", "zzz", "sweat",
         "bolt", "full", "whoosh1", "whoosh2", "whoosh3", "saiyan", "strawhat",
         "gills_perky", "gills_droopy", "gills_limp", "paw", "desk",
+        "channel_bubble", "channel_empty", "channel_digit1", "channel_digit2", "channel_digit3", "channel_trail",
     };
 
     // The sprite(s) each place is designed to hold.
@@ -609,4 +610,29 @@ public class SkinTests
     static void AssertFits(SkinLayout Layout, string what, int x, int y, int w, int h) =>
         Assert.True(x >= 0 && y >= 0 && x + w <= Layout.CanvasWidth && y + h <= Layout.CanvasHeight,
             $"{what} at ({x},{y}) size {w}x{h} exceeds canvas {Layout.CanvasWidth}x{Layout.CanvasHeight}");
+
+    [Theory, MemberData(nameof(Skins))]
+    public void The_channel_arc_over_the_mouse_fits_the_frame_unshifted(string skin)
+    {
+        var (_, layout, _) = TestSkin.Load(skin);
+        var mouse = layout.Places["righthand"].Points[0];
+        var arc = ChannelArc.Positions(mouse, 3, layout.FrameWidth);
+
+        Assert.Equal(new PixelPoint(mouse.X - 11, mouse.Y - 8), arc[0]);   // not pushed sideways
+        Assert.All(arc, p =>
+        {
+            Assert.InRange(p.X, 0, layout.FrameWidth - ChannelArc.BubbleSize);
+            Assert.True(p.Y >= 0, $"bubble above the frame at {p}");
+        });
+        Assert.True(layout.FrameWidth >= layout.CanvasWidth);
+    }
+
+    [Fact]
+    public void Channel_sprites_are_the_right_size()
+    {
+        var (_, _, sprites) = TestSkin.Load("axolotl");
+        Assert.Equal((6, 6), (sprites["channel_bubble"].ArtWidth, sprites["channel_bubble"].ArtHeight));
+        Assert.Equal((6, 6), (sprites["channel_empty"].ArtWidth, sprites["channel_empty"].ArtHeight));
+        Assert.All(new[] { 1, 2, 3 }, n => Assert.Equal((6, 10), (sprites[$"channel_digit{n}"].Width, sprites[$"channel_digit{n}"].Height)));
+    }
 }

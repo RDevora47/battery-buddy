@@ -376,3 +376,86 @@ kkNNnnkk............
 kkkkkk..............
 kkkkkk..............
 end
+
+# Easy-Switch channel bubbles, rising out of the mouse on right-click (sage & cream). A 12x12 disc with its
+# number drawn 1 row down, centred; the hollow one marks a channel with nothing paired; the trail dots run
+# from the mouse to each bubble once they've settled.
+palette
+A #8fb996
+T #b8d8b4
+V #5f8a6a
+C #fdf6e3
+
+sprite channel_bubble @2x
+...kkkkkk...
+..kTTTTAAk..
+.kTTAAAAAVk.
+kTTAAAAAAAVk
+kTAAAAAAAAVk
+kTAAAAAAAAVk
+kAAAAAAAAAVk
+kAAAAAAAAAVk
+kAAAAAAAAVVk
+.kAAAAAAVVk.
+..kVVVVVVk..
+...kkkkkk...
+end
+
+sprite channel_empty @2x
+...VVVVVV...
+..V......V..
+.V........V.
+V..........V
+V..........V
+V..........V
+V..........V
+V..........V
+V..........V
+.V........V.
+..V......V..
+...VVVVVV...
+end
+
+sprite channel_digit1 @2x
+..CC..
+..CC..
+CCCC..
+CCCC..
+..CC..
+..CC..
+..CC..
+..CC..
+CCCCCC
+CCCCCC
+end
+
+sprite channel_digit2 @2x
+CCCC..
+CCCC..
+....CC
+....CC
+..CC..
+..CC..
+CC....
+CC....
+CCCCCC
+CCCCCC
+end
+
+sprite channel_digit3 @2x
+CCCCCC
+CCCCCC
+....CC
+....CC
+..CCCC
+..CCCC
+....CC
+....CC
+CCCCCC
+CCCCCC
+end
+
+sprite channel_trail @2x
+TT
+TT
+end

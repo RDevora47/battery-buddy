@@ -15,6 +15,8 @@ public static class HidppHosts
     public static readonly TimeSpan SettleTime = TimeSpan.FromMilliseconds(250);
     static readonly TimeSpan RetryGap = TimeSpan.FromMilliseconds(200);
     public const int SwitchAttempts = 4;
+    /// <summary>Easy-Switch devices have at most 3 channels (the pet shows 3); statuses past that aren't read.</summary>
+    public const int MaxChannels = 3;
     const byte Paired = 0x01;
 
     public static byte[] GetHostInfo(byte deviceIndex, byte changeHost) => HidppProtocol.Request(deviceIndex, changeHost, 0);
@@ -49,8 +51,9 @@ public static class HidppHosts
         foreach (var channel in hosts.Channels)
         {
             // The current channel is paired by definition. A status we can't read leaves a channel pickable,
-            // as on a mouse without HOSTS_INFO.
-            if (channel.Number == hosts.Current)
+            // as on a mouse without HOSTS_INFO; so do channels past MaxChannels, which are never shown (and a
+            // garbled count must not cost a timeout per channel).
+            if (channel.Number == hosts.Current || channel.Number > MaxChannels)
             {
                 channels.Add(channel);
                 continue;

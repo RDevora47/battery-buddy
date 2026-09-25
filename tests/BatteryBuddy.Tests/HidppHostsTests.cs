@@ -103,6 +103,17 @@ public class HidppHostsTests
     }
 
     [Fact]
+    public async Task A_silly_channel_count_costs_at_most_three_status_reads()
+    {
+        // 200 channels, only status replies missing: each would cost a full timeout on a real device.
+        var device = new FakeDevice { Answer = (f, fn, _) => f == ChangeHost && fn == 0 ? Reply(ChangeHost, 0, 200, 0x00) : null };
+        var hosts = (await HidppHosts.ReadAsync(device.Request, Direct, ChangeHost, HostsInfo, Timeout, CancellationToken.None))!;
+
+        Assert.Equal(200, hosts.Channels.Count);
+        Assert.True(device.Sent.Count(f => f[2] == HostsInfo) <= HidppHosts.MaxChannels);
+    }
+
+    [Fact]
     public async Task Without_hosts_info_every_channel_counts_as_paired()
     {
         var device = new FakeDevice { Answer = (f, fn, _) => f == ChangeHost && fn == 0 ? Reply(ChangeHost, 0, 0x02, 0x01) : null };

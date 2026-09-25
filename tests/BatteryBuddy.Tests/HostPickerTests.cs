@@ -118,6 +118,25 @@ public class HostPickerTests
     }
 
     [Fact]
+    public void No_new_picker_opens_while_a_switch_is_still_running()
+    {
+        var picker = Opened();
+        picker.Tick(T0 + HostPicker.MoveTime);
+        var pickAt = T0 + TimeSpan.FromSeconds(1);
+        picker.Pick(2, pickAt);
+        picker.Tick(pickAt + HostPicker.MoveTime);   // bubbles gone, switch still being confirmed
+        Assert.True(picker.IsSwitching);
+
+        picker.Open("mx-master-3s", Mouse, Channels, pickAt + TimeSpan.FromSeconds(1));
+        Assert.False(picker.IsOpen);
+
+        picker.SwitchFinished();
+        Assert.False(picker.IsSwitching);
+        picker.Open("mx-master-3s", Mouse, Channels, pickAt + TimeSpan.FromSeconds(2));
+        Assert.True(picker.IsOpen);
+    }
+
+    [Fact]
     public void Hover_marks_the_bubble()
     {
         var picker = Opened();

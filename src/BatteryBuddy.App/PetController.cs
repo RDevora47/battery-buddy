@@ -298,7 +298,7 @@ sealed class PetController : IDisposable
             ClosePicker();   // right-clicking the mouse again
             return;
         }
-        if (_openingPicker) return;
+        if (_openingPicker || _picker.IsSwitching) return;   // still asking the mouse, or still confirming a switch
         _openingPicker = true;
         try { await OpenPickerAsync(device); }
         catch (Exception ex) when (!_cts.IsCancellationRequested) { Log.Write($"channel picker failed: {ex.Message}"); }
@@ -340,6 +340,7 @@ sealed class PetController : IDisposable
             Say(result == SwitchResult.Switched ? SwitchText.Switched(channel) : SwitchText.SwitchFailed(_pickerVerified));
         }
         catch (Exception ex) when (!_cts.IsCancellationRequested) { Log.Write($"channel switch failed: {ex.Message}"); }
+        finally { _picker.SwitchFinished(); }
     }
 
     void OnPetHovered(int x, int y)

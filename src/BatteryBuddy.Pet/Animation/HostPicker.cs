@@ -37,6 +37,14 @@ public sealed class HostPicker
 
     public int? Hovered { get; private set; }
 
+    /// <summary>
+    /// From a pick until the caller reports the switch done: confirming it keeps talking to the mouse for up to
+    /// ~3 s, so no new picker may open (its queries would cross the switch's) until then.
+    /// </summary>
+    public bool IsSwitching { get; private set; }
+
+    public void SwitchFinished() => IsSwitching = false;
+
     public bool NeedsTicks => Phase is PickerPhase.Opening or PickerPhase.Closing or PickerPhase.Leaving;
 
     /// <summary>When the idle timeout closes it, while the bubbles are out.</summary>
@@ -44,6 +52,7 @@ public sealed class HostPicker
 
     public void Open(string deviceKey, PixelPoint mouse, HostChannels channels, TimeSpan now)
     {
+        if (IsSwitching) return;
         DeviceKey = deviceKey;
         _mouse = mouse;
         _shown = channels.Channels.Take(ChannelArc.MaxChannels).ToList();
@@ -73,6 +82,7 @@ public sealed class HostPicker
     {
         if (!CanPick(channel)) return;
         _chosen = channel;
+        IsSwitching = true;
         Enter(PickerPhase.Leaving, now);
     }
 

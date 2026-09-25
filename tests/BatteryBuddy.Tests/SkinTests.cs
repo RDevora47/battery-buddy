@@ -115,6 +115,46 @@ public class SkinTests
     }
 
     [Theory, MemberData(nameof(Skins))]
+    public void A_reaching_limb_comes_from_under_the_desk_to_the_paw_on_the_mouse(string skin)
+    {
+        // Only Boba reaches the mouse with a limb of its own: its right long tentacle, which leaves the tail
+        // ("tail_reach"), comes out from under the desk and runs into the paw on the mouse, pressed or not.
+        var (_, Layout, Sprites) = TestSkin.Load(skin);
+        Assert.Equal(skin == "jellyfish", Layout.Reach is not null);
+        if (Layout.Reach is not PixelPoint at) return;
+        Assert.NotNull(Layout.Tail);
+        Assert.True(Sprites.ContainsKey("tail_reach"), "missing sprite tail_reach");
+        Assert.True(Sprites.ContainsKey("reach1"), "missing the limb's frames on the way (reach1...)");
+        var paw = Sprites["paw"];
+        var mousePaw = Layout.MousePaw!.Value;
+        int deskBottom = Layout.Desk!.Value.Y + Sprites["desk"].ArtHeight;
+        bool Opaque(Sprite s, int x, int y) => x >= 0 && y >= 0 && x < s.Width && y < s.Height && s.Pixels[y * s.Width + x] != 0;
+        List<(int X, int Y)> Pixels(Sprite s) =>
+            Enumerable.Range(0, s.Height).SelectMany(y => Enumerable.Range(0, s.Width).Select(x => (x, y)))
+                .Where(p => Opaque(s, p.x, p.y)).Select(p => (at.X * s.Density + p.x, at.Y * s.Density + p.y)).ToList();
+
+        foreach (var name in Enumerable.Range(1, 9).Select(n => $"reach{n}").TakeWhile(Sprites.ContainsKey).Append("reach"))
+        {
+            var s = Sprites[name];
+            AssertFits(Layout, name, at.X, at.Y, s.ArtWidth, s.ArtHeight);
+            // Every frame starts on the desk's bottom border (its last two rows), as if coming from behind it.
+            int edge = deskBottom * s.Density - 2;
+            // Its leftmost columns there (the strand coming out) show nothing on the desk just above it.
+            var px = Pixels(s);
+            var onEdge = px.Where(p => p.Y == edge).Select(p => p.X).Order().ToList();
+            Assert.True(onEdge.Count > 0, $"{name} doesn't reach the desk's bottom border");
+            int strandEnd = onEdge.TakeWhile((x, i) => i == 0 || x == onEdge[i - 1] + 1).Last();
+            Assert.False(px.Any(p => p.Y < edge && p.Y >= edge - 6 && p.X >= onEdge[0] && p.X <= strandEnd),
+                $"{name} shows in front of the desk where it should come from behind it");
+        }
+        var reach = Pixels(Sprites["reach"]);
+        int d = paw.Density;
+        for (int press = 0; press <= 1; press++)
+            Assert.True(reach.Any(p => Opaque(paw, p.X - mousePaw.X * d, p.Y - (mousePaw.Y + press) * d)),
+                $"the limb doesn't reach the paw on the mouse (pressed: {press == 1})");
+    }
+
+    [Theory, MemberData(nameof(Skins))]
     public void Keyboard_icons_go_left_and_mouse_icons_go_right(string skin)
     {
         var (_, Layout, Sprites) = TestSkin.Load(skin);
@@ -277,6 +317,7 @@ public class SkinTests
     [InlineData("choppa")]
     [InlineData("missy")]
     [InlineData("redpanda")]
+    [InlineData("jellyfish")]   // its two extra-long tentacles, swaying below the desk
     public void Tailed_pets_have_a_tail_that_wags_within_the_canvas(string skin)
     {
         var (_, Layout, Sprites) = TestSkin.Load(skin);
@@ -293,6 +334,7 @@ public class SkinTests
     [InlineData("choppa")]
     [InlineData("missy")]
     [InlineData("redpanda")]
+    [InlineData("jellyfish")]
     public void Every_tail_pose_stays_attached_to_the_body(string skin)
     {
         // The tail is drawn behind the body: every pixel that shows must connect, through other showing
@@ -457,7 +499,6 @@ public class SkinTests
     [InlineData("bunny")]   // the cottontail hides behind the body
     [InlineData("panda")]
     [InlineData("parrot")]
-    [InlineData("jellyfish")]
     public void Some_pets_have_no_tail(string skin) => Assert.Null(TestSkin.Load(skin).Layout.Tail);
 
     [Theory]
@@ -481,18 +522,12 @@ public class SkinTests
     }
 
     [Fact]
-    public void Bobas_side_tentacles_hang_lower_as_the_battery_drains()
+    public void Boba_has_no_side_tentacles()
     {
-        // They fill the "gills" slot, rooted under the bell in every pose: held out when charged, drooping when
-        // low, hanging straight down when drained. The lower the battery, the lower their tips reach.
+        // Every pet has the three "gills" sprites; Boba's are blank, so only its fading color shows the battery.
         var sprites = TestSkin.Load("jellyfish").Sprites;
-        int Bottom(string pose)
-        {
-            var s = sprites[pose];
-            return Enumerable.Range(0, s.Height).Last(y => Enumerable.Range(0, s.Width).Any(x => s.Pixels[y * s.Width + x] != 0));
-        }
-        Assert.True(Bottom("gills_perky") < Bottom("gills_droopy"), "droopy tentacles must hang lower than perky ones");
-        Assert.True(Bottom("gills_droopy") < Bottom("gills_limp"), "limp tentacles must hang lower than droopy ones");
+        foreach (var mood in new[] { "gills_perky", "gills_droopy", "gills_limp" })
+            Assert.All(sprites[mood].Pixels, p => Assert.Equal(0u, p));
     }
 
     /// <summary>Every skin crossed with every full-charge hat's sprite.</summary>

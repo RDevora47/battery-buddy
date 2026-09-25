@@ -262,6 +262,43 @@ public class PetAnimatorTests
     }
 
     [Fact]
+    public void A_reaching_limb_takes_its_frames_to_get_to_the_mouse_and_back()
+    {
+        // Two frames out (steps 1, 2), there (0) for the rest of the second, then two frames back (2, 1).
+        var animator = new PetAnimator(() => 0, TimeSpan.Zero, new PixelPoint(37, 5), new PixelPoint(36, 10)) { ReachFrames = 2 };
+        var f = PetAnimator.FrameInterval.TotalMilliseconds;
+        (bool, int) At(double ms) { var frame = animator.FrameAt(Ms(ms)); return (frame.RightPawOnMouse, frame.ReachStep); }
+
+        Assert.Equal((false, 0), At(50));
+        animator.Click(Ms(100));
+        Assert.Equal((true, 1), At(100));
+        Assert.Equal((true, 2), At(101 + f));
+        Assert.Equal((true, 0), At(101 + 2 * f));
+        Assert.Equal((true, 0), At(1099));
+        Assert.Equal((true, 2), At(1100));          // letting go
+        Assert.Equal((true, 1), At(1101 + f));
+        Assert.True(animator.NeedsTicks(Ms(1101 + f)));
+        Assert.Equal((false, 0), At(1101 + 2 * f));
+        Assert.False(animator.NeedsTicks(Ms(1101 + 2 * f)));
+
+        animator.Click(Ms(2000));
+        animator.Click(Ms(2001 + 2 * f));           // already there: no second trip
+        Assert.Equal((true, 0), At(2001 + 2 * f));
+        animator.KeyTap(Ms(2500));                  // typing sends it back at once
+        Assert.Equal((true, 2), At(2500));
+        Assert.Equal((false, 0), At(2501 + 2 * f));
+    }
+
+    [Fact]
+    public void Typing_without_the_mouse_never_sends_a_reaching_limb_anywhere()
+    {
+        var animator = new PetAnimator(() => 0, TimeSpan.Zero, new PixelPoint(37, 5), new PixelPoint(36, 10)) { ReachFrames = 2 };
+        animator.KeyTap(Ms(100));
+        var frame = animator.FrameAt(Ms(100));
+        Assert.Equal((false, 0), (frame.RightPawOnMouse, frame.ReachStep));
+    }
+
+    [Fact]
     public void Scrolling_flicks_the_right_paw_on_the_mouse()
     {
         var animator = New();

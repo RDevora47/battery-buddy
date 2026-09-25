@@ -125,6 +125,7 @@ sealed class PetController : IDisposable
         {
             Hat = _settings.Hat,
             Hops = _layout.Perched,
+            ReachFrames = _layout.Reach is null ? 0 : Enumerable.Range(1, 9).TakeWhile(n => _sprites.ContainsKey($"reach{n}")).Count(),
         };
         int resolution = FrameComposer.ResolutionOf(_sprites);
         _bitmap = new WriteableBitmap(_layout.CanvasWidth * resolution, _layout.CanvasHeight * resolution, 96, 96, PixelFormats.Bgra32, null);

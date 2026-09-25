@@ -23,4 +23,33 @@ static class NativeMethods
         long style = GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64();
         SetWindowLongPtr(hwnd, GWL_EXSTYLE, new IntPtr(style | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE));
     }
+
+    const long WS_EX_TOPMOST = 0x00000008;
+    const uint GW_HWNDPREV = 3;
+    static readonly IntPtr HWND_TOPMOST = new(-1);
+    const uint SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_NOACTIVATE = 0x0010, SWP_NOOWNERZORDER = 0x0200;
+
+    [DllImport("user32.dll")]
+    static extern IntPtr GetWindow(IntPtr hWnd, uint uCmd);
+
+    [DllImport("user32.dll")]
+    static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint flags);
+
+    static bool IsTopmost(IntPtr hwnd) => (GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64() & WS_EX_TOPMOST) != 0;
+
+    /// <summary>
+    /// Whether a topmost window has been pushed out of the topmost band: it lost the style, or an ordinary
+    /// window sits above it. Windows can do this while the window still reports itself as topmost to WPF.
+    /// </summary>
+    public static bool LostTopmost(IntPtr hwnd)
+    {
+        if (!IsTopmost(hwnd)) return true;
+        for (var above = GetWindow(hwnd, GW_HWNDPREV); above != IntPtr.Zero; above = GetWindow(above, GW_HWNDPREV))
+            if (!IsTopmost(above)) return true;
+        return false;
+    }
+
+    /// <summary>Puts the window back on top of the topmost band without activating it.</summary>
+    public static void RestoreTopmost(IntPtr hwnd) =>
+        SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
 }

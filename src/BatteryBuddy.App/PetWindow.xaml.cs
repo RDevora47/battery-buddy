@@ -6,6 +6,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using BatteryBuddy.Pet.Ui;
 using WinForms = System.Windows.Forms;
 
@@ -25,6 +26,8 @@ public partial class PetWindow : Window
     const int WM_DISPLAYCHANGE = 0x007E;
     const int WM_SETTINGCHANGE = 0x001A;
     const int SPI_SETWORKAREA = 0x002F;
+    // How often to check that nothing has pushed the pet out of the always-on-top band.
+    static readonly TimeSpan TopmostCheckInterval = TimeSpan.FromSeconds(3);
 
     Point _pressedAt;
     bool _pressed;
@@ -38,8 +41,23 @@ public partial class PetWindow : Window
             var source = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
             NativeMethods.MakeToolWindowNoActivate(source.Handle);
             source.AddHook(WndProc);
+            StartTopmostGuard(source.Handle);
         };
         LocationChanged += (_, _) => PlaceBubble();
+    }
+
+    // Windows sometimes drops a topmost window below ordinary ones (e.g. around full-screen apps) while it
+    // keeps reporting itself as topmost, so WPF never re-applies it and the pet hides behind other windows.
+    void StartTopmostGuard(IntPtr hwnd)
+    {
+        var timer = new DispatcherTimer { Interval = TopmostCheckInterval };
+        timer.Tick += (_, _) =>
+        {
+            if (!IsVisible || !NativeMethods.LostTopmost(hwnd)) return;
+            NativeMethods.RestoreTopmost(hwnd);
+            Log.Write("pet window had dropped below other windows; put it back on top");
+        };
+        timer.Start();
     }
 
     /// <summary>Click on the pet in frame pixel coordinates (art pixels x resolution, not screen pixels).</summary>

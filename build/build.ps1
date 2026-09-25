@@ -7,7 +7,8 @@
     .\build\build.ps1 -SelfContained   # bundle the .NET runtime so the exe runs without .NET installed; no diag.log
     .\build\build.ps1 -AutoClose -AutoLaunch   # stop any running Battery Buddy, build, then start the new one
     .\build\build.ps1 -Branch main   # build main without asking
-    .\build\build.ps1 -Release 1.2.0   # release: test, build, zip, bump the version, commit and tag v1.2.0
+    .\build\build.ps1 -Package   # test, then zip both downloads into build\release
+    .\build\build.ps1 -Release 1.2.0   # release: -Package, then bump the version, commit and tag v1.2.0
 .PARAMETER Branch
     The local branch to build. Without it, a repo with more than one branch asks which one (Enter: the current
     one), showing how many uncommitted changes each checked-out branch has. A branch checked out in this or any
@@ -19,11 +20,17 @@
     to build over a copy running from build\out. A failed test run leaves it running.
 .PARAMETER AutoLaunch
     Starts build\out\BatteryBuddy.exe after a successful build.
+.PARAMETER Package
+    Builds both downloads and zips them into build\release (emptied first), under names that stay the same from
+    release to release so the README can link to the latest one:
+      BatteryBuddy-standalone-win-x64.zip  self-contained, runs on any 64-bit Windows 10/11 (also left in build\out)
+      BatteryBuddy-dotnet8-win-x64.zip     much smaller, needs the .NET 8 Desktop Runtime
+    Neither has the diag.log. -SelfContained is implied.
 .PARAMETER Release
-    Prepares release <version> (major.minor.patch, above every existing v* tag) from a clean main: runs the
-    tests, builds self-contained, zips it to build\release\BatteryBuddy-v<version>-win-x64.zip, sets <Version>
-    in Directory.Build.props, commits that and tags v<version>. It never pushes; 'git push origin main
-    --follow-tags' does, and GitHub Actions then builds the tag and publishes the GitHub release.
+    Prepares release <version> (major.minor.patch, above every existing v* tag) from a clean main: runs
+    -Package with that version, then sets <Version> in Directory.Build.props, commits that and tags v<version>.
+    It never pushes; 'git push origin main --follow-tags' does, and GitHub Actions then builds the tag the same
+    way and attaches both zips to the GitHub release.
 #>
 param(
     [string]$Branch,
@@ -32,6 +39,7 @@ param(
     [switch]$SelfContained,
     [switch]$AutoClose,
     [switch]$AutoLaunch,
+    [switch]$Package,
     [string]$Release
 )
 
@@ -72,8 +80,9 @@ if ($Release) {
         Sort-Object | Select-Object -Last 1
     if ($newest -and [version]$Release -le $newest) { throw "v$Release isn't newer than the last release, v$newest." }
     $Branch = "main"
-    $SelfContained = $true   # a download has to run on PCs without .NET 8
+    $Package = $true
 }
+if ($Package) { $SelfContained = $true }   # build\out gets the standalone build
 
 # Where a branch builds from: the worktree it's checked out in (its files as they are), else its last commit.
 function Get-BuildSource([string]$name) {
@@ -148,27 +157,45 @@ try {
     # Start from a clean out\ so removed files don't linger; keep the placeholder that keeps the folder in git.
     if (Test-Path $out) { Get-ChildItem $out -Exclude .gitkeep | Remove-Item -Recurse -Force }
 
-    $publishArgs = @("src/BatteryBuddy.App", "-c", $Configuration, "-r", "win-x64", "-p:PublishSingleFile=true", "-o", $out, "--nologo")
-    if ($SelfContained) {
-        # The runtime and WPF make the exe much larger; compression keeps it manageable.
-        $publishArgs += "--self-contained", "true", "-p:IncludeNativeLibrariesForSelfExtract=true", "-p:EnableCompressionInSingleFile=true"
+    # A framework-dependent build gets the diag.log unless it's a download.
+    function Publish([string]$dir, [bool]$standalone) {
+        $publishArgs = @("src/BatteryBuddy.App", "-c", $Configuration, "-r", "win-x64", "-p:PublishSingleFile=true", "-o", $dir, "--nologo")
+        if ($standalone) {
+            # The runtime and WPF make the exe much larger; compression keeps it manageable.
+            $publishArgs += "--self-contained", "true", "-p:IncludeNativeLibrariesForSelfExtract=true", "-p:EnableCompressionInSingleFile=true"
+        }
+        else {
+            $publishArgs += "--self-contained", "false"
+            if (-not $Package) { $publishArgs += "-p:DiagLog=true" }
+        }
+        if ($Release) { $publishArgs += "-p:Version=$Release" }
+        dotnet publish @publishArgs
+        if ($LASTEXITCODE -ne 0) { throw "Publish failed." }
     }
-    else {
-        $publishArgs += "--self-contained", "false", "-p:DiagLog=true"
-    }
-    if ($Release) { $publishArgs += "-p:Version=$Release" }
-    dotnet publish @publishArgs
-    if ($LASTEXITCODE -ne 0) { throw "Publish failed." }
 
+    Publish $out $SelfContained
     Write-Host ""
     Write-Host "Built: $out\BatteryBuddy.exe" -ForegroundColor Green
 
-    if ($Release) {
+    if ($Package) {
         $releaseDir = Join-Path $worktrees[0].Path "build\release"
-        New-Item -ItemType Directory -Force $releaseDir | Out-Null
-        $zip = Join-Path $releaseDir "BatteryBuddy-v$Release-win-x64.zip"
-        Get-ChildItem $out -Exclude .gitkeep | Compress-Archive -DestinationPath $zip -Force
+        if (Test-Path $releaseDir) { Remove-Item $releaseDir -Recurse -Force }
+        $small = Join-Path $releaseDir "dotnet8"
+        Publish $small $false
+        $zips = @(
+            @{ From = $out; To = Join-Path $releaseDir "BatteryBuddy-standalone-win-x64.zip" },
+            @{ From = $small; To = Join-Path $releaseDir "BatteryBuddy-dotnet8-win-x64.zip" }
+        )
+        foreach ($zip in $zips) {
+            # The exe only: the .pdb is for debugging, and .gitkeep holds build\out in git.
+            Get-ChildItem $zip.From -Exclude .gitkeep, *.pdb | Compress-Archive -DestinationPath $zip.To
+        }
+        Remove-Item $small -Recurse -Force
+        Write-Host ""
+        foreach ($zip in $zips) { Write-Host ("Packaged: {0} ({1:N0} MB)" -f $zip.To, ((Get-Item $zip.To).Length / 1MB)) -ForegroundColor Green }
+    }
 
+    if ($Release) {
         # Only now that it built: record the version, commit it and tag that commit.
         $props = Join-Path $root "Directory.Build.props"
         $text = [IO.File]::ReadAllText($props)
@@ -182,9 +209,9 @@ try {
         git -C $root tag -a "v$Release" -m "Battery Buddy v$Release"
         if ($LASTEXITCODE -ne 0) { throw "Couldn't create tag v$Release." }
 
-        Write-Host "Release v$Release is committed and tagged; local copy: $zip" -ForegroundColor Green
+        Write-Host "Release v$Release is committed and tagged." -ForegroundColor Green
         Write-Host "To publish it:  git push origin main --follow-tags" -ForegroundColor Cyan
-        Write-Host "(GitHub Actions then builds the tag and creates the GitHub release with the zip.)"
+        Write-Host "(GitHub Actions then builds the tag and creates the GitHub release with both zips.)"
     }
 
     if ($AutoLaunch) {

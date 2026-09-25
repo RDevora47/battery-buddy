@@ -7,7 +7,7 @@ using Windows.Devices.Enumeration;
 namespace BatteryBuddy.Backends.Windows;
 
 /// <summary>
-/// Every keyboard and mouse Windows has, battery or not (see <see cref="InputDeviceMerger"/>). Keyboard and mouse
+/// Every keyboard and mouse Windows has, battery or not, the laptop's own included (see <see cref="InputDeviceMerger"/>). Keyboard and mouse
 /// device interfaces are hidden from WinRT, so this watches the device nodes of their setup classes instead.
 /// </summary>
 public sealed class InputDeviceSource : IDeviceSource, IDisposable

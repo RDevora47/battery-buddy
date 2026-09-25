@@ -44,6 +44,35 @@ public class InputDeviceMergerTests
         Assert.Equal(new[] { "Gaming KB", "LIGHTSPEED Receiver", "MX Master 3S", "RK-S98RGB" }, MergeScan().Keys.OrderBy(n => n));
     }
 
+    static IReadOnlyDictionary<string, DeviceKind> KindsOf(IEnumerable<InputNode> nodes) =>
+        InputDeviceMerger.Merge(nodes, TestReadings.T0).ToDictionary(r => r.Name, r => r.Kind);
+
+    static readonly InputNode[] LaptopOnly = Scan.Where(n => n.ContainerId == Laptop).ToArray();
+
+    [Fact]
+    public void A_laptop_alone_shows_its_keyboard_and_touchpad()
+    {
+        Assert.Equal(new Dictionary<string, DeviceKind>
+        {
+            [InputDeviceMerger.BuiltInKeyboardName] = DeviceKind.Keyboard,
+            [InputDeviceMerger.TouchpadName] = DeviceKind.Mouse,
+        }, KindsOf(LaptopOnly));
+        Assert.All(InputDeviceMerger.Merge(LaptopOnly, TestReadings.T0), r => Assert.True(r.NoBattery));
+    }
+
+    [Fact]
+    public void An_external_mouse_replaces_only_the_touchpad() =>
+        Assert.Equal(new Dictionary<string, DeviceKind>
+        {
+            [InputDeviceMerger.BuiltInKeyboardName] = DeviceKind.Keyboard,
+            ["MX Master 3S"] = DeviceKind.Mouse,
+        }, KindsOf(LaptopOnly.Concat(Scan.Where(n => n.ContainerId == MxMaster))));
+
+    [Fact]
+    public void A_laptop_keyboard_alone_has_no_touchpad() =>
+        Assert.Equal(new[] { InputDeviceMerger.BuiltInKeyboardName },
+            KindsOf(LaptopOnly.Where(n => n.Class == DeviceKind.Keyboard)).Keys);
+
     [Fact]
     public void Readings_are_connected_without_a_battery()
     {

@@ -158,7 +158,7 @@ try {
     if (Test-Path $out) { Get-ChildItem $out -Exclude .gitkeep | Remove-Item -Recurse -Force }
 
     # A framework-dependent build gets the diag.log unless it's a download.
-    function Publish([string]$dir, [bool]$standalone) {
+    function Publish-BatteryBuddy([string]$dir, [bool]$standalone) {
         $publishArgs = @("src/BatteryBuddy.App", "-c", $Configuration, "-r", "win-x64", "-p:PublishSingleFile=true", "-o", $dir, "--nologo")
         if ($standalone) {
             # The runtime and WPF make the exe much larger; compression keeps it manageable.
@@ -173,7 +173,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "Publish failed." }
     }
 
-    Publish $out $SelfContained
+    Publish-BatteryBuddy $out $SelfContained
     Write-Host ""
     Write-Host "Built: $out\BatteryBuddy.exe" -ForegroundColor Green
 
@@ -181,7 +181,7 @@ try {
         $releaseDir = Join-Path $worktrees[0].Path "build\release"
         if (Test-Path $releaseDir) { Remove-Item $releaseDir -Recurse -Force }
         $small = Join-Path $releaseDir "dotnet8"
-        Publish $small $false
+        Publish-BatteryBuddy $small $false
         $zips = @(
             @{ From = $out; To = Join-Path $releaseDir "BatteryBuddy-standalone-win-x64.zip" },
             @{ From = $small; To = Join-Path $releaseDir "BatteryBuddy-dotnet8-win-x64.zip" }

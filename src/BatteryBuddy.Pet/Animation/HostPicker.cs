@@ -12,10 +12,12 @@ public enum PickerPhase { Closed, Opening, Open, Closing, Leaving }
 /// </summary>
 public sealed class HostPicker
 {
-    /// <summary>Rising, sinking and flying take this many frames at <see cref="PetAnimator.Fps"/>.</summary>
-    public const int MoveFrames = 2;
-    public static readonly TimeSpan MoveTime = TimeSpan.FromTicks(PetAnimator.FrameInterval.Ticks * MoveFrames);
+    /// <summary>How long rising, sinking and flying take.</summary>
+    public static readonly TimeSpan MoveTime = TimeSpan.FromMilliseconds(200);
     public static readonly TimeSpan IdleTimeout = TimeSpan.FromSeconds(8);
+
+    /// <summary>While bubbles move, the frame is redrawn this often (~30 fps) so the move is smooth; the pet itself stays at its own pace.</summary>
+    public static readonly TimeSpan FrameInterval = TimeSpan.FromMilliseconds(33);
 
     readonly int _frameWidth;
     IReadOnlyList<HostChannel> _shown = Array.Empty<HostChannel>();

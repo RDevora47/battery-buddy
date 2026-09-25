@@ -391,6 +391,9 @@ sealed class PetController : IDisposable
         _renders++;
 #endif
 
+        // Moving bubbles get a faster redraw than the pet's own frame rate, so they glide rather than jump.
+        var interval = _picker.NeedsTicks ? HostPicker.FrameInterval : PetAnimator.FrameInterval;
+        if (_frameTimer.Interval != interval) _frameTimer.Interval = interval;
         if (_animator.NeedsTicks(now) || _picker.NeedsTicks) { if (!_frameTimer.IsEnabled) _frameTimer.Start(); }
         else _frameTimer.Stop();
 

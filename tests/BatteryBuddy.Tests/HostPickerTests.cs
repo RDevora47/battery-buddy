@@ -37,6 +37,20 @@ public class HostPickerTests
     }
 
     [Fact]
+    public void Bubbles_settle_within_a_fifth_of_a_second()
+    {
+        var picker = Opened();
+        picker.Tick(T0 + TimeSpan.FromMilliseconds(199));
+        Assert.Equal(PickerPhase.Opening, picker.Phase);
+        picker.Tick(T0 + TimeSpan.FromMilliseconds(200));
+        Assert.Equal(PickerPhase.Open, picker.Phase);
+    }
+
+    [Fact]
+    public void Moving_bubbles_are_redrawn_at_about_thirty_frames_a_second() =>
+        Assert.InRange(HostPicker.FrameInterval, TimeSpan.FromMilliseconds(30), TimeSpan.FromMilliseconds(40));
+
+    [Fact]
     public void Only_a_paired_channel_other_than_the_current_one_can_be_picked()
     {
         var picker = Opened();

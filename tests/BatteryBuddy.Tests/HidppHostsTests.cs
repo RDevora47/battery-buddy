@@ -143,4 +143,11 @@ public class HidppHostsTests
         Assert.Equal(HidppHosts.SwitchAttempts, switches.Count);
         Assert.All(switches, f => Assert.Equal(0x01, f[4]));
     }
+
+    [Theory]
+    [InlineData((ushort)0xB034, true, true)]    // MX Master 3S over Bluetooth
+    [InlineData((ushort)0xB034, false, false)]  // same id seen some other way: not what was verified
+    [InlineData((ushort)0xB042, true, false)]   // MX Master 4: has CHANGE_HOST, but untested
+    public void Only_the_MX_Master_3S_over_Bluetooth_is_verified(ushort productId, bool direct, bool verified) =>
+        Assert.Equal(verified, BatteryBuddy.Backends.Logitech.LogitechSource.IsVerifiedModel(productId, direct));
 }

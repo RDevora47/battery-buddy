@@ -9,7 +9,8 @@ public enum BatteryStyle { Outline, Bar, Gauge }
 /// What to draw this frame. CriticalDx shifts sprites of devices at ≤ 10 % sideways (the pet shaking them).
 /// Gills is drawn over the body; Fade (0..1) desaturates body, gills and paws toward grey.
 /// PawLeftDy / PawRightDy push a paw down while it taps a key or clicks; ClickDy also takes the mouse along.
-/// RightPawOnMouse moves the right paw from the body to the skin's MousePaw spot.
+/// RightPawOnMouse moves the right paw from the body to the skin's MousePaw spot (a skin with a Reach limb
+/// reaches there with the limb instead, and its right paw stays on the keys).
 /// Tail is the tail pose, drawn only for skins that have a Tail spot.
 /// BodyDx moves the pet sideways with everything that follows its body (a perched pet hopping key to key).
 /// </summary>

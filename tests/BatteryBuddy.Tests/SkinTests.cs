@@ -115,6 +115,31 @@ public class SkinTests
     }
 
     [Theory, MemberData(nameof(Skins))]
+    public void A_reaching_limb_joins_the_body_to_the_paw_on_the_mouse(string skin)
+    {
+        // Only Boba reaches the mouse with a limb of its own (a third tentacle); it must never float free:
+        // its top overlaps the body however the body bobs, and its bottom runs into the paw on the mouse.
+        var (_, Layout, Sprites) = TestSkin.Load(skin);
+        Assert.Equal(skin == "jellyfish", Layout.Reach is not null);
+        if (Layout.Reach is not PixelPoint at) return;
+        var limb = Sprites["reach"];
+        var body = Sprites["body_idle"];
+        var paw = Sprites["paw"];
+        var mousePaw = Layout.MousePaw!.Value;
+        int d = limb.Density;
+        bool Opaque(Sprite s, int x, int y) => x >= 0 && y >= 0 && x < s.Width && y < s.Height && s.Pixels[y * s.Width + x] != 0;
+        // Limb pixel (x, y) in frame pixels.
+        var pixels = Enumerable.Range(0, limb.Height).SelectMany(y => Enumerable.Range(0, limb.Width).Select(x => (x, y)))
+            .Where(p => Opaque(limb, p.x, p.y)).Select(p => (X: at.X * d + p.x, Y: at.Y * d + p.y)).ToList();
+        for (int bob = -1; bob <= 1; bob++)
+            Assert.True(pixels.Any(p => Opaque(body, p.X - Layout.Body.X * d, p.Y - (Layout.Body.Y + bob) * d)),
+                $"the limb doesn't reach the body when it bobs {bob}");
+        Assert.True(pixels.Any(p => Opaque(paw, p.X - mousePaw.X * d, p.Y - mousePaw.Y * d)), "the limb doesn't reach the paw on the mouse");
+        int bottom = pixels.Max(p => p.Y);
+        Assert.True(bottom < (mousePaw.Y + paw.ArtHeight) * d, "the limb pokes out below the paw on the mouse");
+    }
+
+    [Theory, MemberData(nameof(Skins))]
     public void Keyboard_icons_go_left_and_mouse_icons_go_right(string skin)
     {
         var (_, Layout, Sprites) = TestSkin.Load(skin);

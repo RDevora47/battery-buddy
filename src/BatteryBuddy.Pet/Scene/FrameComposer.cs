@@ -235,6 +235,8 @@ public static class FrameComposer
         // the paws tapping it, then everything the pet holds or wears. A perched pet stands in front of the
         // desk on the keyboard instead; its paws are its feet, and they hop with it rather than tapping.
         bool reaching = spec.RightPawOnMouse && layout.MousePaw is not null && !layout.Perched;
+        // A skin with a reaching limb clicks with it instead, so its right paw stays on the keys, at rest.
+        bool limb = reaching && layout.Reach is not null;
         if (layout.Perched)
         {
             DrawDeskAndKeyboard();
@@ -247,12 +249,17 @@ public static class FrameComposer
         }
         if (layout.Paws is not null)
             foreach (var (paw, point) in layout.Paws)
-                if (!(reaching && paw == Paw.Right))
-                    Blit(sprites["paw"], point.X + spec.BodyDx, point.Y + spec.BodyDy + (layout.Perched ? 0 : spec.PawDy(paw)), BodyOwner, spec.Fade);
+                if (!(reaching && paw == Paw.Right && !limb))
+                    Blit(sprites["paw"], point.X + spec.BodyDx, point.Y + spec.BodyDy +
+                        (layout.Perched || limb && paw == Paw.Right ? 0 : spec.PawDy(paw)), BodyOwner, spec.Fade);
         for (int i = 0; i < placements.Count; i++)
             if (placements[i].PlaceName is not ("seat" or EarPlace)) DrawDevice(i);
         if (reaching)   // on the mouse, which sits on the desk and doesn't bob
+        {
+            if (layout.Reach is PixelPoint reach)
+                Blit(sprites["reach"], reach.X, reach.Y + spec.PawRightDy, BodyOwner, spec.Fade);
             Blit(sprites["paw"], layout.MousePaw!.Value.X, layout.MousePaw.Value.Y + spec.PawRightDy, BodyOwner, spec.Fade);
+        }
         foreach (var overlay in spec.Overlays)
             Blit(sprites[overlay.Sprite], overlay.X, overlay.Y, BodyOwner);
         // Earbuds sit in the ears, which a hat often covers; they stay in view over it.

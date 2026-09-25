@@ -436,6 +436,42 @@ public class FrameComposerTests
         Assert.Equal(Blue, Pixel(press, 8, 5));
     }
 
+    [Fact]
+    public void A_reaching_limb_clicks_the_mouse_while_the_right_paw_keeps_its_place()
+    {
+        // As above, plus a 1x2 limb at (8,1) reaching down to the paw on the mouse (Boba's third tentacle).
+        var layout = Layout with
+        {
+            Places = new Dictionary<string, Place> { ["righthand"] = new(new[] { new PixelPoint(8, 3) }, new PixelPoint(0, 8), false, FollowsClick: true) },
+            Paws = new Dictionary<Paw, PixelPoint> { [Paw.Left] = new(0, 4), [Paw.Right] = new(3, 4) },
+            MousePaw = new PixelPoint(8, 3),
+            Reach = new PixelPoint(8, 1),
+        };
+        var sprites = new Dictionary<string, Sprite>(Sprites)
+        {
+            ["paw"] = new("paw", 1, 1, new[] { Green }),
+            ["reach"] = new("reach", 1, 2, new[] { Yellow, Yellow }),
+            ["tallmouse"] = new("tallmouse", 1, 2, new[] { Blue, Blue }),
+        };
+        var mouse = new DevicePlacement(TestReadings.Make("Mouse", DeviceKind.Mouse, battery: 80), "righthand", "tallmouse");
+
+        var reach = FrameComposer.Compose(layout, sprites, new[] { mouse }, Spec(dy: 1) with { RightPawOnMouse = true }, BatteryStyle.Bar);
+        Assert.Equal(Green, Pixel(reach, 3, 5));     // the right paw stays on the body, bobbing with it
+        Assert.Equal(Yellow, Pixel(reach, 8, 1));    // the limb, not bobbing
+        Assert.Equal(Yellow, Pixel(reach, 8, 2));
+        Assert.Equal(Green, Pixel(reach, 8, 3));     // its paw on the mouse
+        Assert.Equal(HitTarget.Body, reach.HitTest(8, 1, out _));
+
+        var press = FrameComposer.Compose(layout, sprites, new[] { mouse },
+            Spec() with { RightPawOnMouse = true, PawRightDy = 1, ClickDy = 1 }, BatteryStyle.Bar);
+        Assert.Equal(Green, Pixel(press, 3, 4));     // the click doesn't press the paw on the keys
+        Assert.Equal(0u, Pixel(press, 3, 5));
+        Assert.Equal(Yellow, Pixel(press, 8, 2));    // the limb stretches down with the click
+        Assert.Equal(Yellow, Pixel(press, 8, 3));
+        Assert.Equal(Green, Pixel(press, 8, 4));
+        Assert.Equal(Blue, Pixel(press, 8, 5));
+    }
+
     // A 3x2 device at (8,4) whose icons go to the given side; a 1x2 bolt (or a 1x1 @2x one) and 1x1 full icon.
     static ComposedFrame ComposeIcons(Side side, DeviceReading device, BatteryStyle style, bool hiRes = false)
     {

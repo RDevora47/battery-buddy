@@ -1,4 +1,4 @@
-# Battery Buddy — Boba (cartoon jellyfish) skin (drawn over Skins/common/sprites.txt, whose palette it extends)
+# Battery Buddy â€” Boba (cartoon jellyfish) skin (drawn over Skins/common/sprites.txt, whose palette it extends)
 # Every sprite is @2x: each character is half an art pixel. skin.json positions are in art pixels.
 # Boba floats behind the desk; its two long tentacles rest their tips on the keys to type.
 palette
@@ -331,6 +331,32 @@ kkfggvvk
 kkgggvvk
 .kkvvvk.
 ..kkkk..
+end
+
+# Reach: a third tentacle reaching the mouse on a click, from under the bell to the paw drawn on the mouse.
+sprite reach @2x
+....fggv........
+....fgggv.......
+..kkvgggvkk.....
+..kkkfggvkkk....
+...kkfgggvkk....
+...kkvgggvkkk...
+...kkkfgggvkkk..
+....kkvggggvkk..
+....kkkvgggvkkk.
+.....kkkfgggvkk.
+......kkvgggvkk.
+......kkkfggvkk.
+.......kkfggvkk.
+.......kkfggvkkk
+.......kkfgggvkk
+.......kkfgggvkk
+.......kkfgggvkk
+.......kkfgggvkk
+.......kkfgggvkk
+.......kkfgggvkk
+.......kkfgggvkk
+.......kkvvvvvkk
 end
 
 # Gills are the two side tentacles: held out when charged, drooping when low, hanging limp when drained.

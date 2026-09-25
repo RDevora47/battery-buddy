@@ -4,6 +4,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <!-- The last release; build.ps1 -Release <version> bumps it, commits and tags v<version>. -->
-    <Version>0.0.0</Version>
+    <Version>0.0.1</Version>
   </PropertyGroup>
 </Project>

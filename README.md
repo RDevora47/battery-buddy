@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/banner.gif" alt="All eight pets typing at their desks, wearing earbuds, with a mouse, keyboard and charging phone" width="736">
+  <img src="docs/images/banner.gif" alt="All eight pets typing at their desks, wearing earbuds with a mouse and keyboard">
 </p>
 
 <p align="center">
@@ -23,16 +23,16 @@ Pick one from the tray menu. They all type along with your keyboard and click al
 
 <table>
   <tr>
-    <td align="center"><img src="docs/images/pet-axolotl.gif" alt="Mochi the axolotl" width="166"><br><b>Mochi</b><br><sub>axolotl · gills droop as batteries drain</sub></td>
-    <td align="center"><img src="docs/images/pet-redpanda.gif" alt="Maple the red panda" width="166"><br><b>Maple</b><br><sub>red panda · wags its tail when happy</sub></td>
-    <td align="center"><img src="docs/images/pet-bunny.gif" alt="Bebonio the bunny" width="166"><br><b>Bebonio</b><br><sub>bunny</sub></td>
-    <td align="center"><img src="docs/images/pet-panda.gif" alt="Bao the giant panda" width="166"><br><b>Bao</b><br><sub>giant panda</sub></td>
+    <td align="center"><img src="docs/images/pet-axolotl.gif" alt="Mochi the axolotl"><br><b>Mochi</b><br><sub>axolotl · gills droop as batteries drain</sub></td>
+    <td align="center"><img src="docs/images/pet-redpanda.gif" alt="Maple the red panda"><br><b>Maple</b><br><sub>red panda · wags its tail when happy</sub></td>
+    <td align="center"><img src="docs/images/pet-bunny.gif" alt="Bebonio the bunny"><br><b>Bebonio</b><br><sub>bunny</sub></td>
+    <td align="center"><img src="docs/images/pet-panda.gif" alt="Bao the giant panda"><br><b>Bao</b><br><sub>giant panda</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/images/pet-parrot.gif" alt="Mango the parrot" width="166"><br><b>Mango</b><br><sub>parrot · hops from key to key</sub></td>
-    <td align="center"><img src="docs/images/pet-jellyfish.gif" alt="Boba the jellyfish" width="166"><br><b>Boba</b><br><sub>jellyfish · a long tentacle works the mouse</sub></td>
-    <td align="center"><img src="docs/images/pet-choppa.gif" alt="Choppa the dog" width="166"><br><b>Choppa</b><br><sub>dog · wags its tail when happy</sub></td>
-    <td align="center"><img src="docs/images/pet-missy.gif" alt="Missy the dog" width="166"><br><b>Missy</b><br><sub>havapoo · wags its tail when happy</sub></td>
+    <td align="center"><img src="docs/images/pet-parrot.gif" alt="Mango the parrot"><br><b>Mango</b><br><sub>parrot · hops from key to key</sub></td>
+    <td align="center"><img src="docs/images/pet-jellyfish.gif" alt="Boba the jellyfish"><br><b>Boba</b><br><sub>jellyfish · a long tentacle works the mouse</sub></td>
+    <td align="center"><img src="docs/images/pet-choppa.gif" alt="Choppa the dog"><br><b>Choppa</b><br><sub>dog · wags its tail when happy</sub></td>
+    <td align="center"><img src="docs/images/pet-missy.gif" alt="Missy the dog"><br><b>Missy</b><br><sub>havapoo · wags its tail when happy</sub></td>
   </tr>
 </table>
 
@@ -44,14 +44,14 @@ battery, your choice), and a lightning bolt while it charges. The pet's mood fol
 
 <table>
   <tr>
-    <td align="center"><img src="docs/images/mood-happy.gif" alt="Happy pet" width="166"><br><b>Happy</b><br><sub>everything above 20 %</sub></td>
-    <td align="center"><img src="docs/images/mood-sleepy.gif" alt="Sleepy pet with a Zzz" width="166"><br><b>Sleepy</b><br><sub>a device at 20 % or less</sub></td>
-    <td align="center"><img src="docs/images/mood-critical.gif" alt="Worried pet shaking a nearly empty mouse" width="166"><br><b>Worried</b><br><sub>at 10 % it shakes the device<br>for the last bit of energy</sub></td>
+    <td align="center"><img src="docs/images/mood-happy.gif" alt="Happy pet"><br><b>Happy</b><br><sub>everything above 20 %</sub></td>
+    <td align="center"><img src="docs/images/mood-sleepy.gif" alt="Sleepy pet with a Zzz"><br><b>Sleepy</b><br><sub>a device at 20 % or less</sub></td>
+    <td align="center"><img src="docs/images/mood-critical.gif" alt="Worried pet shaking a nearly empty mouse"><br><b>Worried</b><br><sub>at 10 % it shakes the device<br>for the last bit of energy</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/images/mood-full-saiyan.gif" alt="Pet with spiky golden hair" width="166"><br><b>Fully charged</b><br><sub>every device at 95 %+:<br>Super Saiyan hair…</sub></td>
-    <td align="center"><img src="docs/images/mood-full-strawhat.gif" alt="Red panda in a straw hat" width="166"><br><b>…or a straw hat</b><br><sub>(or nothing: your pick)</sub></td>
-    <td align="center"><img src="docs/images/rescan.gif" alt="Pet searching with a magnifying glass" width="166"><br><b>Rescanning</b><br><sub>click the pet to look<br>for devices right now</sub></td>
+    <td align="center"><img src="docs/images/mood-full-saiyan.gif" alt="Pet with spiky golden hair"><br><b>Fully charged</b><br><sub>every device at 95 %+:<br>Super Saiyan hair…</sub></td>
+    <td align="center"><img src="docs/images/mood-full-strawhat.gif" alt="Red panda in a straw hat"><br><b>…or a straw hat</b><br><sub>(or nothing: your pick)</sub></td>
+    <td align="center"><img src="docs/images/rescan.gif" alt="Pet searching with a magnifying glass"><br><b>Rescanning</b><br><sub>click the pet to look<br>for devices right now</sub></td>
   </tr>
 </table>
 

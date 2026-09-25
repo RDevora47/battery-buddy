@@ -15,13 +15,12 @@ Directory.CreateDirectory(output);
 
 string[] pets = { "axolotl", "redpanda", "bunny", "panda", "parrot", "jellyfish", "choppa", "missy" };
 
-// A typical desk: buds on the ears, a mouse and keyboard on the desk, a phone charging beside it.
-DeviceReading[] Desk(int buds = 85, int mouse = 90, int keyboard = 75, int phone = 65, bool phoneCharging = true) => new[]
+// A typical desk: buds on the ears, a mouse and keyboard on the desk.
+DeviceReading[] Desk(int buds = 85, int mouse = 90, int keyboard = 75) => new[]
 {
     Device("Galaxy Buds3 Pro", DeviceKind.Earbuds, buds, detail: new BudsDetail(buds, buds + 4, 60, true, true)),
     Device("MX Master 3S", DeviceKind.Mouse, mouse),
     Device("MX Keys", DeviceKind.Keyboard, keyboard),
-    Device("Galaxy S25 Ultra", DeviceKind.Phone, phone, charging: phoneCharging),
 };
 
 // Types for two seconds, bobs happily, clicks the mouse twice, then rests: 7 s.
@@ -41,10 +40,10 @@ foreach (var pet in pets)
 
 // Moods and extras on Mochi, 3 s each, with the idle burst (bob, Zzz drift or shake) near the start.
 Save("mood-happy", Render("axolotl", Desk(), 18));
-Save("mood-sleepy", Render("axolotl", Desk(buds: 18, phoneCharging: false), 18));
-Save("mood-critical", Render("axolotl", Desk(buds: 60, mouse: 8, phoneCharging: false), 18));
-Save("mood-full-saiyan", Render("axolotl", Desk(100, 100, 100, 98, phoneCharging: false), 18));
-Save("mood-full-strawhat", Render("redpanda", Desk(100, 100, 100, 98, phoneCharging: false), 18, hat: FullChargeHat.StrawHat));
+Save("mood-sleepy", Render("axolotl", Desk(buds: 18), 18));
+Save("mood-critical", Render("axolotl", Desk(buds: 60, mouse: 8), 18));
+Save("mood-full-saiyan", Render("axolotl", Desk(100, 100, 100), 18));
+Save("mood-full-strawhat", Render("redpanda", Desk(100, 100, 100), 18, hat: FullChargeHat.StrawHat));
 Save("rescan", Render("axolotl", Desk(), 18, (pet, frame, now) =>
 {
     if (frame == 0) pet.BeginSniff(now);

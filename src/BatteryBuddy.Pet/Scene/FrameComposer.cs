@@ -194,6 +194,21 @@ public static class FrameComposer
             }
         }
 
+        // Owns a sprite's opaque pixels and the one-pixel ring around them (where its battery outline goes), without drawing.
+        void ClaimWithRing(Sprite sprite, int ox, int oy, short owner)
+        {
+            int cell = res / sprite.Density;
+            for (int y = -1; y <= sprite.Height; y++)
+                for (int x = -1; x <= sprite.Width; x++)
+                {
+                    if (!(Opaque(sprite, x, y) || Opaque(sprite, x - 1, y) || Opaque(sprite, x + 1, y) ||
+                          Opaque(sprite, x, y - 1) || Opaque(sprite, x, y + 1))) continue;
+                    for (int py = Math.Max(oy * res + y * cell, 0); py < Math.Min(oy * res + (y + 1) * cell, h); py++)
+                        for (int px = Math.Max(ox * res + x * cell, 0); px < Math.Min(ox * res + (x + 1) * cell, w); px++)
+                            owners[py * w + px] = owner;
+                }
+        }
+
         // Owns a sprite's opaque pixels without drawing them.
         void Claim(Sprite sprite, int ox, int oy, short owner)
         {
@@ -323,6 +338,15 @@ public static class FrameComposer
                 Blit(sprites[spec.ReachStep > 0 ? $"reach{spec.ReachStep}" : "reach"], reach.X, reach.Y, BodyOwner, spec.Fade);
             if (!limb || spec.ReachStep == 0)
                 Blit(sprites["paw"], layout.MousePaw!.Value.X, layout.MousePaw.Value.Y + spec.PawRightDy, BodyOwner, spec.Fade);
+        }
+        // Clicking the mouse is itself a click, so the pet presses it (dip, paw or limb on it) before the click is
+        // hit-tested: the mouse keeps its resting footprint so none of that steals the click.
+        for (int i = 0; i < placements.Count; i++)
+        {
+            var place = layout.Places[placements[i].PlaceName];
+            if (!place.FollowsClick) continue;
+            foreach (var point in place.Points)
+                ClaimWithRing(sprites[placements[i].SpriteName], point.X, point.Y, (short)(i + 1));
         }
         foreach (var overlay in spec.Overlays)
             Blit(sprites[overlay.Sprite], overlay.X, overlay.Y, BodyOwner);

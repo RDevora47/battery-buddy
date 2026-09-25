@@ -594,6 +594,26 @@ public class FrameComposerTests
         Assert.Equal(HitTarget.Channel, HitArt(hovered, Arc[1].X + 3, Arc[1].Y - 1, out _));
     }
 
+    // Clicking the pet's mouse is itself a click, so the pet presses the mouse before the click is hit-tested:
+    // the mouse dips and the paw (or Boba's tentacle) lands on it. Neither may steal the mouse's pixels.
+    [Theory, MemberData(nameof(SkinTests.Skins), MemberType = typeof(SkinTests))]
+    public void The_mouse_keeps_its_resting_pixels_while_the_pet_clicks_it(string skin)
+    {
+        var (_, layout, sprites) = TestSkin.Load(skin);
+        var mouse = new DevicePlacement(TestReadings.Make("Mouse", DeviceKind.Mouse), "righthand", "mouse");
+        var resting = FrameComposer.Compose(layout, sprites, new[] { mouse }, new FrameSpec("body_idle", 0, Array.Empty<Overlay>()));
+        var clicking = FrameComposer.Compose(layout, sprites, new[] { mouse },
+            new FrameSpec("body_idle", 0, Array.Empty<Overlay>(), PawRightDy: 1, ClickDy: 1, RightPawOnMouse: true));
+
+        var lost = new List<(int, int)>();
+        for (int y = 0; y < resting.Height; y++)
+            for (int x = 0; x < resting.Width; x++)
+                if (resting.HitTest(x, y, out var d) == HitTarget.Device && d!.Kind == DeviceKind.Mouse &&
+                    !(clicking.HitTest(x, y, out var c) == HitTarget.Device && c!.Kind == DeviceKind.Mouse))
+                    lost.Add((x, y));
+        Assert.True(lost.Count == 0, $"{lost.Count} mouse pixels stop hitting the mouse while it's clicked, e.g. {string.Join(" ", lost.Take(5))}");
+    }
+
     [Fact]
     public void Without_a_picker_nothing_hit_tests_as_a_channel()
     {

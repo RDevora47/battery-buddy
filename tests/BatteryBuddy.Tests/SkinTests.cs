@@ -54,7 +54,7 @@ public class SkinTests
 
     [Fact]
     public void Has_every_pet() =>
-        Assert.Equal(new[] { "axolotl", "bunny", "choppa", "duck", "jellyfish", "missy", "panda", "parrot", "ragdoll", "redpanda" }, TestSkin.Names);
+        Assert.Equal(new[] { "axolotl", "bunny", "choppa", "duck", "jellyfish", "missy", "panda", "parrot", "pig", "ragdoll", "redpanda" }, TestSkin.Names);
 
     [Theory, MemberData(nameof(Skins))]
     public void Has_all_required_sprites(string skin)
@@ -271,6 +271,7 @@ public class SkinTests
     [InlineData("redpanda", 3)]
     [InlineData("ragdoll", 3)]
     [InlineData("duck", 0)]       // perched too, with nothing on his head
+    [InlineData("pig", 2)]
     [InlineData("bunny", 11)]    // rows 0-10 are for the long ears
     [InlineData("panda", 4)]
     [InlineData("parrot", 5)]     // small and perched on the keyboard
@@ -294,6 +295,7 @@ public class SkinTests
     [InlineData("redpanda", 3)]
     [InlineData("ragdoll", 3)]
     [InlineData("duck", 0)]
+    [InlineData("pig", 2)]
     [InlineData("bunny", 11)]
     [InlineData("panda", 4)]
     [InlineData("parrot", 5)]
@@ -327,6 +329,7 @@ public class SkinTests
     [InlineData("missy")]
     [InlineData("redpanda")]
     [InlineData("ragdoll")]
+    [InlineData("pig")]         // a little curly tail
     [InlineData("jellyfish")]   // its two extra-long tentacles, swaying below the desk
     public void Tailed_pets_have_a_tail_that_wags_within_the_canvas(string skin)
     {
@@ -345,6 +348,7 @@ public class SkinTests
     [InlineData("missy")]
     [InlineData("redpanda")]
     [InlineData("ragdoll")]
+    [InlineData("pig")]
     [InlineData("jellyfish")]
     public void Every_tail_pose_stays_attached_to_the_body(string skin)
     {
@@ -390,6 +394,7 @@ public class SkinTests
     [InlineData("missy")]
     [InlineData("redpanda")]
     [InlineData("ragdoll")]
+    [InlineData("pig")]
     public void Wagging_swings_the_tail_about_a_base_tucked_behind_the_body(string skin)
     {
         // The bottom rows (the base) are the same in every pose, and all of them sit behind the body.
@@ -419,6 +424,7 @@ public class SkinTests
     [InlineData("missy")]
     [InlineData("redpanda")]
     [InlineData("ragdoll")]
+    [InlineData("pig")]         // the corkscrew stays open
     public void Tails_are_open_curls_not_rings(string skin)
     {
         // A see-through hole enclosed by the tail itself reads as a loose ring once it swings clear of the body.
@@ -530,6 +536,54 @@ public class SkinTests
         Assert.True(right.Left < still.Left, "body_wag2 swings the tail out on the left");
     }
 
+    [Fact]
+    public void Crispins_head_is_no_bigger_than_his_body()
+    {
+        // Unlike Bao's big chibi head, Crispin's head (art rows 2-12) is no wider than his chubby body and no
+        // taller than the body that shows between his jowls and the desk.
+        const int crown = 2, chin = 12;
+        var (_, Layout, Sprites) = TestSkin.Load("pig");
+        var body = Sprites["body_idle"];
+        int deskRow = Layout.Desk!.Value.Y - Layout.Body.Y;
+        var head = Extent(body, crown, chin);
+        var torso = Extent(body, chin + 1, deskRow - 1);
+        Assert.True(head.Right - head.Left <= torso.Right - torso.Left, $"head {head}, body {torso}");
+        Assert.True(chin - crown + 1 <= deskRow - chin - 1, "the head is taller than the body showing above the desk");
+    }
+
+    [Fact]
+    public void Crispin_rests_his_hooves_on_his_belly_and_taps_down_onto_the_keys()
+    {
+        var (_, Layout, Sprites) = TestSkin.Load("pig");
+        Assert.Equal(2, Layout.PawLift);
+        var keyboard = new DevicePlacement(TestReadings.Make("Keys", DeviceKind.Keyboard, battery: 80), "seat", "keyboard");
+        int Top(FrameSpec spec)
+        {
+            // the left hoof's top row: the first frame row that differs from a pawless frame in its columns
+            var frame = FrameComposer.Compose(Layout, Sprites, new[] { keyboard }, spec);
+            var bare = FrameComposer.Compose(Layout with { Paws = null }, Sprites, new[] { keyboard }, spec);
+            int x0 = Layout.Paws![Paw.Left].X * 2;
+            return Enumerable.Range(0, frame.Height).First(y => Enumerable.Range(x0, Sprites["paw"].Width)
+                .Any(x => frame.Pixels[y * frame.Width + x] != bare.Pixels[y * frame.Width + x])) / 2;
+        }
+        var rest = Top(new FrameSpec("body_idle", 0, Array.Empty<Overlay>()));
+        var tap = Top(new FrameSpec("body_idle", 0, Array.Empty<Overlay>()) { PawLeftDy = 1 });
+        Assert.Equal(Layout.Paws![Paw.Left].Y - 2, rest);
+        Assert.Equal(Layout.Paws[Paw.Left].Y + 1, tap);   // down on the keys, like every other pet's tap
+    }
+
+    [Fact]
+    public void Crispin_has_cloven_hooves()
+    {
+        // Trotters, not paws: the hoof is split by a cleft down the middle that opens between the two toes.
+        var paw = TestSkin.Load("pig").Sprites["paw"];
+        const uint hoof = 0xFF8A5A63;   // the skin's hoof color
+        int mid = paw.Width / 2;
+        var bottom = Enumerable.Range(0, paw.Width).Select(x => paw.Pixels[(paw.Height - 1) * paw.Width + x]).ToArray();
+        Assert.True(bottom[mid - 1] == 0 && bottom[mid] == 0, "the toes don't part at the bottom");
+        Assert.Contains(hoof, paw.Pixels);
+    }
+
     [Theory]
     [InlineData("choppa")]
     [InlineData("missy")]
@@ -538,6 +592,7 @@ public class SkinTests
     [InlineData("bunny")]
     [InlineData("panda")]
     [InlineData("parrot")]
+    [InlineData("pig")]
     public void Ears_and_crests_sink_as_the_battery_drains(string skin)
     {
         // The ears fill the "gills" slot: each mood is its own pose, and the lower the battery, the lower the ears sit.
@@ -601,6 +656,7 @@ public class SkinTests
     [InlineData("redpanda", 3, 8)]
     [InlineData("ragdoll", 3, 8)]
     [InlineData("duck", 0, 3)]
+    [InlineData("pig", 2, 5)]
     [InlineData("bunny", 11, 16)]
     [InlineData("panda", 4, 11)]
     [InlineData("parrot", 5, 9)]

@@ -27,7 +27,8 @@ public sealed record SkinLayout(
     PixelPoint? Tail = null,
     bool Perched = false,
     PixelPoint? Reach = null,
-    bool Taps = false)
+    bool Taps = false,
+    int PawLift = 0)
 {
     // Paws: the "paw" sprite drawn over the body at these points. Desk: the "desk" sprite in front of the
     // body, which the seat's device lies on. MousePaw: where the right paw goes to click the mouse.
@@ -38,6 +39,8 @@ public sealed record SkinLayout(
     // Reach: where the "reach" sprite goes, a whole limb running to MousePaw (Boba's long tentacle, out from
     // under the desk). A skin with one clicks with that limb, the paw drawn at its tip, and its right paw keeps
     // typing. On the way there and back it shows "reach1", "reach2"..., and its tail pose is "tail_reach".
+    // PawLift: how many rows above Paws a sitting pet rests its paws (Crispin's hooves on his belly); a tap
+    // still comes down to Paws and onto the keys.
     /// <summary>A perched pet that hops from key to key as it types, rather than tapping them.</summary>
     public bool Hops => Perched && !Taps;
 
@@ -84,7 +87,8 @@ public sealed record SkinLayout(
             root.TryGetProperty("tail", out var tail) ? Point(tail) : null,
             root.TryGetProperty("perched", out var perched) && perched.GetBoolean(),
             root.TryGetProperty("reach", out var reach) ? Point(reach) : null,
-            root.TryGetProperty("taps", out var taps) && taps.GetBoolean());
+            root.TryGetProperty("taps", out var taps) && taps.GetBoolean(),
+            root.TryGetProperty("pawLift", out var lift) ? lift.GetInt32() : 0);
     }
 
     static PixelPoint Point(JsonElement e) => new(e[0].GetInt32(), e[1].GetInt32());

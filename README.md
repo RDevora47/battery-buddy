@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/banner.gif" alt="All nine pets typing at their desks, wearing earbuds with a mouse and keyboard">
+  <img src="docs/images/banner.gif" alt="All ten pets typing at their desks, wearing earbuds with a mouse and keyboard">
 </p>
 
 <p align="center">
@@ -48,6 +48,11 @@ Pick one from the tray menu. They all type along with your keyboard and click al
     <td align="center"><img src="docs/images/pet-choppa.gif" alt="Choppa the dog"><br><b>Choppa</b><br><sub>dog · wags its tail when happy</sub></td>
     <td align="center"><img src="docs/images/pet-missy.gif" alt="Missy the dog"><br><b>Missy</b><br><sub>havapoo · wags its tail when happy</sub></td>
     <td align="center"><img src="docs/images/pet-ragdoll.gif" alt="Cat Damon the Ragdoll cat"><br><b>Cat Damon</b><br><sub>Ragdoll cat · wags its tail when happy</sub></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td align="center"><img src="docs/images/pet-duck.gif" alt="Gumersindo the Pekin duck"><br><b>Gumersindo</b><br><sub>Pekin duck · twists his whole body to wag</sub></td>
+    <td></td>
   </tr>
 </table>
 

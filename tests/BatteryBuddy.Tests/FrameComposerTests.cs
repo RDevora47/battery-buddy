@@ -59,6 +59,18 @@ public class FrameComposerTests
         Assert.Equal(4, Compose(Array.Empty<DevicePlacement>(), Spec() with { Tail = "tail_wag1" }).Pixels.Count(p => p != 0));
 
     [Fact]
+    public void A_skin_with_whole_body_wag_frames_twists_its_body_to_wag()
+    {
+        // No tail spot: the wag pose swaps the body frame for body_wag1, which bobs like the body.
+        var sprites = new Dictionary<string, Sprite>(Sprites) { ["body_wag1"] = new("body_wag1", 2, 2, new[] { Blue, Blue, Blue, Blue }) };
+        var wag = FrameComposer.Compose(Layout, sprites, Array.Empty<DevicePlacement>(), Spec(dy: 1) with { Tail = "tail_wag1" });
+        Assert.Equal(Blue, Pixel(wag, 0, 1));
+        Assert.Equal(0u, Pixel(wag, 0, 0));
+        var rest = FrameComposer.Compose(Layout, sprites, Array.Empty<DevicePlacement>(), Spec() with { Tail = "tail" });
+        Assert.Equal(Red, Pixel(rest, 0, 0));   // at rest (and with no body_tail frame) it's the usual body
+    }
+
+    [Fact]
     public void Hit_test_distinguishes_body_device_and_empty()
     {
         var frame = Compose(new[] { Mouse() }, Spec());
@@ -176,6 +188,39 @@ public class FrameComposerTests
         Assert.Equal(Green, Pixel(hop, 16, 2));    // and neither foot goes to the mouse
         Assert.Equal(0u, Pixel(hop, 12, 3));
         Assert.Equal(Blue, Pixel(hop, 6, 4));      // a device the pet holds hops with it
+    }
+
+    [Fact]
+    public void A_perched_pet_that_taps_presses_the_keys_with_its_feet()
+    {
+        // Gumersindo's way: standing on the keyboard, a foot at (0,3) drops a pixel to tap, like a paw.
+        var layout = Layout with
+        {
+            Desk = new PixelPoint(0, 1),
+            Paws = new Dictionary<Paw, PixelPoint> { [Paw.Left] = new(0, 3), [Paw.Right] = new(15, 3) },
+            Perched = true,
+            Taps = true,
+        };
+        var sprites = new Dictionary<string, Sprite>(Sprites)
+        {
+            ["desk"] = new("desk", 4, 1, new[] { Yellow, Yellow, Yellow, Yellow }),
+            ["paw"] = new("paw", 1, 1, new[] { Green }),
+        };
+        Assert.False(layout.Hops);
+        var tap = FrameComposer.Compose(layout, sprites, Array.Empty<DevicePlacement>(), Spec() with { PawLeftDy = 1 }, BatteryStyle.Bar);
+        Assert.Equal(Green, Pixel(tap, 0, 4));
+        Assert.Equal(0u, Pixel(tap, 0, 3));
+        Assert.Equal(Red, Pixel(tap, 1, 1));      // still in front of the desk
+
+        // Its legs are drawn behind the body, so they can run up under it: a foot at the body's corner is hidden.
+        var tucked = layout with { Paws = new Dictionary<Paw, PixelPoint> { [Paw.Left] = new(1, 1), [Paw.Right] = new(15, 3) } };
+        Assert.Equal(Red, Pixel(FrameComposer.Compose(tucked, sprites, Array.Empty<DevicePlacement>(), Spec(), BatteryStyle.Bar), 1, 1));
+
+        // Using the mouse doesn't move its feet, like Mango's.
+        var click = FrameComposer.Compose(layout, sprites, Array.Empty<DevicePlacement>(),
+            Spec() with { PawRightDy = 1, ClickDy = 1, RightPawOnMouse = true }, BatteryStyle.Bar);
+        Assert.Equal(Green, Pixel(click, 15, 3));
+        Assert.Equal(0u, Pixel(click, 15, 4));
     }
 
     [Fact]

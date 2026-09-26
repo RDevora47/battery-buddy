@@ -141,7 +141,7 @@ sealed class PetController : IDisposable
             _layout.Overlays["magnifier"])
         {
             Hat = _settings.Hat,
-            Hops = _layout.Perched,
+            Hops = _layout.Hops,
             ReachFrames = _layout.Reach is null ? 0 : Enumerable.Range(1, 9).TakeWhile(n => _sprites.ContainsKey($"reach{n}")).Count(),
         };
         _picker = new HostPicker(_layout.FrameWidth);

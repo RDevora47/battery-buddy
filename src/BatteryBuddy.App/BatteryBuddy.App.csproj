@@ -27,6 +27,8 @@
     <EmbeddedResource Include="Skins\missy\skin.json" LogicalName="skins.missy.skin.json" />
     <EmbeddedResource Include="Skins\ragdoll\sprites.txt" LogicalName="skins.ragdoll.sprites.txt" />
     <EmbeddedResource Include="Skins\ragdoll\skin.json" LogicalName="skins.ragdoll.skin.json" />
+    <EmbeddedResource Include="Skins\duck\sprites.txt" LogicalName="skins.duck.sprites.txt" />
+    <EmbeddedResource Include="Skins\duck\skin.json" LogicalName="skins.duck.skin.json" />
     <EmbeddedResource Include="Skins\redpanda\sprites.txt" LogicalName="skins.redpanda.sprites.txt" />
     <EmbeddedResource Include="Skins\redpanda\skin.json" LogicalName="skins.redpanda.skin.json" />
     <EmbeddedResource Include="Skins\bunny\sprites.txt" LogicalName="skins.bunny.sprites.txt" />

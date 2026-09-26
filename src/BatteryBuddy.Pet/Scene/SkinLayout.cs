@@ -26,16 +26,21 @@ public sealed record SkinLayout(
     PixelPoint? MousePaw = null,
     PixelPoint? Tail = null,
     bool Perched = false,
-    PixelPoint? Reach = null)
+    PixelPoint? Reach = null,
+    bool Taps = false)
 {
     // Paws: the "paw" sprite drawn over the body at these points. Desk: the "desk" sprite in front of the
     // body, which the seat's device lies on. MousePaw: where the right paw goes to click the mouse.
     // Tail: the tail sprites ("tail", "tail_wag1", "tail_wag2"), drawn behind the body and bobbing with it.
     // All are canvas positions like Body. Perched: a small pet standing on the keyboard instead of sitting
-    // behind the desk; it's drawn in front of the desk, its paws are its feet, and it hops as it types.
+    // behind the desk; it's drawn in front of the desk, its paws are its feet, and it hops as it types
+    // (Mango) - or, with Taps, taps the keys with its feet like paws (Gumersindo, too heavy to hop about).
     // Reach: where the "reach" sprite goes, a whole limb running to MousePaw (Boba's long tentacle, out from
     // under the desk). A skin with one clicks with that limb, the paw drawn at its tip, and its right paw keeps
     // typing. On the way there and back it shows "reach1", "reach2"..., and its tail pose is "tail_reach".
+    /// <summary>A perched pet that hops from key to key as it types, rather than tapping them.</summary>
+    public bool Hops => Perched && !Taps;
+
     public static readonly string[] RequiredPlaces = { "gills", "neck", "hands", "righthand", "seat", "side", "float1", "float2" };
 
     /// <summary>
@@ -78,7 +83,8 @@ public sealed record SkinLayout(
             root.TryGetProperty("mousePaw", out var mousePaw) ? Point(mousePaw) : null,
             root.TryGetProperty("tail", out var tail) ? Point(tail) : null,
             root.TryGetProperty("perched", out var perched) && perched.GetBoolean(),
-            root.TryGetProperty("reach", out var reach) ? Point(reach) : null);
+            root.TryGetProperty("reach", out var reach) ? Point(reach) : null,
+            root.TryGetProperty("taps", out var taps) && taps.GetBoolean());
     }
 
     static PixelPoint Point(JsonElement e) => new(e[0].GetInt32(), e[1].GetInt32());

@@ -53,8 +53,8 @@ public class SkinTests
     };
 
     [Fact]
-    public void Ships_every_pet() =>
-        Assert.Equal(new[] { "axolotl", "bunny", "choppa", "jellyfish", "missy", "panda", "parrot", "redpanda" }, TestSkin.Names);
+    public void Has_every_pet_and_the_template() =>
+        Assert.Equal(new[] { "axolotl", "bunny", "choppa", "jellyfish", "missy", "panda", "parrot", "ragdoll", "redpanda", "template" }, TestSkin.Names);
 
     [Theory, MemberData(nameof(Skins))]
     public void Has_all_required_sprites(string skin)
@@ -265,6 +265,8 @@ public class SkinTests
     [InlineData("choppa", 7)]    // rows 0-6 are for the ears
     [InlineData("missy", 3)]
     [InlineData("redpanda", 3)]
+    [InlineData("ragdoll", 3)]
+    [InlineData("template", 3)]
     [InlineData("bunny", 11)]    // rows 0-10 are for the long ears
     [InlineData("panda", 4)]
     [InlineData("parrot", 5)]     // small and perched on the keyboard
@@ -286,6 +288,8 @@ public class SkinTests
     [InlineData("choppa", 7)]
     [InlineData("missy", 3)]
     [InlineData("redpanda", 3)]
+    [InlineData("ragdoll", 3)]
+    [InlineData("template", 3)]
     [InlineData("bunny", 11)]
     [InlineData("panda", 4)]
     [InlineData("parrot", 5)]
@@ -318,6 +322,8 @@ public class SkinTests
     [InlineData("choppa")]
     [InlineData("missy")]
     [InlineData("redpanda")]
+    [InlineData("ragdoll")]
+    [InlineData("template")]
     [InlineData("jellyfish")]   // its two extra-long tentacles, swaying below the desk
     public void Tailed_pets_have_a_tail_that_wags_within_the_canvas(string skin)
     {
@@ -335,6 +341,8 @@ public class SkinTests
     [InlineData("choppa")]
     [InlineData("missy")]
     [InlineData("redpanda")]
+    [InlineData("ragdoll")]
+    [InlineData("template")]
     [InlineData("jellyfish")]
     public void Every_tail_pose_stays_attached_to_the_body(string skin)
     {
@@ -379,6 +387,8 @@ public class SkinTests
     [InlineData("choppa")]
     [InlineData("missy")]
     [InlineData("redpanda")]
+    [InlineData("ragdoll")]
+    [InlineData("template")]
     public void Wagging_swings_the_tail_about_a_base_tucked_behind_the_body(string skin)
     {
         // The bottom rows (the base) are the same in every pose, and all of them sit behind the body.
@@ -407,6 +417,8 @@ public class SkinTests
     [InlineData("choppa")]
     [InlineData("missy")]
     [InlineData("redpanda")]
+    [InlineData("ragdoll")]
+    [InlineData("template")]
     public void Tails_are_open_curls_not_rings(string skin)
     {
         // A see-through hole enclosed by the tail itself reads as a loose ring once it swings clear of the body.
@@ -506,6 +518,8 @@ public class SkinTests
     [InlineData("choppa")]
     [InlineData("missy")]
     [InlineData("redpanda")]
+    [InlineData("ragdoll")]
+    [InlineData("template")]
     [InlineData("bunny")]
     [InlineData("panda")]
     [InlineData("parrot")]
@@ -570,6 +584,8 @@ public class SkinTests
     [InlineData("choppa", 7, 12)]
     [InlineData("missy", 3, 8)]
     [InlineData("redpanda", 3, 8)]
+    [InlineData("ragdoll", 3, 8)]
+    [InlineData("template", 3, 8)]
     [InlineData("bunny", 11, 16)]
     [InlineData("panda", 4, 11)]
     [InlineData("parrot", 5, 9)]

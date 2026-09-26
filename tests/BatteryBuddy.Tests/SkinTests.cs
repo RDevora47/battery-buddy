@@ -53,8 +53,8 @@ public class SkinTests
     };
 
     [Fact]
-    public void Has_every_pet_and_the_template() =>
-        Assert.Equal(new[] { "axolotl", "bunny", "choppa", "jellyfish", "missy", "panda", "parrot", "ragdoll", "redpanda", "template" }, TestSkin.Names);
+    public void Has_every_pet() =>
+        Assert.Equal(new[] { "axolotl", "bunny", "choppa", "duck", "jellyfish", "missy", "panda", "parrot", "ragdoll", "redpanda" }, TestSkin.Names);
 
     [Theory, MemberData(nameof(Skins))]
     public void Has_all_required_sprites(string skin)
@@ -238,18 +238,22 @@ public class SkinTests
     }
 
     [Fact]
-    public void Only_mango_is_perched() =>
-        Assert.Equal(new[] { "parrot" }, TestSkin.Names.Where(n => TestSkin.Load(n).Layout.Perched));
+    public void Only_the_birds_are_perched() =>
+        Assert.Equal(new[] { "duck", "parrot" }, TestSkin.Names.Where(n => TestSkin.Load(n).Layout.Perched));
 
-    [Fact]
-    public void Mango_stands_on_the_keyboard_and_hops_within_the_canvas()
+    [Theory]
+    [InlineData("parrot", true)]
+    [InlineData("duck", false)]   // too heavy to hop about: his feet tap the keys like paws
+    public void Perched_birds_stand_on_the_keyboard_and_hop_within_the_canvas(string skin, bool hops)
     {
-        var (_, Layout, Sprites) = TestSkin.Load("parrot");
+        var (_, Layout, Sprites) = TestSkin.Load(skin);
         var body = Sprites["body_idle"];
         var keyboard = Layout.Places["seat"].Points[0];
         Assert.True(Layout.Body.Y + body.ArtHeight <= keyboard.Y, "the body stays above the keys; the feet stand on them");
         Assert.InRange(Layout.Body.X * 2 + body.Width / 2, keyboard.X * 2 + Sprites["keyboard"].Width / 2 - 1,
             keyboard.X * 2 + Sprites["keyboard"].Width / 2 + 1);   // centred on the keyboard, in half art pixels
+        Assert.Equal(hops, Layout.Hops);
+        if (!hops) return;
         foreach (var dx in new[] { -1, 1 })
             foreach (var sprite in new[] { "body_idle", "gills_perky" })
                 AssertFits(Layout, $"{sprite} mid-hop", Layout.Body.X + dx, Layout.Body.Y - PetAnimator.HopHeight,
@@ -266,7 +270,7 @@ public class SkinTests
     [InlineData("missy", 3)]
     [InlineData("redpanda", 3)]
     [InlineData("ragdoll", 3)]
-    [InlineData("template", 3)]
+    [InlineData("duck", 0)]       // perched too, with nothing on his head
     [InlineData("bunny", 11)]    // rows 0-10 are for the long ears
     [InlineData("panda", 4)]
     [InlineData("parrot", 5)]     // small and perched on the keyboard
@@ -289,7 +293,7 @@ public class SkinTests
     [InlineData("missy", 3)]
     [InlineData("redpanda", 3)]
     [InlineData("ragdoll", 3)]
-    [InlineData("template", 3)]
+    [InlineData("duck", 0)]
     [InlineData("bunny", 11)]
     [InlineData("panda", 4)]
     [InlineData("parrot", 5)]
@@ -323,7 +327,6 @@ public class SkinTests
     [InlineData("missy")]
     [InlineData("redpanda")]
     [InlineData("ragdoll")]
-    [InlineData("template")]
     [InlineData("jellyfish")]   // its two extra-long tentacles, swaying below the desk
     public void Tailed_pets_have_a_tail_that_wags_within_the_canvas(string skin)
     {
@@ -342,7 +345,6 @@ public class SkinTests
     [InlineData("missy")]
     [InlineData("redpanda")]
     [InlineData("ragdoll")]
-    [InlineData("template")]
     [InlineData("jellyfish")]
     public void Every_tail_pose_stays_attached_to_the_body(string skin)
     {
@@ -388,7 +390,6 @@ public class SkinTests
     [InlineData("missy")]
     [InlineData("redpanda")]
     [InlineData("ragdoll")]
-    [InlineData("template")]
     public void Wagging_swings_the_tail_about_a_base_tucked_behind_the_body(string skin)
     {
         // The bottom rows (the base) are the same in every pose, and all of them sit behind the body.
@@ -418,7 +419,6 @@ public class SkinTests
     [InlineData("missy")]
     [InlineData("redpanda")]
     [InlineData("ragdoll")]
-    [InlineData("template")]
     public void Tails_are_open_curls_not_rings(string skin)
     {
         // A see-through hole enclosed by the tail itself reads as a loose ring once it swings clear of the body.
@@ -512,14 +512,29 @@ public class SkinTests
     [InlineData("bunny")]   // the cottontail hides behind the body
     [InlineData("panda")]
     [InlineData("parrot")]
+    [InlineData("duck")]    // he wags with his whole body instead
     public void Some_pets_have_no_tail(string skin) => Assert.Null(TestSkin.Load(skin).Layout.Tail);
+
+    [Fact]
+    public void Gumersindo_wags_by_twisting_his_whole_body()
+    {
+        // Each wag pose turns the whole duck, the tail feathers swinging out on one side and then the other.
+        var sprites = TestSkin.Load("duck").Sprites;
+        var idle = sprites["body_idle"];
+        string[] poses = { "body_wag1", "body_wag2" };
+        Assert.All(poses, n => Assert.Equal((idle.Width, idle.Height), (sprites[n].Width, sprites[n].Height)));
+        Assert.Equal(3, poses.Append("body_idle").Select(n => string.Join(",", sprites[n].Pixels)).Distinct().Count());
+        var (left, right) = (Extent(sprites["body_wag1"], 0, idle.ArtHeight - 1), Extent(sprites["body_wag2"], 0, idle.ArtHeight - 1));
+        var still = Extent(idle, 0, idle.ArtHeight - 1);
+        Assert.True(left.Right > still.Right, "body_wag1 swings the tail out on the right");
+        Assert.True(right.Left < still.Left, "body_wag2 swings the tail out on the left");
+    }
 
     [Theory]
     [InlineData("choppa")]
     [InlineData("missy")]
     [InlineData("redpanda")]
     [InlineData("ragdoll")]
-    [InlineData("template")]
     [InlineData("bunny")]
     [InlineData("panda")]
     [InlineData("parrot")]
@@ -585,7 +600,7 @@ public class SkinTests
     [InlineData("missy", 3, 8)]
     [InlineData("redpanda", 3, 8)]
     [InlineData("ragdoll", 3, 8)]
-    [InlineData("template", 3, 8)]
+    [InlineData("duck", 0, 3)]
     [InlineData("bunny", 11, 16)]
     [InlineData("panda", 4, 11)]
     [InlineData("parrot", 5, 9)]

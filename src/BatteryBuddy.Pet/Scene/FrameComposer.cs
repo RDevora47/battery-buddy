@@ -298,7 +298,10 @@ public static class FrameComposer
             int x = layout.Body.X + spec.BodyDx, y = layout.Body.Y + spec.BodyDy;
             if (layout.Tail is PixelPoint tail && spec.Tail is not null)
                 Blit(sprites[limb ? "tail_reach" : spec.Tail], tail.X + spec.BodyDx, tail.Y + spec.BodyDy, BodyOwner, spec.Fade);
-            Blit(sprites[spec.BodySprite], x, y, BodyOwner, spec.Fade);
+            // A pet that wags with its whole body (Gumersindo) has a body frame per wag pose: "tail_wag1" draws "body_wag1".
+            var wagBody = spec.Tail?.StartsWith("tail_") == true ? "body_" + spec.Tail["tail_".Length..] : null;
+            var body = wagBody is not null && sprites.ContainsKey(wagBody) ? wagBody : spec.BodySprite;
+            Blit(sprites[body], x, y, BodyOwner, spec.Fade);
             if (spec.Gills is not null)
                 Blit(sprites[spec.Gills], x, y, BodyOwner, spec.Fade);
         }
@@ -313,22 +316,34 @@ public static class FrameComposer
 
         // Back to front: the tail behind the pet, pet, the desk in front of it, the keyboard on the desk,
         // the paws tapping it, then everything the pet holds or wears. A perched pet stands in front of the
-        // desk on the keyboard instead; its paws are its feet, and they hop with it rather than tapping.
+        // desk on the keyboard instead; its paws are its feet, and they hop with it rather than tapping
+        // (unless it Taps: then its feet tap the keys like paws, and its legs, drawn behind the body, run up
+        // under it so a tapping foot never comes loose). Either way a perched pet's feet stay on the keys
+        // when it uses the mouse.
+        int PawDrop(Paw paw) =>
+            layout.Hops || limb && paw == Paw.Right || layout.Perched && paw == Paw.Right && spec.ClickDy > 0
+                ? 0 : spec.PawDy(paw);
+        void DrawPaws()
+        {
+            if (layout.Paws is null) return;
+            foreach (var (paw, point) in layout.Paws)
+                if (!(reaching && paw == Paw.Right && !limb))
+                    Blit(sprites["paw"], point.X + spec.BodyDx, point.Y + spec.BodyDy + PawDrop(paw), BodyOwner, spec.Fade);
+        }
+
         if (layout.Perched)
         {
             DrawDeskAndKeyboard();
+            if (layout.Taps) DrawPaws();
             DrawPet();
+            if (!layout.Taps) DrawPaws();
         }
         else
         {
             DrawPet();
             DrawDeskAndKeyboard();
+            DrawPaws();
         }
-        if (layout.Paws is not null)
-            foreach (var (paw, point) in layout.Paws)
-                if (!(reaching && paw == Paw.Right && !limb))
-                    Blit(sprites["paw"], point.X + spec.BodyDx, point.Y + spec.BodyDy +
-                        (layout.Perched || limb && paw == Paw.Right ? 0 : spec.PawDy(paw)), BodyOwner, spec.Fade);
         for (int i = 0; i < placements.Count; i++)
             if (placements[i].PlaceName is not ("seat" or EarPlace)) DrawDevice(i);
         if (reaching)   // on the mouse, which sits on the desk and doesn't bob

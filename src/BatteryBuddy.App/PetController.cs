@@ -16,6 +16,9 @@ sealed class PetController : IDisposable
 {
     static readonly TimeSpan BubbleDuration = TimeSpan.FromSeconds(6);
 
+    // Hidden for now: a triple-click on the pet calls these back. Later: a list the user edits, and a visible way in.
+    static readonly RememberedDevice[] Remembered = { new("Buds3 Pro", DeviceKind.Earbuds) };
+
     readonly PetWindow _window;
     SkinLayout _layout = null!;
     IReadOnlyDictionary<string, Sprite> _sprites = null!;
@@ -26,6 +29,9 @@ sealed class PetController : IDisposable
     readonly DispatcherTimer _idleTimer;
     readonly DispatcherTimer _bubbleTimer;
     readonly IBatteryBackend _backend;
+    readonly IDeviceConnector _connector;
+    readonly ClickStreak _tripleClick = new(3, TimeSpan.FromMilliseconds(System.Windows.Forms.SystemInformation.DoubleClickTime));
+    bool _connecting;
     readonly InputMonitor _input = new();
     readonly CancellationTokenSource _cts = new();
     Settings _settings = Settings.Load();
@@ -38,10 +44,11 @@ sealed class PetController : IDisposable
     bool _pickerVerified;
     bool _openingPicker;                 // asking the mouse for its channels
 
-    public PetController(PetWindow window, IBatteryBackend backend)
+    public PetController(PetWindow window, IBatteryBackend backend, IDeviceConnector connector)
     {
         _window = window;
         _backend = backend;
+        _connector = connector;
         if (!SkinLoader.Exists(_settings.Skin)) _settings = _settings with { Skin = SkinLoader.Default };
         LoadSkin(_settings.Skin);
 
@@ -267,6 +274,12 @@ sealed class PetController : IDisposable
         if (!_bluetoothOn) return; // keep the "Bluetooth is off" bubble up
         var target = _frame.HitTest(x, y, out var device);
         if (target == HitTarget.None) return;
+        if (target != HitTarget.Body) _tripleClick.Reset();
+        else if (_tripleClick.Register(_clock.Elapsed))
+        {
+            _ = ConnectRememberedAsync();
+            return;
+        }
 
         _bubbleTimer.Stop();
         _window.HideBubble();
@@ -341,6 +354,28 @@ sealed class PetController : IDisposable
         }
         catch (Exception ex) when (!_cts.IsCancellationRequested) { Log.Write($"channel switch failed: {ex.Message}"); }
         finally { _picker.SwitchFinished(); }
+    }
+
+    async Task ConnectRememberedAsync()
+    {
+        if (_connecting) return;
+        _connecting = true;
+        try
+        {
+            foreach (var remembered in Remembered)
+            {
+                if (_backend.Connected.FirstOrDefault(d => d.Kind == remembered.Kind && remembered.Matches(d.Name)) is { } here)
+                {
+                    Say(ConnectText.AlreadyHere(here.Name));
+                    continue;
+                }
+                Say(ConnectText.Calling(remembered.Name));
+                var result = await _connector.ConnectAsync(remembered, _cts.Token);
+                Say(ConnectText.For(result, remembered.Name));
+            }
+        }
+        catch (Exception ex) when (!_cts.IsCancellationRequested) { Log.Write($"connect failed: {ex.Message}"); }
+        finally { _connecting = false; }
     }
 
     void OnPetHovered(int x, int y)

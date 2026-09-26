@@ -13,7 +13,7 @@ var output = Path.Combine(root, "docs", "images");
 var preview = args.FirstOrDefault();
 Directory.CreateDirectory(output);
 
-string[] pets = { "axolotl", "redpanda", "bunny", "panda", "parrot", "jellyfish", "choppa", "missy" };
+string[] pets = { "axolotl", "redpanda", "bunny", "panda", "parrot", "jellyfish", "choppa", "missy", "ragdoll" };
 
 // A typical desk: buds on the ears, a mouse and keyboard on the desk.
 DeviceReading[] Desk(int buds = 85, int mouse = 90, int keyboard = 75) => new[]
@@ -50,8 +50,8 @@ Save("rescan", Render("axolotl", Desk(), 18, (pet, frame, now) =>
     if (frame == 8) pet.EndSniff(now);
 }));
 
-// The banner: all eight at work, two rows of four, each row bottom-aligned.
-Save("banner", Grid(pets.Select(p => working[p]).ToList(), columns: 4, gap: 6 * Scale));
+// The banner: all nine at work, three rows of three, each row bottom-aligned.
+Save("banner", Grid(pets.Select(p => working[p]).ToList(), columns: 3, gap: 6 * Scale));
 Console.WriteLine($"Wrote {output}");
 
 Clip Render(string skin, DeviceReading[] devices, int frames, Action<PetAnimator, int, TimeSpan>? script = null,

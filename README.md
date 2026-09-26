@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/banner.gif" alt="All eight pets typing at their desks, wearing earbuds with a mouse and keyboard">
+  <img src="docs/images/banner.gif" alt="All nine pets typing at their desks, wearing earbuds with a mouse and keyboard">
 </p>
 
 <p align="center">
@@ -38,13 +38,16 @@ Pick one from the tray menu. They all type along with your keyboard and click al
     <td align="center"><img src="docs/images/pet-axolotl.gif" alt="Mochi the axolotl"><br><b>Mochi</b><br><sub>axolotl · gills droop as batteries drain</sub></td>
     <td align="center"><img src="docs/images/pet-redpanda.gif" alt="Maple the red panda"><br><b>Maple</b><br><sub>red panda · wags its tail when happy</sub></td>
     <td align="center"><img src="docs/images/pet-bunny.gif" alt="Bebonio the bunny"><br><b>Bebonio</b><br><sub>bunny</sub></td>
-    <td align="center"><img src="docs/images/pet-panda.gif" alt="Bao the giant panda"><br><b>Bao</b><br><sub>giant panda</sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/images/pet-panda.gif" alt="Bao the giant panda"><br><b>Bao</b><br><sub>giant panda</sub></td>
     <td align="center"><img src="docs/images/pet-parrot.gif" alt="Mango the parrot"><br><b>Mango</b><br><sub>parrot · hops from key to key</sub></td>
     <td align="center"><img src="docs/images/pet-jellyfish.gif" alt="Boba the jellyfish"><br><b>Boba</b><br><sub>jellyfish · a long tentacle works the mouse</sub></td>
+  </tr>
+  <tr>
     <td align="center"><img src="docs/images/pet-choppa.gif" alt="Choppa the dog"><br><b>Choppa</b><br><sub>dog · wags its tail when happy</sub></td>
     <td align="center"><img src="docs/images/pet-missy.gif" alt="Missy the dog"><br><b>Missy</b><br><sub>havapoo · wags its tail when happy</sub></td>
+    <td align="center"><img src="docs/images/pet-ragdoll.gif" alt="Cat Damon the Ragdoll cat"><br><b>Cat Damon</b><br><sub>Ragdoll cat · wags its tail when happy</sub></td>
   </tr>
 </table>
 

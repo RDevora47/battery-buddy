@@ -2,6 +2,7 @@ using BatteryBuddy.Backend;
 using BatteryBuddy.Backends.GalaxyBuds;
 using BatteryBuddy.Backends.Logitech;
 using BatteryBuddy.Backends.Windows;
+using BatteryBuddy.Backends.Windows.Audio;
 using BatteryBuddy.Devices;
 
 namespace BatteryBuddy.App;
@@ -30,4 +31,6 @@ static class Backends
         };
         return new DeviceHub(sources, charge, Log.Write, new BluetoothRadioMonitor(), SynchronizationContext.Current);
     }
+
+    public static IDeviceConnector CreateConnector() => new BluetoothAudioConnector(Log.Write);
 }

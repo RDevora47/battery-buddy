@@ -320,9 +320,13 @@ public static class FrameComposer
         // (unless it Taps: then its feet tap the keys like paws, and its legs, drawn behind the body, run up
         // under it so a tapping foot never comes loose). Either way a perched pet's feet stay on the keys
         // when it uses the mouse.
-        int PawDrop(Paw paw) =>
-            layout.Hops || limb && paw == Paw.Right || layout.Perched && paw == Paw.Right && spec.ClickDy > 0
+        // A sitting pet with a PawLift rests its paws that many rows higher; a tap still lands on the keys.
+        int PawDrop(Paw paw)
+        {
+            int drop = layout.Hops || limb && paw == Paw.Right || layout.Perched && paw == Paw.Right && spec.ClickDy > 0
                 ? 0 : spec.PawDy(paw);
+            return drop > 0 || layout.Perched ? drop : -layout.PawLift;
+        }
         void DrawPaws()
         {
             if (layout.Paws is null) return;

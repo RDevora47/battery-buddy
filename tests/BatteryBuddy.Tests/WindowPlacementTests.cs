@@ -33,16 +33,20 @@ public class WindowPlacementTests
         Assert.Equal((-44.0, -140.0), Resolve((-44, -140), Primary));
 
     [Fact]
-    public void Pet_poking_past_the_right_edge_is_pulled_back() =>
-        Assert.Equal((1700.0, 500.0), Resolve((1750, 500), Primary));
+    public void Pet_half_off_the_right_edge_is_kept() =>
+        Assert.Equal((1788.0, 500.0), Resolve((1788, 500), Primary));
 
     [Fact]
-    public void Pet_poking_past_the_top_is_pulled_down() =>
-        Assert.Equal((100.0, -140.0), Resolve((100, -200), Primary));
+    public void Pet_half_off_the_top_is_kept() =>
+        Assert.Equal((100.0, -228.0), Resolve((100, -228), Primary));
 
     [Fact]
-    public void Pet_overlapping_the_taskbar_is_pulled_up() =>
-        Assert.Equal((100.0, 716.0), Resolve((100, 800), Primary));
+    public void Pet_half_over_the_taskbar_is_kept() =>
+        Assert.Equal((100.0, 804.0), Resolve((100, 804), Primary));
+
+    [Fact]
+    public void Pet_more_than_half_off_screen_resets_to_default() =>
+        Assert.Equal((1692.0, 708.0), Resolve((100, -300), Primary));
 }
 
 public class ScreenClampTests
@@ -66,6 +70,16 @@ public class ScreenClampTests
     [Fact]
     public void Rect_bigger_than_the_area_is_pinned_top_left() =>
         Assert.Equal((10.0, 20.0), ScreenClamp.Into(new(-10, -20, 3000, 2000), Left));
+
+    [Fact]
+    public void Overhang_lets_that_fraction_of_the_rect_stick_out()
+    {
+        Assert.Equal((0.0, 0.0), ScreenClamp.Into(new(-50, 10, 100, 100), Left, 0.5));
+        Assert.Equal((10.0, 0.0), ScreenClamp.Into(new(-60, 10, 100, 100), Left, 0.5));
+        Assert.Equal((0.0, 20.0), ScreenClamp.Into(new(10, -70, 100, 100), Left, 0.5));
+        Assert.Equal((-30.0, 0.0), ScreenClamp.Into(new(1900, 10, 100, 100), Left, 0.5));
+        Assert.Equal((0.0, -18.0), ScreenClamp.Into(new(10, 1000, 100, 100), Left, 0.5));
+    }
 
     [Fact]
     public void Area_containing_the_point_wins() =>

@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -17,11 +16,11 @@ public partial class PetWindow : Window
     public const int Scale = 4;
     const double DragThreshold = 4;
     // Transparent room around the pet so the bubble can sit above or below it and shift sideways.
-    const double SideRoom = 44;
+    const double MinSideRoom = 44;
     const double BubbleRoom = 140;
     const double BubbleShadow = 4;
+    const double BubbleMaxWidth = 212 + BubbleShadow; // Bubble's MaxWidth in the XAML
 
-    const int WM_MOVING = 0x0216;
     const int WM_DISPLAYCHANGE = 0x007E;
     const int WM_SETTINGCHANGE = 0x001A;
     const int SPI_SETWORKAREA = 0x002F;
@@ -29,6 +28,9 @@ public partial class PetWindow : Window
     Point _pressedAt;
     bool _pressed;
     int _resolution = 1;
+    double _sideRoom = MinSideRoom;
+    // While dragging: the cursor and the window's top-left when the drag started, in screen pixels.
+    (System.Drawing.Point Cursor, int Left, int Top)? _drag;
 
     public PetWindow()
     {
@@ -68,7 +70,7 @@ public partial class PetWindow : Window
     public event Action? MenuRequested;
 
     /// <summary>Where the pet image sits inside the window, in DIPs.</summary>
-    public ScreenRect PetInWindow => new(SideRoom, BubbleRoom, PetImage.Width, PetImage.Height);
+    public ScreenRect PetInWindow => new(_sideRoom, BubbleRoom, PetImage.Width, PetImage.Height);
 
     /// <summary>resolution: bitmap pixels per art pixel.</summary>
     public void SetBitmap(WriteableBitmap bitmap, int resolution)
@@ -77,9 +79,12 @@ public partial class PetWindow : Window
         PetImage.Source = bitmap;
         PetImage.Width = bitmap.PixelWidth * Scale / resolution;
         PetImage.Height = bitmap.PixelHeight * Scale / resolution;
-        Canvas.SetLeft(PetImage, SideRoom);
+        // With half the pet off the left or right edge, the bubble is shifted onto the screen, which puts it
+        // up to its full width past the pet's inner half; the window must be wide enough to hold it there.
+        _sideRoom = Math.Max(MinSideRoom, BubbleMaxWidth - PetImage.Width / 2);
+        Canvas.SetLeft(PetImage, _sideRoom);
         Canvas.SetTop(PetImage, BubbleRoom);
-        Width = PetImage.Width + 2 * SideRoom;
+        Width = PetImage.Width + 2 * _sideRoom;
         Height = PetImage.Height + 2 * BubbleRoom;
     }
 
@@ -98,10 +103,10 @@ public partial class PetWindow : Window
 
     ScreenRect PetWorkArea => ScreenClamp.AreaFor(PetOnScreen.CenterX, PetOnScreen.CenterY, WorkAreas());
 
-    /// <summary>Pulls the pet back inside its monitor's work area (after a display or taskbar change).</summary>
+    /// <summary>Pulls the pet back to at least half on its monitor's work area (after a display or taskbar change).</summary>
     public void KeepOnScreen()
     {
-        var (dx, dy) = ScreenClamp.Into(PetOnScreen, PetWorkArea);
+        var (dx, dy) = ScreenClamp.Into(PetOnScreen, PetWorkArea, WindowPlacement.PetOverhang);
         if (dx == 0 && dy == 0) return;
         Left += dx;
         Top += dy;
@@ -137,42 +142,46 @@ public partial class PetWindow : Window
 
     IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        if (msg == WM_MOVING)
-        {
-            // Clamp while dragging, against the monitor under the cursor so the pet can still cross monitors.
-            var rect = Marshal.PtrToStructure<RECT>(lParam);
-            var dpi = VisualTreeHelper.GetDpi(this);
-            var pet = PetInWindow;
-            var petPx = new ScreenRect(rect.Left + pet.X * dpi.DpiScaleX, rect.Top + pet.Y * dpi.DpiScaleY,
-                pet.Width * dpi.DpiScaleX, pet.Height * dpi.DpiScaleY);
-            var cursor = WinForms.Cursor.Position;
-            var areasPx = WinForms.Screen.AllScreens.Select(s => ToRect(s.WorkingArea)).ToList();
-            var (dx, dy) = ScreenClamp.Into(petPx, ScreenClamp.AreaFor(cursor.X, cursor.Y, areasPx));
-            int ix = PixelsAwayFromZero(dx), iy = PixelsAwayFromZero(dy);
-            if (ix != 0 || iy != 0)
-            {
-                rect.Left += ix; rect.Right += ix;
-                rect.Top += iy; rect.Bottom += iy;
-                Marshal.StructureToPtr(rect, lParam, false);
-            }
-            handled = true;
-            return 1;
-        }
         if (msg == WM_DISPLAYCHANGE || (msg == WM_SETTINGCHANGE && wParam == SPI_SETWORKAREA))
             Dispatcher.BeginInvoke(KeepOnScreen); // after WPF and WinForms have seen the new layout
         return IntPtr.Zero;
     }
 
-    // Rounding toward zero could leave a sliver of the pet off screen.
-    static int PixelsAwayFromZero(double d) => (int)(d > 0 ? Math.Ceiling(d) : Math.Floor(d));
+    // The drag is done by hand rather than with DragMove: Windows' move loop won't let a window's top edge
+    // go above the top of the screen, and the bubble room above the pet kept it a whole bubble away from it.
+    void BeginDrag()
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        NativeMethods.GetWindowRect(hwnd, out var rect);
+        _drag = (WinForms.Cursor.Position, rect.Left, rect.Top);
+    }
+
+    void DragTo(System.Drawing.Point cursor)
+    {
+        if (_drag is not var (from, left, top)) return;
+        int x = left + cursor.X - from.X, y = top + cursor.Y - from.Y;
+
+        // Clamp in screen pixels, against the monitor under the cursor so the pet can still cross monitors.
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var pet = PetInWindow;
+        var petPx = new ScreenRect(x + pet.X * dpi.DpiScaleX, y + pet.Y * dpi.DpiScaleY,
+            pet.Width * dpi.DpiScaleX, pet.Height * dpi.DpiScaleY);
+        var areasPx = WinForms.Screen.AllScreens.Select(s => ToRect(s.WorkingArea)).ToList();
+        var (dx, dy) = ScreenClamp.Into(petPx, ScreenClamp.AreaFor(cursor.X, cursor.Y, areasPx), WindowPlacement.PetOverhang);
+        NativeMethods.MoveWindow(new WindowInteropHelper(this).Handle, x + PixelsTowardArea(dx), y + PixelsTowardArea(dy));
+    }
+
+    void EndDrag()
+    {
+        if (_drag is null) return;
+        _drag = null;
+        Moved?.Invoke();
+    }
+
+    // Rounding toward zero could leave the pet a pixel further off screen than allowed.
+    static int PixelsTowardArea(double d) => (int)(d > 0 ? Math.Ceiling(d) : Math.Floor(d));
 
     static ScreenRect ToRect(System.Drawing.Rectangle r) => new(r.X, r.Y, r.Width, r.Height);
-
-    [StructLayout(LayoutKind.Sequential)]
-    struct RECT
-    {
-        public int Left, Top, Right, Bottom;
-    }
 
     void PetImage_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
@@ -183,6 +192,12 @@ public partial class PetWindow : Window
 
     void PetImage_MouseMove(object sender, MouseEventArgs e)
     {
+        if (_drag is not null)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed) DragTo(WinForms.Cursor.Position);
+            else PetImage.ReleaseMouseCapture(); // missed the button-up; LostMouseCapture ends the drag
+            return;
+        }
         if (!_pressed || e.LeftButton != MouseButtonState.Pressed)
         {
             var (hx, hy) = FramePoint(e);
@@ -193,9 +208,7 @@ public partial class PetWindow : Window
         if (Math.Abs(delta.X) <= DragThreshold && Math.Abs(delta.Y) <= DragThreshold) return;
 
         _pressed = false;
-        PetImage.ReleaseMouseCapture();
-        DragMove();
-        Moved?.Invoke();
+        BeginDrag(); // keeps the mouse captured until the button comes up
     }
 
     void PetImage_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -214,6 +227,8 @@ public partial class PetWindow : Window
     }
 
     void PetImage_MouseLeave(object sender, MouseEventArgs e) => PetHovered?.Invoke(-1, -1);
+
+    void PetImage_LostMouseCapture(object sender, MouseEventArgs e) => EndDrag();
 
     /// <summary>Opens the tray menu (the controller decides when a right-click means that).</summary>
     public void RequestMenu() => MenuRequested?.Invoke();

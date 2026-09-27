@@ -7,13 +7,19 @@ public readonly record struct ScreenRect(double X, double Y, double Width, doubl
 
     public bool Contains(double x, double y) => x >= X && y >= Y && x < X + Width && y < Y + Height;
 
+    /// <summary>Like <see cref="Contains"/>, but a point on the right or bottom edge counts too.</summary>
+    public bool Touches(double x, double y) => x >= X && y >= Y && x <= X + Width && y <= Y + Height;
+
     public ScreenRect Offset(double dx, double dy) => this with { X = X + dx, Y = Y + dy };
 }
 
 public static class WindowPlacement
 {
+    /// <summary>How much of the pet (a fraction of its size) may hang off the edge of the screen.</summary>
+    public const double PetOverhang = 0.5;
+
     /// <summary>
-    /// Window position that keeps the pet (at <paramref name="pet"/> inside the window) fully on screen.
+    /// Window position that keeps at least half of the pet (at <paramref name="pet"/> inside the window) on screen.
     /// A saved position whose monitor is gone falls back to the bottom-right of the primary work area.
     /// </summary>
     public static (double X, double Y) Resolve(
@@ -26,9 +32,11 @@ public static class WindowPlacement
         if (saved is (double x, double y))
         {
             var onScreen = pet.Offset(x, y);
-            if (workAreas.Any(a => a.Contains(onScreen.CenterX, onScreen.CenterY)))
+            // Touches: a pet hanging exactly half off the right or bottom edge has its center on that edge.
+            if (workAreas.Any(a => a.Touches(onScreen.CenterX, onScreen.CenterY)))
             {
-                var (dx, dy) = ScreenClamp.Into(onScreen, ScreenClamp.AreaFor(onScreen.CenterX, onScreen.CenterY, workAreas));
+                var (dx, dy) = ScreenClamp.Into(onScreen, ScreenClamp.AreaFor(onScreen.CenterX, onScreen.CenterY, workAreas),
+                    PetOverhang);
                 return (x + dx, y + dy);
             }
         }

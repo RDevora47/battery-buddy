@@ -21,6 +21,7 @@
                MouseMove="PetImage_MouseMove"
                MouseLeftButtonUp="PetImage_MouseLeftButtonUp"
                MouseRightButtonUp="PetImage_MouseRightButtonUp"
-               MouseLeave="PetImage_MouseLeave" />
+               MouseLeave="PetImage_MouseLeave"
+               LostMouseCapture="PetImage_LostMouseCapture" />
     </Canvas>
 </Window>

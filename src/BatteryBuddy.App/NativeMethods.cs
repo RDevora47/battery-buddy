@@ -27,7 +27,7 @@ static class NativeMethods
     const long WS_EX_TOPMOST = 0x00000008;
     const uint GW_HWNDPREV = 3;
     static readonly IntPtr HWND_TOPMOST = new(-1);
-    const uint SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_NOACTIVATE = 0x0010, SWP_NOOWNERZORDER = 0x0200;
+    const uint SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_NOZORDER = 0x0004, SWP_NOACTIVATE = 0x0010, SWP_NOOWNERZORDER = 0x0200;
 
     [DllImport("user32.dll")]
     static extern IntPtr GetWindow(IntPtr hWnd, uint uCmd);
@@ -48,6 +48,19 @@ static class NativeMethods
             if (!IsTopmost(above)) return true;
         return false;
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT
+    {
+        public int Left, Top, Right, Bottom;
+    }
+
+    [DllImport("user32.dll")]
+    public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+
+    /// <summary>Moves the window's top-left to (x, y) screen pixels, keeping its size and z-order.</summary>
+    public static void MoveWindow(IntPtr hwnd, int x, int y) =>
+        SetWindowPos(hwnd, IntPtr.Zero, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
 
     /// <summary>Puts the window back on top of the topmost band without activating it.</summary>
     public static void RestoreTopmost(IntPtr hwnd) =>

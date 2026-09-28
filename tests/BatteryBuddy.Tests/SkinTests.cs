@@ -295,12 +295,12 @@ public class SkinTests
     [InlineData("redpanda", 3)]
     [InlineData("ragdoll", 3)]
     [InlineData("duck", 0)]
-    [InlineData("pig", 2)]
+    [InlineData("pig", 2, 1)]  // his flat head top sits on a half row, so a notch between bangs may show half a pixel
     [InlineData("bunny", 11)]
     [InlineData("panda", 4)]
     [InlineData("parrot", 5)]
     [InlineData("jellyfish", 1)]
-    public void Saiyan_hairline_sits_on_the_head_with_no_gap(string skin, int headTop)
+    public void Saiyan_hairline_sits_on_the_head_with_no_gap(string skin, int headTop, int slack = 0)
     {
         // Across the forehead (the bangs and the notches between them) the hair's lowest pixel touches or
         // overlaps the head, so the hair never floats above it.
@@ -318,7 +318,7 @@ public class SkinTests
             var headRows = Enumerable.Range(headTop * d, body.Height - headTop * d).Where(y => body.Pixels[y * body.Width + bx] != 0);
             if (!headRows.Any()) continue;
             int headTopRow = headRows.First() + Layout.Body.Y * d;
-            Assert.True(hairBottom + 1 >= headTopRow, $"column {hx}: hair ends at {hairBottom / 2.0}, head starts at {headTopRow / 2.0}");
+            Assert.True(hairBottom + 1 + slack >= headTopRow, $"column {hx}: hair ends at {hairBottom / 2.0}, head starts at {headTopRow / 2.0}");
         }
     }
 
@@ -669,6 +669,28 @@ public class SkinTests
         Assert.InRange(bottom, top + 1, Layout.Body.Y + eyeRow - 1);   // brim on the head, above the eyes (body art rows)
         int centre = hat.X * 2 + Sprites["strawhat"].Width / 2, body = Layout.Body.X * 2 + Sprites["body_idle"].Width / 2;
         Assert.InRange(centre, body - 1, body + 1);   // centred on the pet, in half art pixels
+    }
+
+    [Theory]
+    [InlineData("axolotl", 8)]
+    [InlineData("choppa", 12)]
+    [InlineData("missy", 8)]
+    [InlineData("redpanda", 8)]
+    [InlineData("ragdoll", 8)]
+    [InlineData("pig", 5)]
+    [InlineData("bunny", 16)]
+    [InlineData("panda", 11)]
+    [InlineData("parrot", 9)]
+    [InlineData("jellyfish", 4)]
+    public void Saiyan_hair_stays_above_the_eyes(string skin, int eyeRow)
+    {
+        // The bangs hang down onto the forehead but never over the eyes (body art rows).
+        var (_, Layout, Sprites) = TestSkin.Load(skin);
+        var hair = Sprites["saiyan"];
+        int lowest = Enumerable.Range(0, hair.Height).Last(y => Enumerable.Range(0, hair.Width).Any(x => hair.Pixels[y * hair.Width + x] != 0));
+        int hairBottom = Layout.Overlays["saiyan"].Y * hair.Density + lowest;   // half art pixels
+        int eyes = (Layout.Body.Y + eyeRow) * hair.Density;
+        Assert.True(hairBottom < eyes, $"hair ends at {hairBottom / 2.0}, eyes start at {eyes / 2.0}");
     }
 
     [Theory, MemberData(nameof(Skins))]

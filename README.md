@@ -77,7 +77,10 @@ battery, your choice), and a lightning bolt while it charges. The pet's mood fol
 
 ### Things to try
 
-- **Click a device**: a speech bubble with its latest charge (Galaxy Buds: left / right / case).
+- **Click a device**: a speech bubble with its latest charge (Galaxy Buds: left / right / case) and,
+  once it has learned how the device drains, how much use is left (`2d 5h left`, `3h 10min left`).
+  The estimate learns from the past week, only while the device is connected and in use, and leans on
+  how fast it has been draining in the last half hour.
 - **Click the pet**: rescan now.
 - **Right-click the mouse** (Logitech Easy-Switch mice): switch it to another computer's channel.
 - **Drag** it anywhere; it remembers where.
@@ -154,7 +157,7 @@ Anything Windows reports a Bluetooth battery level for, plus richer detail for:
   `Stop-Process -Name QuickControls`. Opening the full Galaxy Buds app still works; while it's open,
   Battery Buddy shows the single Windows value ("L/R detail unavailable").
 
-Settings live in `%APPDATA%\BatteryBuddy\settings.json`, logs (7 days) in `%LOCALAPPDATA%\BatteryBuddy\logs`.
+Settings live in `%APPDATA%\BatteryBuddy\settings.json` (a week of drain history in `usage.json`), logs (7 days) in `%LOCALAPPDATA%\BatteryBuddy\logs`.
 
 ## Build from source
 

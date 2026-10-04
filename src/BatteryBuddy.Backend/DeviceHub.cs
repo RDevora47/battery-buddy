@@ -13,6 +13,7 @@ public sealed class DeviceHub : IBatteryBackend
     readonly IReadOnlyList<IDeviceSource> _sources;
     readonly IAvailabilityMonitor? _availability;
     readonly DeviceRegistry _registry;
+    readonly DrainHistory? _drain;
     readonly Action<string> _log;
     readonly SynchronizationContext? _context;
     readonly object _gate = new();
@@ -20,12 +21,13 @@ public sealed class DeviceHub : IBatteryBackend
     bool _disposed;
 
     public DeviceHub(IEnumerable<IDeviceSource> sources, ChargeTracker charge, Action<string> log,
-        IAvailabilityMonitor? availability = null, SynchronizationContext? context = null)
+        IAvailabilityMonitor? availability = null, SynchronizationContext? context = null, DrainHistory? drain = null)
     {
         _sources = sources.ToList();
         _availability = availability;
+        _drain = drain;
         _registry = new DeviceRegistry(charge,
-            device => _sources.OfType<IDetailSource>().Any(s => s.ProvidesDetailFor(device)));
+            device => _sources.OfType<IDetailSource>().Any(s => s.ProvidesDetailFor(device)), drain);
         _log = log;
         _context = context;
         _chargeTimer = new Timer(_ => Post(RecheckCharging));
@@ -40,6 +42,16 @@ public sealed class DeviceHub : IBatteryBackend
     public IReadOnlyList<DeviceReading> Connected => _registry.Connected;
 
     public DeviceReading? LastKnown(string key) => _registry.LastKnown(key);
+
+    public TimeSpan? TimeLeft(string key, DateTimeOffset now) =>
+        _drain is not null
+        && _registry.LastKnown(key) is { IsConnected: true, IsCharging: false, BatteryStale: false } reading
+        && reading.EffectiveBattery is int level
+            ? TimeLeftEstimator.Estimate(_drain.Segments(key), level, _drain.LevelSince(key), now)
+            : null;
+
+    /// <summary>The PC is going to sleep: the time asleep isn't use, so every drain stretch ends here.</summary>
+    public void Suspend() => Post(() => _drain?.InterruptAll());
 
     // Host switching goes to the first source that can switch this device; with none, it can't be switched.
     IHostSwitcher? SwitcherFor(DeviceReading device) =>

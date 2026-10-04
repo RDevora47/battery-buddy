@@ -286,7 +286,8 @@ sealed class PetController : IDisposable
         if (target == HitTarget.Device && device is not null)
         {
             var latest = _backend.LastKnown(device.Key) ?? device;
-            _window.ShowBubble(BubbleText.For(latest, DateTimeOffset.Now));
+            var now = DateTimeOffset.Now;
+            _window.ShowBubble(BubbleText.For(latest, now, _backend.TimeLeft(device.Key, now)));
             _bubbleTimer.Start();
         }
         else

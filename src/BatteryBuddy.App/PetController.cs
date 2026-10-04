@@ -364,11 +364,7 @@ sealed class PetController : IDisposable
         {
             foreach (var remembered in Remembered)
             {
-                if (_backend.Connected.FirstOrDefault(d => d.Kind == remembered.Kind && remembered.Matches(d.Name)) is { } here)
-                {
-                    Say(ConnectText.AlreadyHere(here.Name));
-                    continue;
-                }
+                // Always ask, even when it looks connected: the reconnect is how a half-dropped link gets picked back up.
                 Say(ConnectText.Calling(remembered.Name));
                 var result = await _connector.ConnectAsync(remembered, _cts.Token);
                 Say(ConnectText.For(result, remembered.Name));

@@ -21,6 +21,7 @@ static class SkinLoader
         ("ragdoll", "Cat Damon"),
         ("duck", "Gumersindo"),
         ("pig", "Crispin"),
+        ("capybara", "Yuzu"),
     };
 
     public static bool Exists(string skin) => Pets.Any(p => p.Skin == skin);

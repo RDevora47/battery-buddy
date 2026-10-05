@@ -13,7 +13,7 @@ var output = Path.Combine(root, "docs", "images");
 var preview = args.FirstOrDefault();
 Directory.CreateDirectory(output);
 
-string[] pets = { "axolotl", "redpanda", "bunny", "panda", "parrot", "jellyfish", "choppa", "missy", "ragdoll", "duck", "pig" };
+string[] pets = { "axolotl", "redpanda", "bunny", "panda", "parrot", "jellyfish", "choppa", "missy", "ragdoll", "duck", "pig", "capybara" };
 
 // A typical desk: buds on the ears, a mouse and keyboard on the desk.
 DeviceReading[] Desk(int buds = 85, int mouse = 90, int keyboard = 75) => new[]
@@ -50,7 +50,7 @@ Save("rescan", Render("axolotl", Desk(), 18, (pet, frame, now) =>
     if (frame == 8) pet.EndSniff(now);
 }));
 
-// The banner: all eleven at work, two rows of six and five, each row bottom-aligned.
+// The banner: all twelve at work, two rows of six, each row bottom-aligned.
 Save("banner", Grid(pets.Select(p => working[p]).ToList(), columns: 6, gap: 6 * Scale));
 Console.WriteLine($"Wrote {output}");
 

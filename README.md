@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/banner.gif" alt="All eleven pets typing at their desks, wearing earbuds with a mouse and keyboard">
+  <img src="docs/images/banner.gif" alt="All twelve pets typing at their desks, wearing earbuds with a mouse and keyboard">
 </p>
 
 <p align="center">
@@ -50,9 +50,9 @@ Pick one from the tray menu. They all type along with your keyboard and click al
     <td align="center"><img src="docs/images/pet-ragdoll.gif" alt="Cat Damon the Ragdoll cat"><br><b>Cat Damon</b><br><sub>Ragdoll cat · wags its tail when happy</sub></td>
   </tr>
   <tr>
-    <td></td>
     <td align="center"><img src="docs/images/pet-duck.gif" alt="Gumersindo the Pekin duck"><br><b>Gumersindo</b><br><sub>Pekin duck · twists his whole body to wag</sub></td>
     <td align="center"><img src="docs/images/pet-pig.gif" alt="Crispin the pig"><br><b>Crispin</b><br><sub>piglet · types with his trotters, wags his curly tail</sub></td>
+    <td align="center"><img src="docs/images/pet-capybara.gif" alt="Yuzu the capybara"><br><b>Yuzu</b><br><sub>capybara · the chillest pet</sub></td>
   </tr>
 </table>
 

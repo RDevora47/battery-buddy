@@ -85,6 +85,8 @@ charger doesn't count: it's being looked after, so the pet stays happy.
 - **Click the pet**: rescan now.
 - **Right-click the mouse** (Logitech Easy-Switch mice): switch it to another computer's channel.
 - **Drag** it anywhere; it remembers where.
+- **Go full screen** (a video, a game, a slideshow): the pet steps out of the way like the mouse pointer
+  does, and shows again while you move the mouse.
 - **Right-click the pet or the tray icon**: Rescan, Pet, Full-charge hat, Battery display, Start with Windows, Quit.
 
 ## Download

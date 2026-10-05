@@ -65,7 +65,7 @@ battery, your choice), and a lightning bolt while it charges. The pet's mood fol
 <table>
   <tr>
     <td align="center"><img src="docs/images/mood-happy.gif" alt="Happy pet"><br><b>Happy</b><br><sub>everything above 20 %</sub></td>
-    <td align="center"><img src="docs/images/mood-sleepy.gif" alt="Sleepy pet with a Zzz"><br><b>Sleepy</b><br><sub>a device at 20 % or less</sub></td>
+    <td align="center"><img src="docs/images/mood-sleepy.gif" alt="Sleepy pet with drowsy eyes"><br><b>Sleepy</b><br><sub>a device at 20 % or less</sub></td>
     <td align="center"><img src="docs/images/mood-critical.gif" alt="Worried pet shaking a nearly empty mouse"><br><b>Worried</b><br><sub>at 10 % it shakes the device<br>for the last bit of energy</sub></td>
   </tr>
   <tr>

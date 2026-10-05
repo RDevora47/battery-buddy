@@ -38,7 +38,7 @@ foreach (var pet in pets)
     Save($"pet-{pet}", working[pet]);
 }
 
-// Moods and extras on Mochi, 3 s each, with the idle burst (bob, Zzz drift or shake) near the start.
+// Moods and extras on Mochi, 3 s each, with the idle burst (bob or shake) near the start.
 Save("mood-happy", Render("axolotl", Desk(), 18));
 Save("mood-sleepy", Render("axolotl", Desk(buds: 18), 18));
 Save("mood-critical", Render("axolotl", Desk(buds: 60, mouse: 8), 18));
@@ -61,7 +61,7 @@ Clip Render(string skin, DeviceReading[] devices, int frames, Action<PetAnimator
     var sprites = SpriteSheetParser.Parse(File.ReadAllText(Path.Combine(skins, "common", "sprites.txt")),
         File.ReadAllText(Path.Combine(skins, skin, "sprites.txt")));
     // With a random of 0 the idle burst comes every 3 s; starting the clock 2.5 s early plays the first at 0.5 s.
-    var pet = new PetAnimator(() => 0, TimeSpan.FromSeconds(-2.5), layout.Overlays["zzz"], layout.Overlays["sweat"],
+    var pet = new PetAnimator(() => 0, TimeSpan.FromSeconds(-2.5), layout.Overlays["sweat"],
         layout.Overlays["saiyan"], layout.Overlays["strawhat"], layout.Overlays["magnifier"])
     {
         Hat = hat,

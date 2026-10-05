@@ -91,8 +91,16 @@ sealed class TrayIcon : IDisposable
         };
     }
 
-    /// <summary>Shows the tray menu at the cursor (used for right-click on the pet).</summary>
-    public void ShowMenu() => _menu.Show(WinForms.Cursor.Position);
+    /// <summary>
+    /// Shows the tray menu at the cursor (used for right-click on the pet). The pet window never activates, so the
+    /// menu is brought to the foreground the way the tray icon does it: a click anywhere else then deactivates the
+    /// app and the menu closes, instead of staying open until an item is picked.
+    /// </summary>
+    public void ShowMenu()
+    {
+        _menu.Show(WinForms.Cursor.Position);
+        NativeMethods.SetForegroundWindow(_menu.Handle);
+    }
 
     /// <summary>Shows a new pet in the tray: its picture and its name in the tooltip.</summary>
     public void SetIcon(Sprite iconSprite)

@@ -21,6 +21,8 @@ static class Backends
     {
         var charge = new ChargeTracker(DeviceStatsFile.Load());
         charge.StatsChanged += () => DeviceStatsFile.Save(charge.Stats);
+        var drain = new DrainHistory(UsageFile.Load());
+        drain.Changed += () => UsageFile.Save(drain.All);
 
         IDeviceSource[] sources =
         {
@@ -29,7 +31,13 @@ static class Backends
             new LogitechSource(Log.Write),
             new InputDeviceSource(Log.Write),
         };
-        return new DeviceHub(sources, charge, Log.Write, new BluetoothRadioMonitor(), SynchronizationContext.Current);
+        var hub = new DeviceHub(sources, charge, Log.Write, new BluetoothRadioMonitor(), SynchronizationContext.Current, drain);
+        // Time asleep isn't use: end every drain stretch before the PC sleeps.
+        Microsoft.Win32.SystemEvents.PowerModeChanged += (_, e) =>
+        {
+            if (e.Mode == Microsoft.Win32.PowerModes.Suspend) hub.Suspend();
+        };
+        return hub;
     }
 
     public static IDeviceConnector CreateConnector() => new BluetoothAudioConnector(Log.Write);

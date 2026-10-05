@@ -7,14 +7,15 @@ public static class BubbleText
 {
     public const string BluetoothOff = "Bluetooth is off";
 
-    public static string For(DeviceReading device, DateTimeOffset now)
+    /// <param name="timeLeft">How much use is left, when known; shown unless the device is charging.</param>
+    public static string For(DeviceReading device, DateTimeOffset now, TimeSpan? timeLeft = null)
     {
         var text = new StringBuilder();
         if (device.NoBattery) return $"{device.Name}{Environment.NewLine}no battery level";
         text.AppendLine(device.Name);
         if (device.Detail is BudsDetail buds)
         {
-            text.AppendLine($"L {Percent(buds.Left)} · R {Percent(buds.Right)} · Case {Percent(buds.Case)}{Charging(device)}");
+            text.AppendLine($"L {Percent(buds.Left)} · R {Percent(buds.Right)} · Case {Percent(buds.Case)}{Status(device, timeLeft)}");
             text.AppendLine((buds.LeftWorn, buds.RightWorn) switch
             {
                 (true, true) => "wearing both",
@@ -32,7 +33,7 @@ public static class BubbleText
         }
         else
         {
-            text.AppendLine($"Battery {Percent(device.BatteryPercent)}{Charging(device)}");
+            text.AppendLine($"Battery {Percent(device.BatteryPercent)}{Status(device, timeLeft)}");
             if (device.DetailUnavailable)
                 text.AppendLine("L/R detail unavailable");
         }
@@ -50,5 +51,19 @@ public static class BubbleText
 
     static string Percent(int? value) => value is int v ? $"{v}%" : "?";
 
-    static string Charging(DeviceReading device) => device.IsCharging ? " · charging" : "";
+    /// <summary>"45min", "3h 10min", "2d 5h": days and hours, hours and minutes, or minutes alone.</summary>
+    public static string TimeLeft(TimeSpan left)
+    {
+        int minutes = (int)Math.Round(left.TotalMinutes);
+        if (minutes < 1) return "<1min";
+        if (minutes < 60) return $"{minutes}min";
+        if (minutes < 24 * 60) return minutes % 60 == 0 ? $"{minutes / 60}h" : $"{minutes / 60}h {minutes % 60}min";
+        int hours = (int)Math.Round(left.TotalHours);
+        return hours % 24 == 0 ? $"{hours / 24}d" : $"{hours / 24}d {hours % 24}h";
+    }
+
+    static string Status(DeviceReading device, TimeSpan? timeLeft) =>
+        device.IsCharging ? " · charging"
+        : timeLeft is TimeSpan left ? $" · {TimeLeft(left)} left"
+        : "";
 }

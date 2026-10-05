@@ -12,6 +12,12 @@ public interface IBatteryBackend : IHostSwitcher, IDisposable
     /// <summary>The latest reading for a device, connected or not.</summary>
     DeviceReading? LastKnown(string key);
 
+    /// <summary>How much use a connected, discharging device has left; null while charging or still learning.</summary>
+    TimeSpan? TimeLeft(string key, DateTimeOffset now);
+
+    /// <summary>The PC is about to sleep.</summary>
+    void Suspend();
+
     /// <summary>False while devices can't be reached (e.g. Bluetooth is off).</summary>
     bool IsAvailable { get; }
 

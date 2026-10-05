@@ -31,6 +31,17 @@ static class DeviceStatsFile
     public static void Save(IReadOnlyDictionary<string, DeviceChargeStats> stats) => JsonFile.Save(FilePath, stats);
 }
 
+/// <summary>A week of how fast each device drained in use, for its time-left estimate.</summary>
+static class UsageFile
+{
+    static readonly string FilePath = Settings.AppDataFile("usage.json");
+
+    public static Dictionary<string, List<DrainSegment>> Load() =>
+        JsonFile.Load(FilePath, new Dictionary<string, List<DrainSegment>>());
+
+    public static void Save(IReadOnlyDictionary<string, List<DrainSegment>> segments) => JsonFile.Save(FilePath, segments);
+}
+
 static class JsonFile
 {
     static readonly JsonSerializerOptions Options = new()

@@ -57,6 +57,45 @@ public class BubbleTextTests
     public void Unknown_battery_shows_question_mark() =>
         Assert.Contains("Battery ?", BubbleText.For(TestReadings.Make("Thing", battery: null), Now));
 
+    [Fact]
+    public void Time_left_follows_the_level()
+    {
+        var mouse = TestReadings.Make("MX Master 3S", DeviceKind.Mouse, battery: 45);
+        Assert.Equal(
+            "MX Master 3S\nBattery 45% · 2d 5h left\nupdated 10s ago",
+            BubbleText.For(mouse, Now, new TimeSpan(2, 5, 0, 0)).ReplaceLineEndings("\n"));
+    }
+
+    [Fact]
+    public void Buds_show_time_left_after_the_case()
+    {
+        var buds = TestReadings.Make("Buds3 Pro de Roberto", DeviceKind.Earbuds, detail: new BudsDetail(60, 58, 90, true, true));
+        Assert.Contains("L 60% · R 58% · Case 90% · 3h 10min left", BubbleText.For(buds, Now, TimeSpan.FromMinutes(190)));
+    }
+
+    [Fact]
+    public void Charging_wins_over_time_left()
+    {
+        var mouse = TestReadings.Make("MX Master 3S", DeviceKind.Mouse, battery: 55) with { IsCharging = true };
+        var text = BubbleText.For(mouse, Now, TimeSpan.FromHours(3));
+        Assert.Contains("Battery 55% · charging", text);
+        Assert.DoesNotContain("left", text);
+    }
+
+    [Theory]
+    [InlineData(0, "<1min")]
+    [InlineData(0.4, "<1min")]
+    [InlineData(45, "45min")]
+    [InlineData(59.6, "1h")]
+    [InlineData(60, "1h")]
+    [InlineData(190, "3h 10min")]
+    [InlineData(1439.6, "1d")]
+    [InlineData(2 * 1440 + 5 * 60 + 20, "2d 5h")]
+    [InlineData(2 * 1440 + 5 * 60 + 40, "2d 6h")]
+    [InlineData(30 * 1440, "30d")]
+    public void Time_left_formats(double minutes, string expected) =>
+        Assert.Equal(expected, BubbleText.TimeLeft(TimeSpan.FromMinutes(minutes)));
+
     [Theory]
     [InlineData(10, "10s ago")]
     [InlineData(300, "5m ago")]

@@ -688,3 +688,85 @@ public class ChargingShakeTests
         Assert.Equal(0xFF0000FFu, frame.Pixels[5 * frame.Width + 5]);
     }
 }
+
+/// <summary>Galaxy Buds with detail: each bud wears its own indicator, left on the first point, right on the second.</summary>
+public class PerBudIndicatorTests
+{
+    const uint Blue = 0xFF0000FF, Yellow = 0xFFFFFF00;
+
+    static readonly SkinLayout Layout = new(30, 12, new PixelPoint(0, 0),
+        new Dictionary<string, Place> { ["gills"] = new(new[] { new PixelPoint(5, 5), new PixelPoint(15, 5) }, new PixelPoint(8, 10), true) },
+        new Dictionary<string, PixelPoint>());
+
+    static readonly Dictionary<string, Sprite> Sprites = new()
+    {
+        ["body"] = new("body", 1, 1, new[] { 0xFFFF0000u }),
+        ["earbud"] = new("earbud", 1, 1, new[] { Blue }),
+        ["bolt"] = new("bolt", 1, 1, new[] { Yellow }),
+        ["full"] = new("full", 1, 1, new[] { 0xFF00FF00u }),
+    };
+
+    static ComposedFrame Compose(BudsDetail buds, BatteryStyle style, int criticalDx = 0)
+    {
+        var reading = TestReadings.Make("Buds", DeviceKind.Earbuds, detail: buds);
+        return FrameComposer.Compose(Layout, Sprites, new[] { new DevicePlacement(reading, "gills", "earbud") },
+            new FrameSpec("body", 0, Array.Empty<Overlay>(), criticalDx), style);
+    }
+
+    static uint Pixel(ComposedFrame frame, int x, int y) => frame.Pixels[y * frame.Width + x];
+
+    [Fact]
+    public void Each_bud_has_its_own_outline()
+    {
+        var frame = Compose(new BudsDetail(90, 10, 50, true, true), BatteryStyle.Outline);
+        Assert.Equal(BatteryBar.ColorFor(90), Pixel(frame, 5, 4));    // ring from 12 o'clock
+        Assert.Equal(BatteryBar.ColorFor(10), Pixel(frame, 15, 4));
+        Assert.Equal(BatteryBar.ColorFor(90), Pixel(frame, 4, 5));    // 90 %: the whole ring
+        Assert.Equal(0u, Pixel(frame, 14, 5));                         // 10 %: only its first quarter
+    }
+
+    [Fact]
+    public void Each_bud_has_its_own_bar_side_by_side()
+    {
+        var frame = Compose(new BudsDetail(90, 10, 50, true, true), BatteryStyle.Bar);
+        Assert.Equal(BatteryBar.ColorFor(90), Pixel(frame, 2, 10));   // left bar: 6 left of the place's bar
+        Assert.Equal(BatteryBar.ColorFor(90), Pixel(frame, 11, 10));  // its last segment, full
+        Assert.Equal(BatteryBar.ColorFor(10), Pixel(frame, 14, 10));  // right bar: 6 right of it
+        Assert.Equal(BatteryBar.Empty, Pixel(frame, 17, 10));
+    }
+
+    [Fact]
+    public void Each_bud_has_its_own_mini_battery_on_its_outer_side()
+    {
+        var frame = Compose(new BudsDetail(90, 10, 50, true, true), BatteryStyle.Gauge);
+        Assert.Equal(BatteryGauge.Shell, Pixel(frame, 2, 3));         // left of the left bud
+        Assert.Equal(BatteryGauge.Shell, Pixel(frame, 17, 3));        // right of the right bud
+        Assert.Equal(BatteryBar.ColorFor(90), Pixel(frame, 3, 4));    // top cell lit at 90 %
+        Assert.Equal(BatteryBar.Empty, Pixel(frame, 18, 4));          // not at 10 %
+    }
+
+    [Fact]
+    public void Only_the_bud_in_the_case_gets_the_bolt()
+    {
+        var frame = Compose(new BudsDetail(60, 40, 50, true, false, RightInCase: true), BatteryStyle.Bar);
+        Assert.NotEqual(Yellow, Pixel(frame, 5, 4));
+        Assert.Equal(Yellow, Pixel(frame, 15, 4));
+    }
+
+    [Fact]
+    public void Only_a_critical_bud_out_of_the_case_shakes()
+    {
+        var frame = Compose(new BudsDetail(5, 5, 50, true, false, RightInCase: true), BatteryStyle.Bar, criticalDx: 1);
+        Assert.Equal(Blue, Pixel(frame, 6, 5));
+        Assert.Equal(Blue, Pixel(frame, 15, 5));
+    }
+
+    [Fact]
+    public void Buds_without_detail_keep_one_shared_indicator()
+    {
+        var reading = TestReadings.Make("WF-C500", DeviceKind.Earbuds, battery: 10);
+        var frame = FrameComposer.Compose(Layout, Sprites, new[] { new DevicePlacement(reading, "gills", "earbud") },
+            new FrameSpec("body", 0, Array.Empty<Overlay>()), BatteryStyle.Bar);
+        Assert.Equal(BatteryBar.ColorFor(10), Pixel(frame, 8, 10));
+    }
+}

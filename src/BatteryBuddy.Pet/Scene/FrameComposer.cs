@@ -57,6 +57,8 @@ public static class FrameComposer
     // Channel bubble n is owned by ChannelOwnerBase + n, well past any device index.
     internal const short ChannelOwnerBase = 1000;
     const double GreyedFade = 0.7;
+    // Each bud's bar sits this far left or right of where the pair's one bar would: side by side, 1px apart.
+    const int BudBarShift = (BatteryBar.Width + 1) / 2;
     static readonly double[] TrailDots = { 0.3, 0.5, 0.7 };
     // The place the earbuds go: the gills on the axolotl, the ears on every other pet.
     const string EarPlace = "gills";
@@ -133,11 +135,11 @@ public static class FrameComposer
 
         // Mini battery at art x, vertically centred on a sprite whose top is at art y and art height h.
         // Mixels are half an art pixel (a whole one if the frame has no @2x resolution).
-        void DrawGauge(DeviceReading device, int ax, int ay, int h, short owner)
+        void DrawGauge(int? percent, bool stale, int ax, int ay, int h, short owner)
         {
             int cell = Math.Max(1, res / 2);
-            int lit = BatteryGauge.LitCells(device.EffectiveBattery);
-            uint fill = BatteryBar.ColorFor(device.EffectiveBattery, device.BatteryStale);
+            int lit = BatteryGauge.LitCells(percent);
+            uint fill = BatteryBar.ColorFor(percent, stale);
             int top = ay * res + (h * res - BatteryGauge.MixelHeight * cell) / 2;
             for (int y = 0; y < BatteryGauge.MixelHeight; y++)
                 for (int x = 0; x < BatteryGauge.MixelWidth; x++)
@@ -243,6 +245,12 @@ public static class FrameComposer
                 return;
             }
 
+            if (placement.Device.Detail is { } buds && place.Points.Count == 2)
+            {
+                DrawBuds(buds, placement.Device.BatteryStale, place, sprite, dy, bodyDx, owner);
+                return;
+            }
+
             if (style == BatteryStyle.Outline)
                 foreach (var point in place.Points)
                     DrawOutline(sprite, point.X + dx, point.Y + dy, BatteryBar.ColorFor(battery, placement.Device.BatteryStale), battery, owner);
@@ -259,7 +267,7 @@ public static class FrameComposer
                 bool left = place.Icons == Side.Left ||
                     place.Icons is null && last.X + sprite.ArtWidth + 1 + BatteryGauge.ArtWidth > layout.CanvasWidth;
                 int gx = left ? place.Points[0].X - BatteryGauge.ArtWidth - 1 : last.X + sprite.ArtWidth + 1;
-                DrawGauge(placement.Device, gx, last.Y + dy, sprite.ArtHeight, owner);
+                DrawGauge(battery, placement.Device.BatteryStale, gx, last.Y + dy, sprite.ArtHeight, owner);
                 if (placement.Device.IsCharging && battery != 100)
                 {
                     var bolt = sprites["bolt"];
@@ -279,14 +287,55 @@ public static class FrameComposer
                 BlitCentred(icon, ix, last.Y + dy, sprite.ArtHeight, owner);
             }
             else if (status is not null)
+                DrawBadge(sprites[status], sprite, last.X, last.Y + dy, owner);
+        }
+
+        // A small badge at the sprite's top-right, above it: it stays over the device's own column,
+        // so it never reaches a neighbouring device or the bar below.
+        void DrawBadge(Sprite icon, Sprite sprite, int x, int y, short owner)
+        {
+            int sx = Math.Clamp(x + sprite.ArtWidth - icon.ArtWidth, 0, layout.CanvasWidth - icon.ArtWidth);
+            int sy = y - icon.ArtHeight;
+            if (sy < 0) sy = y;   // no room above (top row): overlap the sprite's own corner
+            Blit(icon, sx, sy, owner);
+        }
+
+        // Galaxy Buds with detail: each bud wears its own ring, bar or mini battery, left bud on the place's first
+        // point, right on its second (as they read in the bubble). A bud in the case charges; a critical one out of
+        // it shakes. The bars sit side by side where the pair's one bar would; the mini batteries go outward.
+        void DrawBuds(BudsDetail buds, bool stale, Place place, Sprite sprite, int dy, int bodyDx, short owner)
+        {
+            var each = new[]
             {
-                // A small badge at the sprite's top-right, above it: it stays over the device's own column,
-                // so it never reaches a neighbouring device or the bar below.
-                var icon = sprites[status];
-                int sx = Math.Clamp(last.X + sprite.ArtWidth - icon.ArtWidth, 0, layout.CanvasWidth - icon.ArtWidth);
-                int sy = last.Y + dy - icon.ArtHeight;
-                if (sy < 0) sy = last.Y + dy;   // no room above (top row): overlap the sprite's own corner
-                Blit(icon, sx, sy, owner);
+                (At: place.Points[0], Level: buds.Left, InCase: buds.LeftInCase, Side: Side.Left),
+                (At: place.Points[1], Level: buds.Right, InCase: buds.RightInCase, Side: Side.Right),
+            };
+            foreach (var bud in each)
+            {
+                int x = bud.At.X + bodyDx, y = bud.At.Y + dy;
+                int dx = !bud.InCase && bud.Level <= BatteryBar.CriticalAtOrBelow ? spec.CriticalDx : 0;
+                bool charging = bud.InCase && bud.Level != 100;
+                if (style == BatteryStyle.Outline)
+                    DrawOutline(sprite, x + dx, y, BatteryBar.ColorFor(bud.Level, stale), bud.Level, owner);
+                Blit(sprite, x + dx, y, owner);
+
+                if (style == BatteryStyle.Gauge)
+                {
+                    bool left = bud.Side == Side.Left;
+                    int gx = left ? x - BatteryGauge.ArtWidth - 1 : x + sprite.ArtWidth + 1;
+                    DrawGauge(bud.Level, stale, gx, y, sprite.ArtHeight, owner);
+                    if (charging)
+                    {
+                        var bolt = sprites["bolt"];
+                        BlitCentred(bolt, left ? gx - bolt.ArtWidth - 1 : gx + BatteryGauge.ArtWidth + 1, y, sprite.ArtHeight, owner);
+                    }
+                    continue;
+                }
+                if ((bud.Level == 100 ? "full" : charging ? "bolt" : null) is string status)
+                    DrawBadge(sprites[status], sprite, x, y, owner);
+                if (style == BatteryStyle.Bar)
+                    DrawBar(bud.Level, stale, place.Bar.X + bodyDx + (bud.Side == Side.Left ? -BudBarShift : BudBarShift),
+                        place.Bar.Y + dy, owner);
             }
         }
 

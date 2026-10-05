@@ -54,7 +54,7 @@ public class SkinTests
 
     [Fact]
     public void Has_every_pet() =>
-        Assert.Equal(new[] { "axolotl", "bunny", "choppa", "duck", "jellyfish", "missy", "panda", "parrot", "pig", "ragdoll", "redpanda" }, TestSkin.Names);
+        Assert.Equal(new[] { "axolotl", "bunny", "capybara", "choppa", "duck", "jellyfish", "missy", "panda", "parrot", "pig", "ragdoll", "redpanda" }, TestSkin.Names);
 
     [Theory, MemberData(nameof(Skins))]
     public void Has_all_required_sprites(string skin)
@@ -289,6 +289,7 @@ public class SkinTests
     [InlineData("ragdoll", 3)]
     [InlineData("duck", 0)]       // perched too, with nothing on his head
     [InlineData("pig", 2)]
+    [InlineData("capybara", 2)]
     [InlineData("bunny", 11)]    // rows 0-10 are for the long ears
     [InlineData("panda", 4)]
     [InlineData("parrot", 5)]     // small and perched on the keyboard
@@ -313,6 +314,7 @@ public class SkinTests
     [InlineData("ragdoll", 3)]
     [InlineData("duck", 0)]
     [InlineData("pig", 2, 1)]  // his flat head top sits on a half row, so a notch between bangs may show half a pixel
+    [InlineData("capybara", 2, 4)]  // his narrow crown slopes away under the outer bangs
     [InlineData("bunny", 11)]
     [InlineData("panda", 4)]
     [InlineData("parrot", 5)]
@@ -536,6 +538,7 @@ public class SkinTests
     [InlineData("panda")]
     [InlineData("parrot")]
     [InlineData("duck")]    // he wags with his whole body instead
+    [InlineData("capybara")] // capybaras have next to no tail
     public void Some_pets_have_no_tail(string skin) => Assert.Null(TestSkin.Load(skin).Layout.Tail);
 
     [Fact]
@@ -610,6 +613,7 @@ public class SkinTests
     [InlineData("panda")]
     [InlineData("parrot")]
     [InlineData("pig")]
+    [InlineData("capybara")]
     public void Ears_and_crests_sink_as_the_battery_drains(string skin)
     {
         // The ears fill the "gills" slot: each mood is its own pose, and the lower the battery, the lower the ears sit.
@@ -674,6 +678,7 @@ public class SkinTests
     [InlineData("ragdoll", 3, 8)]
     [InlineData("duck", 0, 3)]
     [InlineData("pig", 2, 5)]
+    [InlineData("capybara", 2, 7)]
     [InlineData("bunny", 11, 16)]
     [InlineData("panda", 4, 11)]
     [InlineData("parrot", 5, 9)]
@@ -695,6 +700,7 @@ public class SkinTests
     [InlineData("redpanda", 8)]
     [InlineData("ragdoll", 8)]
     [InlineData("pig", 5)]
+    [InlineData("capybara", 7)]
     [InlineData("bunny", 16)]
     [InlineData("panda", 11)]
     [InlineData("parrot", 9)]

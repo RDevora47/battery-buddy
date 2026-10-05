@@ -54,10 +54,12 @@ public class SlotAssignerTests
     }
 
     [Fact]
-    public void Overflow_devices_are_skipped()
+    public void Extra_devices_stack_into_every_float_place_the_skin_has()
     {
         var devices = Enumerable.Range(0, 5).Select(i => TestReadings.Make($"Thing {i}")).ToArray();
-        Assert.Equal(2, SlotAssigner.Assign(devices).Count);
+        var floats = new[] { "float1", "float2", "float3", "float4" };
+        Assert.Equal(floats, SlotAssigner.Assign(devices, floats).Select(p => p.PlaceName));
+        Assert.All(SlotAssigner.Assign(devices, floats), p => Assert.Equal("gadget", p.SpriteName));
     }
 
     [Fact]

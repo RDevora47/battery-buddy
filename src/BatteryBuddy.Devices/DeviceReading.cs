@@ -29,4 +29,13 @@ public sealed record DeviceReading(
     bool NoBattery = false)
 {
     public int? EffectiveBattery => Detail?.Lowest ?? BatteryPercent;
+
+    /// <summary>
+    /// The level being used up: none while charging, except that a bud out of the case still counts while its
+    /// partner charges in it.
+    /// </summary>
+    public int? UnchargedBattery =>
+        Detail is { AnyInCase: true } buds ? buds.LowestOutOfCase
+        : IsCharging ? null
+        : EffectiveBattery;
 }

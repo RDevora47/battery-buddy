@@ -68,3 +68,42 @@ public class DrainObservationTests
             Assert.Single(_drain.Segments(key)));
     }
 }
+
+public class OneBudDrainTests
+{
+    readonly DrainHistory _drain = new();
+    readonly DeviceRegistry _registry;
+
+    public OneBudDrainTests() => _registry = new DeviceRegistry(drain: _drain);
+
+    // Right bud in the ear, left charging in the case.
+    static DeviceReading Buds(int left, int right, int minutes, bool leftInCase = true) =>
+        TestReadings.Make("Buds3 Pro de Roberto", DeviceKind.Earbuds, at: TestReadings.T0.AddMinutes(minutes), source: "galaxy-buds",
+            detail: new BudsDetail(left, right, 50, false, true, LeftInCase: leftInCase));
+
+    void Apply(DeviceReading reading) => _registry.Apply(reading.Source, new[] { reading });
+
+    [Fact]
+    public void The_bud_in_the_ear_is_measured_while_its_partner_charges()
+    {
+        Apply(Buds(40, 80, 0));
+        Apply(Buds(42, 79, 10));
+        Apply(Buds(44, 78, 20));
+        Assert.Equal(new DrainSegment(TestReadings.T0.AddMinutes(10), TestReadings.T0.AddMinutes(20), 79, 78),
+            Assert.Single(_drain.Segments(Buds(0, 0, 0).Key)));
+    }
+
+    [Fact]
+    public void Taking_the_other_bud_out_starts_a_new_stretch()
+    {
+        static DeviceReading BothOut(int left, int right, int minutes) =>
+            Buds(left, right, minutes, leftInCase: false) with { Detail = new BudsDetail(left, right, 50, true, true) };
+        Apply(Buds(70, 80, 0));
+        Apply(Buds(70, 79, 10));
+        Apply(Buds(70, 78, 20));
+        Apply(BothOut(70, 78, 30));   // now the lower of both: 70, not a drop from 78
+        Apply(BothOut(69, 78, 40));
+        Assert.Equal(new DrainSegment(TestReadings.T0.AddMinutes(10), TestReadings.T0.AddMinutes(20), 79, 78),
+            Assert.Single(_drain.Segments(Buds(0, 0, 0).Key)));
+    }
+}

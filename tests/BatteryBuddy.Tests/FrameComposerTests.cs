@@ -667,3 +667,24 @@ public class FrameComposerTests
         Assert.NotEqual(HitTarget.Channel, HitArt(frame, Arc[1].X + 3, Arc[1].Y + 3, out _));
     }
 }
+
+public class ChargingShakeTests
+{
+    [Fact]
+    public void A_charging_device_at_a_critical_level_holds_still()
+    {
+        var layout = new SkinLayout(20, 12, new PixelPoint(0, 0),
+            new Dictionary<string, Place> { ["hands"] = new(new[] { new PixelPoint(5, 5) }, new PixelPoint(0, 8), true) },
+            new Dictionary<string, PixelPoint>());
+        var sprites = new Dictionary<string, Sprite>
+        {
+            ["body"] = new("body", 1, 1, new[] { 0xFFFF0000u }),
+            ["mouse"] = new("mouse", 1, 1, new[] { 0xFF0000FFu }),
+            ["bolt"] = new("bolt", 1, 1, new[] { 0xFFFFFF00u }),
+        };
+        var mouse = TestReadings.Make("Mouse", DeviceKind.Mouse, battery: 5) with { IsCharging = true };
+        var frame = FrameComposer.Compose(layout, sprites, new[] { new DevicePlacement(mouse, "hands", "mouse") },
+            new FrameSpec("body", 0, Array.Empty<Overlay>(), CriticalDx: 1), BatteryStyle.Bar);
+        Assert.Equal(0xFF0000FFu, frame.Pixels[5 * frame.Width + 5]);
+    }
+}

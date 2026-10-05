@@ -24,11 +24,17 @@ static class Log
         catch (UnauthorizedAccessException) { }
     }
 
+    /// <summary>Deletes logs older than <paramref name="days"/>; one it can't delete (open elsewhere, no access) waits for the next start.</summary>
     public static void Prune(int days = 7)
     {
-        if (!Directory.Exists(Dir)) return;
-        foreach (var file in Directory.GetFiles(Dir, "battery-buddy-*.log"))
-            if (File.GetLastWriteTime(file) < DateTime.Now.AddDays(-days))
-                File.Delete(file);
+        try
+        {
+            if (!Directory.Exists(Dir)) return;
+            foreach (var file in Directory.GetFiles(Dir, "battery-buddy-*.log"))
+                if (File.GetLastWriteTime(file) < DateTime.Now.AddDays(-days))
+                    try { File.Delete(file); }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
     }
 }

@@ -71,6 +71,24 @@ public class SkinTests
         Assert.Single(sizes);
     }
 
+    [Fact]
+    public void Float_places_stack_up_the_left_edge_while_they_fit()
+    {
+        var layout = TestSkin.Load("axolotl").Layout;
+        Assert.Equal(new[] { "float1", "float2", "float3", "float4" }, layout.FloatPlaces);
+        Assert.Equal(new[] { 29, 20, 11, 2 }, layout.FloatPlaces.Select(f => layout.Places[f].Points[0].Y));
+        Assert.Equal(new[] { 35, 26, 17, 8 }, layout.FloatPlaces.Select(f => layout.Places[f].Bar.Y));
+    }
+
+    [Theory, MemberData(nameof(Skins))]
+    public void Every_float_place_is_inside_the_canvas(string skin)
+    {
+        var (_, Layout, Sprites) = TestSkin.Load(skin);
+        Assert.True(Layout.FloatPlaces.Count >= 2);
+        Assert.All(Layout.FloatPlaces.Select(f => Layout.Places[f].Points[0]), p =>
+            Assert.True(p.Y >= 0 && p.Y + Sprites["gadget"].ArtHeight <= Layout.CanvasHeight, $"float at {p} leaves the canvas"));
+    }
+
     [Theory, MemberData(nameof(Skins))]
     public void Has_all_places_and_overlays(string skin)
     {
@@ -227,7 +245,7 @@ public class SkinTests
         foreach (var (name, place) in Layout.Places)
         {
             int dy = (place.FollowsBody ? 1 : 0) + (place.FollowsClick ? 1 : 0);
-            foreach (var spriteName in PlaceSprites[name])
+            foreach (var spriteName in Layout.FloatPlaces.Contains(name) ? new[] { "gadget" } : PlaceSprites[name])
                 foreach (var pt in place.Points)
                     AssertFits(Layout, $"{name}/{spriteName}", pt.X, pt.Y + dy, Sprites[spriteName].ArtWidth, Sprites[spriteName].ArtHeight);
             AssertFits(Layout, $"{name}/bar", place.Bar.X, place.Bar.Y + dy, BatteryBar.Width, BatteryBar.Height);

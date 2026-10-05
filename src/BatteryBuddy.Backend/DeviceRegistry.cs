@@ -35,11 +35,15 @@ public sealed class DeviceRegistry
 
     public DeviceReading? LastKnown(string key) => _merged.GetValueOrDefault(key);
 
-    /// <summary>When the earliest inferred-charging flag runs out; re-check with <see cref="Refresh"/> then.</summary>
-    public DateTimeOffset? NextChargeExpiry =>
-        _merged.Values.Where(r => r.IsConnected && r.IsCharging)
+    /// <summary>
+    /// When the earliest inferred-charging flag still ahead of <paramref name="now"/> runs out; re-check with
+    /// <see cref="Refresh"/> then. One already past can't change anything: either Refresh has cleared that flag, or
+    /// the device is charging for another reason (its source says so, or buds sit in their case).
+    /// </summary>
+    public DateTimeOffset? NextChargeExpiry(DateTimeOffset now) =>
+        _merged.Values.Where(r => r.IsConnected && r.IsCharging && !r.ChargingKnown)
                       .Select(r => _charge.ChargingUntil(r.Key))
-                      .Where(until => until is not null)
+                      .Where(until => until > now)
                       .Min();
 
     public void Apply(string source, IReadOnlyList<DeviceReading> snapshot)
@@ -82,7 +86,7 @@ public sealed class DeviceRegistry
             next = WithCharging(next, next.ReadAt) with { DetailUnavailable = next.Detail is null && _detailExpected(next) };
             _merged[key] = next;
             // Only fresh readings: another source's untouched one would restart a stretch at an old time.
-            if (next.Source == source) _drain?.Observe(key, source, DrainingLevel(next), next.ReadAt);
+            if (next.Source == source) _drain?.Observe(key, DrainSource(next), DrainingLevel(next), next.ReadAt);
             if (!wasConnected) added.Add(next);
             else if (!SameContent(previous!, next)) updated.Add(next);
         }
@@ -113,12 +117,16 @@ public sealed class DeviceRegistry
         Raise(new DeviceChange(Array.Empty<DeviceReading>(), updated, Array.Empty<DeviceReading>()));
     }
 
-    /// <summary>The level to measure drain from: only while in use on battery (buds: worn, none in the case).</summary>
+    /// <summary>The level to measure drain from: only while in use on battery (buds: one worn, the lower bud out of the case).</summary>
     static int? DrainingLevel(DeviceReading reading) =>
-        reading.IsCharging || reading.BatteryStale || reading.NoBattery
-        || reading.Detail is { LeftWorn: false, RightWorn: false }
+        reading.BatteryStale || reading.NoBattery || reading.Detail is { LeftWorn: false, RightWorn: false }
             ? null
-            : reading.EffectiveBattery;
+            : reading.UnchargedBattery;
+
+    // Which buds are measured is part of the stretch: taking the other one out of the case changes what
+    // "the lower bud" is, and that jump isn't drain.
+    static string DrainSource(DeviceReading reading) =>
+        reading.Detail is { } buds ? $"{reading.Source}:{(buds.LeftInCase ? "" : "L")}{(buds.RightInCase ? "" : "R")}" : reading.Source;
 
     DeviceReading WithCharging(DeviceReading reading, DateTimeOffset now) =>
         reading.ChargingKnown ? reading

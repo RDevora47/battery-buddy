@@ -104,3 +104,23 @@ public class BubbleTextTests
     public void Ago_formats(int seconds, string expected) =>
         Assert.Equal(expected, BubbleText.Ago(TimeSpan.FromSeconds(seconds)));
 }
+
+public class OneBudBubbleTests
+{
+    [Fact]
+    public void A_bud_in_use_shows_time_left_while_its_partner_charges()
+    {
+        var buds = TestReadings.Make("Buds3 Pro de Roberto", DeviceKind.Earbuds,
+            detail: new BudsDetail(30, 80, 90, false, true, LeftInCase: true)) with { IsCharging = true };
+        var text = BubbleText.For(buds, TestReadings.T0, TimeSpan.FromMinutes(190));
+        Assert.Contains("L 30% · R 80% · Case 90% · 3h 10min left", text);
+    }
+
+    [Fact]
+    public void Buds_both_in_the_case_say_charging()
+    {
+        var buds = TestReadings.Make("Buds3 Pro de Roberto", DeviceKind.Earbuds,
+            detail: new BudsDetail(30, 80, 90, false, false, true, true)) with { IsCharging = true };
+        Assert.Contains("Case 90% · charging", BubbleText.For(buds, TestReadings.T0));
+    }
+}

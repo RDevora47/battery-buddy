@@ -33,3 +33,23 @@ public class DeviceReadingTests
     public void DeviceKey_normalizes_case_and_whitespace(string name, string expected) =>
         Assert.Equal(expected, DeviceKey.ForName(name));
 }
+
+public class UnchargedBatteryTests
+{
+    [Fact]
+    public void A_charging_device_has_none() =>
+        Assert.Null((TestReadings.Make("Mouse", battery: 40) with { IsCharging = true }).UnchargedBattery);
+
+    [Fact]
+    public void A_bud_out_of_the_case_counts_while_its_partner_charges() =>
+        Assert.Equal(80, (TestReadings.Make("Buds", detail: new BudsDetail(30, 80, 90, false, true, LeftInCase: true)) with { IsCharging = true })
+            .UnchargedBattery);
+
+    [Fact]
+    public void Both_buds_in_the_case_have_none() =>
+        Assert.Null(TestReadings.Make("Buds", detail: new BudsDetail(30, 80, 90, false, false, true, true)).UnchargedBattery);
+
+    [Fact]
+    public void A_draining_device_has_its_level() =>
+        Assert.Equal(40, TestReadings.Make("Mouse", battery: 40).UnchargedBattery);
+}

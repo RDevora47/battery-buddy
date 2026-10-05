@@ -45,8 +45,7 @@ public sealed class DeviceHub : IBatteryBackend
 
     public TimeSpan? TimeLeft(string key, DateTimeOffset now) =>
         _drain is not null
-        && _registry.LastKnown(key) is { IsConnected: true, IsCharging: false, BatteryStale: false } reading
-        && reading.EffectiveBattery is int level
+        && _registry.LastKnown(key) is { IsConnected: true, BatteryStale: false, NoBattery: false, UnchargedBattery: int level }
             ? TimeLeftEstimator.Estimate(_drain.Segments(key), level, _drain.LevelSince(key), now)
             : null;
 
@@ -107,7 +106,7 @@ public sealed class DeviceHub : IBatteryBackend
     void ScheduleChargeCheck()
     {
         if (_disposed) return;
-        if (_registry.NextChargeExpiry is not DateTimeOffset expiry)
+        if (_registry.NextChargeExpiry(DateTimeOffset.Now) is not DateTimeOffset expiry)
         {
             _chargeTimer.Change(Timeout.Infinite, Timeout.Infinite);
             return;

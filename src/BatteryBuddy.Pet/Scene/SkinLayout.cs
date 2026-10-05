@@ -47,6 +47,17 @@ public sealed record SkinLayout(
     public static readonly string[] RequiredPlaces = { "gills", "neck", "hands", "righthand", "seat", "side", "float1", "float2" };
 
     /// <summary>
+    /// Where devices without a place of their own go, in order: "float1", "float2" from skin.json, then as many
+    /// more as fit on the canvas, stacked on at the same step (see <see cref="Parse"/>).
+    /// </summary>
+    public IReadOnlyList<string> FloatPlaces => Places.Keys
+        .Where(name => name.StartsWith(FloatPrefix) && int.TryParse(name[FloatPrefix.Length..], out _))
+        .OrderBy(name => int.Parse(name[FloatPrefix.Length..]))
+        .ToList();
+
+    const string FloatPrefix = "float";
+
+    /// <summary>
     /// Canvas width plus room on the right for the channel bubbles over the mouse (transparent columns, so the
     /// pet doesn't move). The bitmap is this wide; CanvasWidth stays the skin's own for icon placement.
     /// </summary>
@@ -71,6 +82,7 @@ public sealed record SkinLayout(
                 p.Value.TryGetProperty("icons", out var icons) ? Enum.Parse<Side>(icons.GetString()!, ignoreCase: true) : null);
         }
 
+        StackFloats(places);
         var overlays = root.GetProperty("overlays").EnumerateObject().ToDictionary(o => o.Name, o => Point(o.Value));
 
         return new SkinLayout(
@@ -90,6 +102,28 @@ public sealed record SkinLayout(
             root.TryGetProperty("taps", out var taps) && taps.GetBoolean(),
             root.TryGetProperty("pawLift", out var lift) ? lift.GetInt32() : 0);
     }
+
+    // float3, float4... continue the float1 -> float2 step (sprite and bar alike) while both stay on the canvas.
+    static void StackFloats(Dictionary<string, Place> places)
+    {
+        if (!places.TryGetValue("float1", out var first) || !places.TryGetValue("float2", out var second)) return;
+        var step = new PixelPoint(second.Points[0].X - first.Points[0].X, second.Points[0].Y - first.Points[0].Y);
+        if (step == default) return;
+        var last = second;
+        for (int n = 3; ; n++)
+        {
+            var next = last with
+            {
+                Points = last.Points.Select(p => Shift(p, step)).ToList(),
+                Bar = Shift(last.Bar, step),
+            };
+            if (next.Points.Append(next.Bar).Any(p => p.X < 0 || p.Y < 0)) return;
+            places.TryAdd($"{FloatPrefix}{n}", next);   // a skin may place its own
+            last = places[$"{FloatPrefix}{n}"];
+        }
+    }
+
+    static PixelPoint Shift(PixelPoint p, PixelPoint by) => new(p.X + by.X, p.Y + by.Y);
 
     static PixelPoint Point(JsonElement e) => new(e[0].GetInt32(), e[1].GetInt32());
 }

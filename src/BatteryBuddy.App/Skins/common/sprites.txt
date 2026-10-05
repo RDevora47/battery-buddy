@@ -195,20 +195,16 @@ end
 
 # A sweat drop like the 😅 emoji: pointed on top, round below, a gleam on its right; it sits on the forehead.
 sprite sweat @2x
-....kk....
-...kBBk...
-...kBBk...
-..kBBBBk..
-..kBBBBk..
-.kBBBBBBk.
-.kBBBBBBk.
-kBBBBBBsBk
-kBBBBBswBk
-kBBBBBssBk
-kBBBBBssBk
-kBBBBBBBBk
-.kBBBBBBk.
-..kkkkkk..
+....k...
+...kBk..
+...kBk..
+..kBBBk.
+..kBBBk.
+.kBBBBsk
+.kBBBswk
+.kBBBBsk
+..kBBBk.
+...kkk..
 end
 
 # Status icons: a 3x6 / 6x4 art footprint.

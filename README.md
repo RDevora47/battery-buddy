@@ -59,7 +59,8 @@ Pick one from the tray menu. They all type along with your keyboard and click al
 ## How it shows your batteries
 
 Every device sits in its own spot with its charge around it (a colored outline, a bar or a mini
-battery, your choice), and a lightning bolt while it charges. The pet's mood follows your
+battery, your choice), and a lightning bolt while it charges. Galaxy Buds get one per bud, left and right, so
+you can see which one needs the case. The pet's mood follows your
 **lowest** device: its gills or ears droop and its color fades as that one drains. A device on its
 charger doesn't count: it's being looked after, so the pet stays happy.
 

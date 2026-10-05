@@ -22,7 +22,6 @@ public sealed class PetAnimator
     const int BlinkBurstFrame = 2;
 
     readonly Func<double> _random;
-    readonly PixelPoint _zzz;
     readonly PixelPoint _sweat;
     readonly PixelPoint _saiyan;
     readonly PixelPoint _strawHat;
@@ -40,20 +39,19 @@ public sealed class PetAnimator
 
     enum Effect { Ploof, Whoosh }
 
-    public PetAnimator(Func<double> random, TimeSpan now, PixelPoint zzz, PixelPoint sweat, PixelPoint saiyan = default, PixelPoint strawHat = default,
+    public PetAnimator(Func<double> random, TimeSpan now, PixelPoint sweat, PixelPoint saiyan = default, PixelPoint strawHat = default,
         PixelPoint magnifier = default)
     {
         _strawHat = strawHat;
         _magnifier = magnifier;
         _random = random;
-        _zzz = zzz;
         _sweat = sweat;
         _saiyan = saiyan;
         ScheduleIdle(now);
     }
 
     public Mood Mood { get; set; }
-    /// <summary>A device is at ≤ 10 %: the idle burst shakes it instead of bobbing, blinking or drifting the Zzz.</summary>
+    /// <summary>A device is at ≤ 10 %: the idle burst shakes it instead of bobbing or blinking.</summary>
     public bool HasCritical { get; set; }
 
     /// <summary>Lowest connected battery; drives gill droop and color fade.</summary>
@@ -165,7 +163,6 @@ public sealed class PetAnimator
                     break;
                 case Mood.Sleepy:
                     body = "body_sleepy";
-                    overlays.Add(new Overlay("zzz", _zzz.X, _zzz.Y - (burst ?? 0) / 2));
                     break;
                 default:
                     body = "body_worried";

@@ -37,7 +37,7 @@ public class SkinTests
     {
         "body_idle", "body_blink", "body_sleepy", "body_worried", "body_sniff_l", "body_sniff_r",
         "earbud", "mouse", "gamepad", "keyboard", "phone", "gadget",
-        "smoke1", "smoke2", "smoke3", "ploof_text", "zzz", "sweat",
+        "smoke1", "smoke2", "smoke3", "ploof_text", "sweat",
         "bolt", "full", "whoosh1", "whoosh2", "whoosh3", "saiyan", "strawhat",
         "gills_perky", "gills_droopy", "gills_limp", "paw", "desk",
         "channel_bubble", "channel_empty", "channel_digit1", "channel_digit2", "channel_digit3", "channel_trail",
@@ -76,7 +76,6 @@ public class SkinTests
     {
         var (_, Layout, Sprites) = TestSkin.Load(skin);
         Assert.All(SkinLayout.RequiredPlaces, p => Assert.True(Layout.Places.ContainsKey(p), $"missing place {p}"));
-        Assert.True(Layout.Overlays.ContainsKey("zzz"));
         Assert.True(Layout.Overlays.ContainsKey("sweat"));
         Assert.True(Layout.Overlays.ContainsKey("saiyan"));
         Assert.True(Layout.Overlays.ContainsKey("strawhat"));

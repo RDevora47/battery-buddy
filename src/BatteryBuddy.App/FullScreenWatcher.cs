@@ -19,6 +19,8 @@ sealed class FullScreenWatcher : IDisposable
     const int OBJID_WINDOW = 0;
     const uint MONITOR_DEFAULTTONEAREST = 2;
     const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
+    const int GWL_STYLE = -16;
+    const long WS_CAPTION = 0x00C00000;
 
     // The shell's own windows: the desktop and the taskbars are never "full-screen content".
     static readonly string[] ShellClasses = { "Progman", "WorkerW", "Shell_TrayWnd", "Shell_SecondaryTrayWnd" };
@@ -85,6 +87,9 @@ sealed class FullScreenWatcher : IDisposable
     {
         var foreground = GetForegroundWindow();
         if (foreground == IntPtr.Zero || foreground == new WindowInteropHelper(_window).Handle || IsShell(foreground)) return false;
+        // A maximized window with a title bar covers the monitor too when the taskbar auto-hides; full-screen
+        // content drops its title bar.
+        if (IsZoomed(foreground) && (GetWindowLongPtr(foreground, GWL_STYLE).ToInt64() & WS_CAPTION) == WS_CAPTION) return false;
         var centre = _petCentre();
         var petMonitor = MonitorFromPoint(new POINT { X = (int)centre.X, Y = (int)centre.Y }, MONITOR_DEFAULTTONEAREST);
         if (MonitorFromWindow(foreground, MONITOR_DEFAULTTONEAREST) != petMonitor) return false;
@@ -126,6 +131,8 @@ sealed class FullScreenWatcher : IDisposable
     [DllImport("user32.dll")] static extern IntPtr SetWinEventHook(uint min, uint max, IntPtr module, WinEventProc proc, uint process, uint thread, uint flags);
     [DllImport("user32.dll")] static extern bool UnhookWinEvent(IntPtr hook);
     [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] static extern bool IsZoomed(IntPtr hwnd);
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] static extern IntPtr GetWindowLongPtr(IntPtr hwnd, int index);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr hwnd, StringBuilder name, int max);
     [DllImport("user32.dll")] static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
     [DllImport("user32.dll")] static extern IntPtr MonitorFromPoint(POINT pt, uint flags);

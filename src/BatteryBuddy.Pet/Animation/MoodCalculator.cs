@@ -10,19 +10,10 @@ public static class MoodCalculator
     /// A device on its charger is being looked after, so it doesn't make the pet sad.
     /// </summary>
     public static int? Lowest(IEnumerable<DeviceReading> devices) =>
-        devices.Where(d => d.IsConnected).Select(Uncharged).Min();
+        devices.Where(d => d.IsConnected).Select(d => d.UnchargedBattery).Min();
 
     /// <summary>A connected device that isn't charging is at <see cref="BatteryBar.CriticalAtOrBelow"/> % or less.</summary>
     public static bool HasCritical(IEnumerable<DeviceReading> devices) => Lowest(devices) <= BatteryBar.CriticalAtOrBelow;
-
-    // The level that counts toward the mood: none while charging, except that a bud in the ear still counts
-    // when only its partner is in the case.
-    static int? Uncharged(DeviceReading d) => d switch
-    {
-        { Detail: { AnyInCase: true } buds } => new[] { buds.LeftInCase ? null : buds.Left, buds.RightInCase ? null : buds.Right }.Min(),
-        { IsCharging: true } => null,
-        _ => d.EffectiveBattery,
-    };
 
     public static Mood From(IEnumerable<DeviceReading> devices) => Lowest(devices) switch
     {

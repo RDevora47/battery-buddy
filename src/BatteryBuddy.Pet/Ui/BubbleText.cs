@@ -7,7 +7,7 @@ public static class BubbleText
 {
     public const string BluetoothOff = "Bluetooth is off";
 
-    /// <param name="timeLeft">How much use is left, when known; shown unless the device is charging.</param>
+    /// <param name="timeLeft">How much use is left, when known; shown unless the device is charging (buds: both in the case).</param>
     public static string For(DeviceReading device, DateTimeOffset now, TimeSpan? timeLeft = null)
     {
         var text = new StringBuilder();
@@ -62,8 +62,9 @@ public static class BubbleText
         return hours % 24 == 0 ? $"{hours / 24}d" : $"{hours / 24}d {hours % 24}h";
     }
 
+    // A bud in the ear while its partner charges is still being used up, so it gets its time left.
     static string Status(DeviceReading device, TimeSpan? timeLeft) =>
-        device.IsCharging ? " · charging"
+        device.IsCharging && device.UnchargedBattery is null ? " · charging"
         : timeLeft is TimeSpan left ? $" · {TimeLeft(left)} left"
         : "";
 }

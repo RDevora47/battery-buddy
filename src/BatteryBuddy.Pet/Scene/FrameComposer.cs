@@ -232,7 +232,8 @@ public static class FrameComposer
             int bodyDx = place.FollowsBody ? spec.BodyDx : 0;
             short owner = (short)(index + 1);
             int? battery = placement.Device.EffectiveBattery;
-            int dx = bodyDx + (battery <= BatteryBar.CriticalAtOrBelow ? spec.CriticalDx : 0);
+            // Only a device running out shakes; one on its charger is being looked after.
+            int dx = bodyDx + (placement.Device.UnchargedBattery <= BatteryBar.CriticalAtOrBelow ? spec.CriticalDx : 0);
 
             // A device without a battery gets no ring, bar, gauge or status icon: just the device.
             if (placement.Device.NoBattery)

@@ -72,7 +72,7 @@ Clip Render(string skin, DeviceReading[] devices, int frames, Action<PetAnimator
         LowestBattery = MoodCalculator.Lowest(devices),
         SuperSaiyan = MoodCalculator.SuperSaiyan(devices),
     };
-    var placements = SlotAssigner.Assign(devices);
+    var placements = SlotAssigner.Assign(devices, layout.FloatPlaces);
 
     var composed = new List<ComposedFrame>();
     for (int i = 0; i < frames; i++)

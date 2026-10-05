@@ -140,7 +140,7 @@ public class RegistryChargingTests
         _registry.Apply("windows", new[] { Mouse(50, 0) });
         _registry.Apply("windows", new[] { Mouse(55, 3) });
         Assert.True(Assert.Single(_changes[1].Updated).IsCharging);
-        Assert.Equal(TestReadings.T0.AddMinutes(11), _registry.NextChargeExpiry);
+        Assert.Equal(TestReadings.T0.AddMinutes(11), _registry.NextChargeExpiry(TestReadings.T0.AddMinutes(3)));
     }
 
     [Fact]
@@ -150,7 +150,7 @@ public class RegistryChargingTests
         _registry.Apply("windows", new[] { Mouse(55, 3) });
         _registry.Refresh(TestReadings.T0.AddMinutes(12));
         Assert.False(Assert.Single(_changes[2].Updated).IsCharging);
-        Assert.Null(_registry.NextChargeExpiry);
+        Assert.Null(_registry.NextChargeExpiry(TestReadings.T0.AddMinutes(12)));
     }
 
     [Fact]
@@ -160,5 +160,35 @@ public class RegistryChargingTests
             detail: new BudsDetail(40, 60, 90, false, false, LeftInCase: true), source: "galaxy-buds");
         _registry.Apply("galaxy-buds", new[] { buds });
         Assert.True(Assert.Single(_registry.Connected).IsCharging);
+    }
+}
+
+public class ChargeExpiryTests
+{
+    [Fact]
+    public void A_source_reported_charge_never_waits_on_a_past_expiry()
+    {
+        var registry = new DeviceRegistry();
+        DeviceReading Mouse(int battery, double minutes) =>
+            TestReadings.Make("MX Master 3S", DeviceKind.Mouse, battery: battery, at: TestReadings.T0.AddMinutes(minutes), source: "logitech")
+                with { ChargingKnown = true, IsCharging = true };
+        registry.Apply("logitech", new[] { Mouse(50, 0) });
+        registry.Apply("logitech", new[] { Mouse(51, 1) });
+        Assert.Null(registry.NextChargeExpiry(TestReadings.T0.AddHours(1)));
+    }
+
+    [Fact]
+    public void Buds_charging_in_their_case_never_wait_on_a_past_expiry()
+    {
+        var registry = new DeviceRegistry();
+        DeviceReading Buds(int left, double minutes) =>
+            TestReadings.Make("Buds", DeviceKind.Earbuds, at: TestReadings.T0.AddMinutes(minutes), source: "galaxy-buds",
+                detail: new BudsDetail(left, 60, 90, false, false, LeftInCase: true, RightInCase: true));
+        registry.Apply("galaxy-buds", new[] { Buds(50, 0) });
+        registry.Apply("galaxy-buds", new[] { Buds(55, 1) });
+        var later = TestReadings.T0.AddHours(1);
+        registry.Refresh(later);
+        Assert.True(registry.Connected.Single().IsCharging);
+        Assert.Null(registry.NextChargeExpiry(later));
     }
 }

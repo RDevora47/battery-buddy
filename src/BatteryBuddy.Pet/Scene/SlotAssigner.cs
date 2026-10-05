@@ -6,10 +6,12 @@ public sealed record DevicePlacement(DeviceReading Device, string PlaceName, str
 
 public static class SlotAssigner
 {
-    static readonly string[] FloatPlaces = { "float1", "float2" };
+    static readonly string[] DefaultFloats = { "float1", "float2" };
 
-    public static IReadOnlyList<DevicePlacement> Assign(IReadOnlyList<DeviceReading> devices)
+    /// <param name="floats">The skin's <see cref="SkinLayout.FloatPlaces"/>; a device left over once they're all taken isn't drawn.</param>
+    public static IReadOnlyList<DevicePlacement> Assign(IReadOnlyList<DeviceReading> devices, IReadOnlyList<string>? floats = null)
     {
+        floats ??= DefaultFloats;
         // Devices with a battery first: a battery-less keyboard or mouse only fills its own place when no
         // device with a battery wants it, and never floats.
         var connected = devices.Where(d => d.IsConnected)
@@ -31,10 +33,10 @@ public static class SlotAssigner
                 _ => Array.Empty<string>(),
             };
             // HashSet.Add returns false for taken places, so this picks the first free one.
-            string? place = preferred.Concat(device.NoBattery ? Array.Empty<string>() : FloatPlaces).FirstOrDefault(used.Add);
+            string? place = preferred.Concat(device.NoBattery ? Array.Empty<string>() : floats).FirstOrDefault(used.Add);
             if (place is null) continue;
 
-            string sprite = FloatPlaces.Contains(place) ? "gadget" : SpriteFor(device.Kind);
+            string sprite = floats.Contains(place) ? "gadget" : SpriteFor(device.Kind);
             placements.Add(new DevicePlacement(device, place, sprite));
         }
         return placements;

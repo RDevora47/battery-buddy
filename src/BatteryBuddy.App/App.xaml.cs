@@ -20,12 +20,12 @@ public partial class App : Application
             return;
         }
 
-        Log.Prune();
         DispatcherUnhandledException += (_, args) =>
         {
             Log.Write($"unhandled: {args.Exception}");
             args.Handled = true;
         };
+        Log.Prune();
 
         var window = new PetWindow();
         _controller = new PetController(window, Backends.Create(), Backends.CreateConnector());

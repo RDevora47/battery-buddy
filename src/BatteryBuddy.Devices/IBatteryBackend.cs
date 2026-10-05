@@ -12,7 +12,10 @@ public interface IBatteryBackend : IHostSwitcher, IDisposable
     /// <summary>The latest reading for a device, connected or not.</summary>
     DeviceReading? LastKnown(string key);
 
-    /// <summary>How much use a connected, discharging device has left; null while charging or still learning.</summary>
+    /// <summary>
+    /// How much use a connected device has left of what it's using up (a bud in the ear counts while its partner
+    /// charges in the case); null while charging or still learning.
+    /// </summary>
     TimeSpan? TimeLeft(string key, DateTimeOffset now);
 
     /// <summary>The PC is about to sleep.</summary>

@@ -301,7 +301,8 @@ sealed class PetController : IDisposable
         if (_frame is null) return;
         var target = _frame.HitTest(x, y, out var device, out _);
         if (target == HitTarget.Channel) return;
-        if (target != HitTarget.Device || device is not { Kind: DeviceKind.Mouse })
+        // A mouse nothing reads a battery from (a touchpad, a wired mouse) has no channels to switch: menu as usual.
+        if (target != HitTarget.Device || device is not { Kind: DeviceKind.Mouse, NoBattery: false })
         {
             ClosePicker();
             _window.RequestMenu();
@@ -323,6 +324,7 @@ sealed class PetController : IDisposable
     {
         if (!_backend.CanSwitchHost(mouse))
         {
+            Log.Write($"channels: {mouse.Name} ({mouse.Source}) has no source that can switch it");
             Say(SwitchText.CantSwitch);
             return;
         }
@@ -405,7 +407,7 @@ sealed class PetController : IDisposable
     {
         // With Bluetooth off only devices that don't need it stay: a wired or receiver keyboard or mouse.
         IReadOnlyList<DeviceReading> connected = _bluetoothOn ? _backend.Connected : _backend.Connected.Where(d => d.NoBattery).ToList();
-        _placements = SlotAssigner.Assign(connected);
+        _placements = SlotAssigner.Assign(connected, _layout.FloatPlaces);
         _animator.Mood = MoodCalculator.From(connected);
         _animator.HasCritical = MoodCalculator.HasCritical(connected);
         _animator.LowestBattery = MoodCalculator.Lowest(connected);

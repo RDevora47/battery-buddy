@@ -407,7 +407,7 @@ sealed class PetController : IDisposable
         IReadOnlyList<DeviceReading> connected = _bluetoothOn ? _backend.Connected : _backend.Connected.Where(d => d.NoBattery).ToList();
         _placements = SlotAssigner.Assign(connected);
         _animator.Mood = MoodCalculator.From(connected);
-        _animator.HasCritical = connected.Any(d => d.EffectiveBattery <= BatteryBar.CriticalAtOrBelow);
+        _animator.HasCritical = MoodCalculator.HasCritical(connected);
         _animator.LowestBattery = MoodCalculator.Lowest(connected);
         _animator.SuperSaiyan = MoodCalculator.SuperSaiyan(connected);
         Render();

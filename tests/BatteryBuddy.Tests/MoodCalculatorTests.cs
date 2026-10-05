@@ -39,4 +39,41 @@ public class MoodCalculatorTests
     [Fact]
     public void Buds_use_lowest_bud() =>
         Assert.Equal(Mood.Worried, MoodOf(TestReadings.Make("Buds", battery: 90, detail: new BudsDetail(90, 8, 50, true, true))));
+
+    [Theory]
+    [InlineData(5)]
+    [InlineData(15)]
+    public void A_low_device_on_its_charger_keeps_the_pet_happy(int level)
+    {
+        var devices = new[] { TestReadings.Make("A", battery: 90), TestReadings.Make("B", battery: level) with { IsCharging = true } };
+        Assert.Equal(Mood.Happy, MoodOf(devices));
+        Assert.Equal(90, MoodCalculator.Lowest(devices));
+        Assert.False(MoodCalculator.HasCritical(devices));
+    }
+
+    [Fact]
+    public void A_charging_device_does_not_hide_another_low_one()
+    {
+        var devices = new[] { TestReadings.Make("A", battery: 5) with { IsCharging = true }, TestReadings.Make("B", battery: 15) };
+        Assert.Equal(Mood.Sleepy, MoodOf(devices));
+        Assert.False(MoodCalculator.HasCritical(devices));
+    }
+
+    [Fact]
+    public void A_low_bud_in_its_case_is_charging_but_one_in_the_ear_still_counts()
+    {
+        var inCase = new BudsDetail(90, 8, 50, true, false, RightInCase: true);
+        Assert.Equal(Mood.Happy, MoodOf(TestReadings.Make("Buds", battery: 90, detail: inCase) with { IsCharging = true }));
+
+        var wornLow = new BudsDetail(8, 90, 50, true, false, RightInCase: true);
+        Assert.Equal(Mood.Worried, MoodOf(TestReadings.Make("Buds", battery: 90, detail: wornLow) with { IsCharging = true }));
+    }
+
+    [Fact]
+    public void Critical_is_a_device_at_10_or_less_not_charging()
+    {
+        Assert.True(MoodCalculator.HasCritical(new[] { TestReadings.Make("A", battery: 10) }));
+        Assert.False(MoodCalculator.HasCritical(new[] { TestReadings.Make("A", battery: 11) }));
+        Assert.False(MoodCalculator.HasCritical(new[] { TestReadings.Make("A", battery: null) }));
+    }
 }

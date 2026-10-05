@@ -68,7 +68,7 @@ Clip Render(string skin, DeviceReading[] devices, int frames, Action<PetAnimator
         Hops = layout.Hops,
         ReachFrames = layout.Reach is null ? 0 : Enumerable.Range(1, 9).TakeWhile(n => sprites.ContainsKey($"reach{n}")).Count(),
         Mood = MoodCalculator.From(devices),
-        HasCritical = devices.Any(d => d.EffectiveBattery <= BatteryBar.CriticalAtOrBelow),
+        HasCritical = MoodCalculator.HasCritical(devices),
         LowestBattery = MoodCalculator.Lowest(devices),
         SuperSaiyan = MoodCalculator.SuperSaiyan(devices),
     };

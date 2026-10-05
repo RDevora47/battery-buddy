@@ -33,6 +33,10 @@ sealed class PetController : IDisposable
     readonly ClickStreak _tripleClick = new(3, TimeSpan.FromMilliseconds(System.Windows.Forms.SystemInformation.DoubleClickTime));
     bool _connecting;
     readonly InputMonitor _input = new();
+    // Over full-screen content the pet acts like the pointer: out of sight while the mouse rests.
+    readonly FullScreenWatcher _fullScreen;
+    readonly FullScreenPeek _peek = new();
+    readonly DispatcherTimer _peekTimer = new();
     readonly CancellationTokenSource _cts = new();
     Settings _settings = Settings.Load();
     IReadOnlyList<DevicePlacement> _placements = Array.Empty<DevicePlacement>();
@@ -80,6 +84,24 @@ sealed class PetController : IDisposable
         _input.KeyPressed += () => { _animator.KeyTap(_clock.Elapsed); Render(); };
         _input.MouseClicked += () => { _animator.Click(_clock.Elapsed); Render(); };
         _input.MouseScrolled += () => { _animator.Scroll(_clock.Elapsed); Render(); };
+
+        _fullScreen = new FullScreenWatcher(_window, _window.PetCentrePixels);
+        _fullScreen.Changed += on =>
+        {
+            _peek.SetFullScreen(on, _clock.Elapsed);
+            UpdatePeek();
+        };
+        // Another window coming forward is when Windows may push the pet below it: put it back at once.
+        _fullScreen.ForegroundChanged += _window.KeepOnTop;
+        _window.Moved += _fullScreen.Check;   // dragged (or pulled back) onto another monitor
+        _peekTimer.Tick += (_, _) => UpdatePeek();
+        // Movement reports arrive hundreds of times a second: just note the time, and only wake a hidden pet.
+        _input.MouseMoved += () =>
+        {
+            if (!_peek.IsFullScreen) return;
+            _peek.MouseMoved(_clock.Elapsed);
+            if (!_peekTimer.IsEnabled) UpdatePeek();
+        };
 
 #if DIAG_LOG
         StartDiagnostics();
@@ -191,6 +213,7 @@ sealed class PetController : IDisposable
         PlaceWindow();
         _window.Show();
         _input.Start(_window);
+        _fullScreen.Start();
         Render();
         await _backend.StartAsync(_cts.Token);
     }
@@ -439,6 +462,26 @@ sealed class PetController : IDisposable
         _idleTimer.Start();
     }
 
+    // Shows or hides the pet for the full-screen peek, and wakes up again when the resting mouse should hide it.
+    void UpdatePeek()
+    {
+        var now = _clock.Elapsed;
+        bool shown = _peek.IsShown(now);
+        _peekTimer.Stop();
+        if (shown)
+        {
+            _window.KeepOnTop();
+            if (_peek.HidesAt is TimeSpan hides)
+            {
+                var wait = hides - now;
+                _peekTimer.Interval = wait > TimeSpan.FromMilliseconds(50) ? wait : TimeSpan.FromMilliseconds(50);
+                _peekTimer.Start();
+            }
+        }
+        else ClosePicker();
+        _window.SetShown(shown);
+    }
+
     void PlaceWindow()
     {
         new WindowInteropHelper(_window).EnsureHandle();
@@ -458,6 +501,8 @@ sealed class PetController : IDisposable
     {
         _cts.Cancel();
         _input.Dispose();
+        _fullScreen.Dispose();
+        _peekTimer.Stop();
         _frameTimer.Stop();
         _idleTimer.Stop();
         _bubbleTimer.Stop();

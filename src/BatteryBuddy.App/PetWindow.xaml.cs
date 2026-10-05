@@ -28,6 +28,7 @@ public partial class PetWindow : Window
     Point _pressedAt;
     bool _pressed;
     int _resolution = 1;
+    bool _shown = true;
     double _sideRoom = MinSideRoom;
     // While dragging: the cursor and the window's top-left when the drag started, in screen pixels.
     (System.Drawing.Point Cursor, int Left, int Top)? _drag;
@@ -111,6 +112,29 @@ public partial class PetWindow : Window
         Left += dx;
         Top += dy;
         Moved?.Invoke();
+    }
+
+    /// <summary>The middle of the pet in screen pixels (the window is larger: it holds the bubble's room).</summary>
+    public Point PetCentrePixels()
+    {
+        NativeMethods.GetWindowRect(new WindowInteropHelper(this).Handle, out var rect);
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var pet = PetInWindow;
+        return new Point(rect.Left + pet.CenterX * dpi.DpiScaleX, rect.Top + pet.CenterY * dpi.DpiScaleY);
+    }
+
+    /// <summary>
+    /// Fades the pet and its bubble out of the way (over full-screen content) or back. Fully transparent, the window
+    /// lets every click through.
+    /// </summary>
+    public void SetShown(bool shown)
+    {
+        if (shown == _shown) return;
+        _shown = shown;
+        double target = shown ? 1 : 0;
+        var fade = new DoubleAnimation(target, TimeSpan.FromMilliseconds(shown ? 150 : 400)) { FillBehavior = FillBehavior.Stop };
+        fade.Completed += (_, _) => Root.Opacity = target;
+        Root.BeginAnimation(OpacityProperty, fade);
     }
 
     public void ShowBubble(string text)

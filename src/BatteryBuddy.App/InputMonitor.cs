@@ -7,7 +7,7 @@ namespace BatteryBuddy.App;
 /// <summary>
 /// Notices key presses, mouse clicks and wheel turns anywhere on the desktop via Raw Input sent to the pet window
 /// (no global hook in everyone's input path). Only "a key went down" / "a button went down" leaves
-/// this class (plus "the wheel turned", and "that key was Esc" to close the channel picker): which key is never
+/// this class (plus "the wheel turned", "the mouse moved", and "that key was Esc" to close the channel picker): which key is never
 /// otherwise exposed or logged. Held keys are remembered only to skip auto-repeat.
 /// </summary>
 sealed class InputMonitor : IDisposable
@@ -33,6 +33,9 @@ sealed class InputMonitor : IDisposable
     public event Action? KeyPressed;
     public event Action? MouseClicked;
     public event Action? MouseScrolled;
+
+    /// <summary>The mouse moved (or a button went down). Raised for every movement report: keep handlers cheap.</summary>
+    public event Action? MouseMoved;
     public event Action? EscapePressed;
 
     public void Start(Window window)
@@ -78,6 +81,9 @@ sealed class InputMonitor : IDisposable
         if (type == RIM_TYPEMOUSE)
         {
             ushort buttonFlags = BitConverter.ToUInt16(_buffer, HeaderSize + 4);   // RAWMOUSE: usFlags, padding, usButtonFlags
+            // …usButtonData, ulRawButtons, then lLastX and lLastY.
+            bool moved = BitConverter.ToInt32(_buffer, HeaderSize + 12) != 0 || BitConverter.ToInt32(_buffer, HeaderSize + 16) != 0;
+            if (moved || (buttonFlags & AnyButtonDown) != 0) MouseMoved?.Invoke();
             if ((buttonFlags & AnyButtonDown) != 0) MouseClicked?.Invoke();
             else if ((buttonFlags & AnyWheel) != 0) MouseScrolled?.Invoke();
         }

@@ -133,7 +133,8 @@ public partial class PetWindow : Window
         _shown = shown;
         double target = shown ? 1 : 0;
         var fade = new DoubleAnimation(target, TimeSpan.FromMilliseconds(shown ? 150 : 400)) { FillBehavior = FillBehavior.Stop };
-        fade.Completed += (_, _) => Root.Opacity = target;
+        // A newer fade may have replaced this one: only the wanted state may set the final opacity.
+        fade.Completed += (_, _) => { if (_shown == shown) Root.Opacity = target; };
         Root.BeginAnimation(OpacityProperty, fade);
     }
 

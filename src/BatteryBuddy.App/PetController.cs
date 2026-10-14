@@ -120,7 +120,7 @@ sealed class PetController : IDisposable
         {
             int opaque = _frame is null ? -1 : _frame.Pixels.Count(p => p != 0);
             DiagLog.Write($"heartbeat renders={_renders} opaque={opaque} visible={_window.IsVisible} state={_window.WindowState} " +
-                $"opacity={_window.Opacity} img={_window.PetImage.ActualWidth}x{_window.PetImage.ActualHeight} imgVis={_window.PetImage.IsVisible} " +
+                $"opacity={_window.Opacity} rootOpacity={_window.Root.Opacity:0.##} img={_window.PetImage.ActualWidth}x{_window.PetImage.ActualHeight} imgVis={_window.PetImage.IsVisible} " +
                 $"pos={_window.Left:0},{_window.Top:0} frameTimer={_frameTimer.IsEnabled} idleTimer={_idleTimer.IsEnabled} " +
                 $"tier={RenderCapability.Tier >> 16} bmp={_bitmap.PixelWidth}x{_bitmap.PixelHeight} src={ReferenceEquals(_window.PetImage.Source, _bitmap)}");
             _renders = 0;

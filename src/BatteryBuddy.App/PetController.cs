@@ -100,7 +100,8 @@ sealed class PetController : IDisposable
         {
             if (!_peek.IsFullScreen) return;
             _peek.MouseMoved(_clock.Elapsed);
-            if (!_peekTimer.IsEnabled) UpdatePeek();
+            // Asleep until the trick or the hide; a trick under way stops at once.
+            if (!_peekTimer.IsEnabled || _animator.InTrick) UpdatePeek();
         };
 
 #if DIAG_LOG
@@ -160,7 +161,7 @@ sealed class PetController : IDisposable
         (_layout, _sprites) = SkinLoader.Load(skin);
         _animator = new PetAnimator(Random.Shared.NextDouble, _clock.Elapsed,
             _layout.Overlays["sweat"], _layout.Overlays["saiyan"], _layout.Overlays["strawhat"],
-            _layout.Overlays["magnifier"])
+            _layout.Overlays["magnifier"], _layout.Overlays.GetValueOrDefault("tophat", _layout.Overlays["strawhat"]))
         {
             Hat = _settings.Hat,
             Hops = _layout.Hops,
@@ -462,7 +463,8 @@ sealed class PetController : IDisposable
         _idleTimer.Start();
     }
 
-    // Shows or hides the pet for the full-screen peek, and wakes up again when the resting mouse should hide it.
+    // Shows or hides the pet for the full-screen peek: the vanishing trick starts TrickLead before the hide, and
+    // the smoke bomb goes off with the fade-out. Wakes up again for the trick, then for the hide.
     void UpdatePeek()
     {
         var now = _clock.Elapsed;
@@ -471,15 +473,23 @@ sealed class PetController : IDisposable
         if (shown)
         {
             _window.KeepOnTop();
-            if (_peek.HidesAt is TimeSpan hides)
+            if (_peek.TrickAt is TimeSpan trick && _peek.HidesAt is TimeSpan hides)
             {
-                var wait = hides - now;
+                if (now >= trick) _animator.BeginTrick(now);
+                else _animator.CancelTrick();
+                var wait = (now >= trick ? hides : trick) - now;
                 _peekTimer.Interval = wait > TimeSpan.FromMilliseconds(50) ? wait : TimeSpan.FromMilliseconds(50);
                 _peekTimer.Start();
             }
+            else _animator.CancelTrick();
         }
-        else ClosePicker();
+        else
+        {
+            ClosePicker();
+            _animator.Vanish(now);
+        }
         _window.SetShown(shown);
+        Render();   // the first smoke frame in the same tick as the fade-out
     }
 
     void PlaceWindow()

@@ -39,7 +39,7 @@ public class SkinTests
         "earbud", "mouse", "gamepad", "keyboard", "phone", "gadget",
         "smoke1", "smoke2", "smoke3", "ploof_text", "sweat",
         "bolt", "full", "whoosh1", "whoosh2", "whoosh3", "saiyan", "strawhat",
-        "tophat", "smokebomb1", "smokebomb2", "smokebomb3",
+        "tophat", "smokebomb1", "smokebomb2", "smokebomb3", "smokebomb4", "smokebomb5",
         "gills_perky", "gills_droopy", "gills_limp", "paw", "desk",
         "channel_bubble", "channel_empty", "channel_digit1", "channel_digit2", "channel_digit3", "channel_trail",
     };
@@ -340,6 +340,60 @@ public class SkinTests
             int headTopRow = headRows.First() + Layout.Body.Y * d;
             Assert.True(hairBottom + 1 + slack >= headTopRow, $"column {hx}: hair ends at {hairBottom / 2.0}, head starts at {headTopRow / 2.0}");
         }
+    }
+
+    static readonly string[] SmokeFrames = Enumerable.Range(1, PetAnimator.SmokeFrames).Select(n => $"smokebomb{n}").ToArray();
+
+    static int Opaque(Sprite s) => s.Pixels.Count(p => p != 0);
+
+    // Whether the smoke sprite, bottom-centred on the skin's canvas, is opaque at canvas frame pixel (x, y).
+    static bool SmokeAt(SkinLayout layout, Sprite smoke, int x, int y)
+    {
+        var (ox, oy) = SmokeLayer.Offset(layout, smoke, 2);
+        int sx = x - ox, sy = y - oy;
+        return sx >= 0 && sy >= 0 && sx < smoke.Width && sy < smoke.Height && smoke.Pixels[sy * smoke.Width + sx] != 0;
+    }
+
+    [Fact]
+    public void Smoke_frames_share_one_size()
+    {
+        var sprites = TestSkin.Load("choppa").Sprites;
+        Assert.Single(SmokeFrames.Select(n => (sprites[n].Width, sprites[n].Height)).Distinct());
+    }
+
+    [Theory, MemberData(nameof(Skins))]
+    public void The_third_smoke_frame_covers_the_whole_canvas(string skin)
+    {
+        // The frame showing when the pet starts fading hides everything: pet, hat, desk and devices.
+        var (_, Layout, Sprites) = TestSkin.Load(skin);
+        var smoke = Sprites["smokebomb3"];
+        for (int y = 0; y < Layout.CanvasHeight * 2; y++)
+            for (int x = 0; x < Layout.CanvasWidth * 2; x++)
+                Assert.True(SmokeAt(Layout, smoke, x, y), $"canvas frame pixel ({x}, {y}) shows through");
+    }
+
+    [Fact]
+    public void The_smoke_grows_from_the_bottom_centre_then_thins_into_wisps()
+    {
+        var (_, Layout, Sprites) = TestSkin.Load("duck");   // the tallest canvas
+        var frames = SmokeFrames.Select(n => Sprites[n]).ToList();
+        int midX = Layout.CanvasWidth, bottom = Layout.CanvasHeight * 2 - 1;
+        Assert.True(SmokeAt(Layout, frames[0], midX, bottom - 4), "the poof starts on the desk, at the bottom centre");
+        Assert.False(SmokeAt(Layout, frames[0], midX, Layout.CanvasHeight), "the poof is small: it doesn't reach the canvas's middle yet");
+        Assert.True(Opaque(frames[0]) < Opaque(frames[1]) && Opaque(frames[1]) < Opaque(frames[2]), "frames 1-3 billow out");
+        Assert.True(Opaque(frames[3]) < Opaque(frames[2]) && Opaque(frames[4]) < Opaque(frames[3]), "frames 4-5 thin out");
+    }
+
+    [Theory, MemberData(nameof(Skins))]
+    public void The_smoke_fits_the_window_room_around_the_pet(string skin)
+    {
+        // The window leaves 140 DIPs above and below the pet and at least 44 to each side: 35 and 11 art pixels.
+        var (_, Layout, Sprites) = TestSkin.Load(skin);
+        var smoke = Sprites["smokebomb1"];
+        var (ox, oy) = SmokeLayer.Offset(Layout, smoke, 2);
+        Assert.True(ox >= -11 * 2, $"{-ox / 2} art pixels past the canvas's side");
+        Assert.True(oy >= -35 * 2, $"{-oy / 2} art pixels above the canvas");
+        Assert.True(SmokeLayer.BelowCanvas <= 35);
     }
 
     [Theory]

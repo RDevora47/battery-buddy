@@ -773,6 +773,16 @@ public class PerBudIndicatorTests
 
 public class SmokeLayerTests
 {
+    [Fact]
+    public void A_vanished_pet_draws_nothing_and_takes_no_clicks()
+    {
+        var (_, layout, sprites) = Axolotl;
+        var frame = FrameComposer.Compose(layout, sprites, Array.Empty<DevicePlacement>(),
+            new FrameSpec("body_idle", 0, Array.Empty<Overlay>(), Gills: "gills_perky", Vanished: true));
+        Assert.All(frame.Pixels, p => Assert.Equal(0u, p));
+        Assert.Equal(HitTarget.None, frame.HitTest(layout.CanvasWidth, layout.CanvasHeight, out _));
+    }
+
     static readonly TestSkin Axolotl = TestSkin.Load("axolotl");
 
     static Sprite Smoke(int artW, int artH) => new("smoke", artW * 2, artH * 2, new uint[artW * 2 * artH * 2], 2);

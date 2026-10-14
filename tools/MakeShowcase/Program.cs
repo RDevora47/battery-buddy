@@ -77,30 +77,49 @@ Clip Render(string skin, DeviceReading[] devices, int frames, Action<PetAnimator
     };
     var placements = SlotAssigner.Assign(devices, layout.FloatPlaces);
 
-    var composed = new List<ComposedFrame>();
+    // Every frame gets room around it for the smoke bomb, which the app draws on its own layer over the pet.
+    int res = FrameComposer.ResolutionOf(sprites);
+    var smokeSize = sprites["smokebomb1"];
+    var (sx, sy) = SmokeLayer.Offset(layout, smokeSize, res);
+    int smokeW = smokeSize.Width * res / smokeSize.Density, smokeH = smokeSize.Height * res / smokeSize.Density;
+    int frameW = layout.FrameWidth * res, frameH = layout.CanvasHeight * res;
+    int padL = Math.Max(0, -sx), padT = Math.Max(0, -sy);
+    int w = padL + Math.Max(frameW, sx + smokeW), h = padT + Math.Max(frameH, sy + smokeH);
+
+    var composed = new List<uint[]>();
     for (int i = 0; i < frames; i++)
     {
         var now = TimeSpan.FromTicks(TimeSpan.TicksPerSecond * i / fps);
         script?.Invoke(pet, i, now);
-        composed.Add(FrameComposer.Compose(layout, sprites, placements, pet.FrameAt(now)));
+        var spec = pet.FrameAt(now);
+        var frame = FrameComposer.Compose(layout, sprites, placements, spec);
+        var pixels = new uint[w * h];
+        for (int y = 0; y < frameH; y++) Array.Copy(frame.Pixels, y * frameW, pixels, (padT + y) * w + padL, frameW);
+        if (spec.Smoke is { } smoke)
+        {
+            var layer = SmokeLayer.Pixels(sprites[smoke], res);
+            for (int y = 0; y < smokeH; y++)
+                for (int x = 0; x < smokeW; x++)
+                    if (layer[y * smokeW + x] != 0) pixels[(padT + sy + y) * w + padL + sx + x] = layer[y * smokeW + x];
+        }
+        composed.Add(pixels);
     }
     // Upscaled so each art pixel is Scale x Scale, then cropped to what any frame draws, plus a small margin.
-    int k = Scale / composed[0].Resolution;
-    var clip = new Clip(composed[0].Width * k, composed[0].Height * k,
-        composed.Select(f => Enlarge(f.Pixels, f.Width, f.Height, k)).ToList());
+    int k = Scale / res;
+    var clip = new Clip(w * k, h * k, composed.Select(f => Enlarge(f, w, h, k)).ToList());
     return Crop(clip, Scale);
 }
 
 // The vanishing trick, as over full-screen content: a beat of rest, top hat, key press, smoke bomb, fade.
 Clip Vanish(string pet)
 {
-    var clip = Render(pet, Desk(), 12, (p, frame, now) =>
+    // The trick starts at frame 3; the smoke goes off at 5 and covers the canvas at 7, when the app starts its 400 ms
+    // fade (about 2.4 frames at 6 fps) while the smoke breaks into wisps.
+    var clip = Render(pet, Desk(), 13, (p, frame, now) =>
     {
         if (frame == 3) p.BeginTrick(now);
-        if (frame == 6) p.Vanish(now);
     });
-    // The app fades the window out over 400 ms from the first smoke frame: about 2.4 frames at 6 fps.
-    double[] alpha = { 1, 1, 1, 1, 1, 1, 1, 0.67, 0.33, 0, 0, 0 };
+    double[] alpha = { 1, 1, 1, 1, 1, 1, 1, 1, 0.6, 0.2, 0, 0, 0 };
     return clip with { Frames = clip.Frames.Select((f, i) => f.Select(px => Fade(px, alpha[i])).ToArray()).ToList() };
 }
 

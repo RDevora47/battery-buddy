@@ -448,6 +448,19 @@ public class PetAnimatorTests
     }
 
     [Fact]
+    public void The_pet_is_gone_once_the_smoke_covers_it()
+    {
+        // From the covering frame on, the smoke thins into wisps while the window fades: nothing is left behind it.
+        var animator = WithTopHat();
+        animator.BeginTrick(Ms(0));
+        Assert.False(animator.FrameAt(Frames(3)).Vanished);   // smoke frame 2: still billowing up
+        Assert.True(animator.FrameAt(FullScreenPeek.TrickLead).Vanished);
+        Assert.True(animator.FrameAt(Ms(5000)).Vanished);
+        animator.CancelTrick();
+        Assert.False(animator.FrameAt(Ms(5100)).Vanished);   // back, as the mouse moved
+    }
+
+    [Fact]
     public void Hiding_without_the_lead_still_shows_the_covering_smoke()
     {
         var animator = WithTopHat();

@@ -238,17 +238,17 @@ public sealed class PetAnimator
         return new FrameSpec(body, dy, overlays, criticalDx,
             MoodCalculator.GillsFor(LowestBattery), MoodCalculator.FadeFor(LowestBattery),
             now < _leftPawUp ? 1 : 0, now < _rightPawUp ? 1 : 0, now < _clickUp ? 1 : 0, OnMouse(now), tail, dx, ReachStep(now),
-            Smoke: SmokeAt(now));
+            Smoke: SmokeAt(now), Vanished: SmokeFrame(now) >= SmokeCovers - 1);
     }
 
     // Counted in whole frame intervals from the trick's start (not FrameIndex, which rounds 1/6 s down), so the
     // covering frame lands exactly on the hide.
-    string? SmokeAt(TimeSpan now)
-    {
-        if (_trickStart is not TimeSpan start) return null;
-        long frame = (now - start).Ticks / FrameInterval.Ticks - SmokeDelay;
-        return frame < 0 ? null : $"smokebomb{Math.Min(frame, SmokeFrames - 1) + 1}";
-    }
+    // 0-based; -1 before the bomb goes off or without a trick.
+    long SmokeFrame(TimeSpan now) => _trickStart is TimeSpan start
+        ? Math.Min(Math.Max((now - start).Ticks / FrameInterval.Ticks - SmokeDelay, -1), SmokeFrames - 1)
+        : -1;
+
+    string? SmokeAt(TimeSpan now) => SmokeFrame(now) is var frame and >= 0 ? $"smokebomb{frame + 1}" : null;
 
     bool IsSniffing(TimeSpan now) =>
         _sniffStart is TimeSpan start &&

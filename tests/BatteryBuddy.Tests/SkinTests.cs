@@ -342,43 +342,6 @@ public class SkinTests
         }
     }
 
-    [Theory, MemberData(nameof(Skins))]
-    public void The_smoke_bomb_hides_the_whole_pet_while_it_bursts(string skin)
-    {
-        // The first two frames cover every pixel of the pet and its top hat; the third may thin out (it is fading).
-        var (_, Layout, Sprites) = TestSkin.Load(skin);
-        var hatAt = Layout.Overlays.GetValueOrDefault("tophat", Layout.Overlays["strawhat"]);
-        var hats = new[] { new Overlay("tophat", hatAt.X, hatAt.Y) };
-        var body = Sprites["body_idle"];
-        var hat = Sprites["tophat"];
-        foreach (var smoke in new[] { "smokebomb1", "smokebomb2" })
-        {
-            var hidden = FrameComposer.Compose(Layout, Sprites, Array.Empty<DevicePlacement>(),
-                new FrameSpec("body_idle", 0, hats, Gills: "gills_perky", Cover: smoke));
-            var smokeColors = Sprites[smoke].Pixels.Where(p => p != 0).ToHashSet();
-            // The pet's own pixels: the body sprite's footprint and the hat's.
-            for (int y = 0; y < hidden.Height; y++)
-                for (int x = 0; x < Layout.CanvasWidth * 2; x++)
-                {
-                    int bx = x - Layout.Body.X * 2, by = y - Layout.Body.Y * 2;
-                    bool petPixel = bx >= 0 && by >= 0 && bx < body.Width && by < body.Height && body.Pixels[by * body.Width + bx] != 0;
-                    int hx = x - hatAt.X * 2, hy = y - hatAt.Y * 2;
-                    petPixel |= hx >= 0 && hy >= 0 && hx < hat.Width && hy < hat.Height && hat.Pixels[hy * hat.Width + hx] != 0;
-                    if (petPixel)
-                        Assert.True(smokeColors.Contains(hidden.Pixels[y * hidden.Width + x]), $"{smoke} leaves the pet showing at frame pixel ({x}, {y})");
-                }
-        }
-    }
-
-    [Fact]
-    public void The_smoke_bomb_grows_as_it_bursts()
-    {
-        var sprites = TestSkin.Load("duck").Sprites;
-        var frames = new[] { "smokebomb1", "smokebomb2", "smokebomb3" }.Select(n => sprites[n]).ToList();
-        Assert.True(frames[1].Width * frames[1].Height >= frames[0].Width * frames[0].Height, "frame 2 is at least as big as frame 1");
-        Assert.True(frames[2].Width * frames[2].Height >= frames[1].Width * frames[1].Height, "frame 3 is the biggest");
-    }
-
     [Theory]
     [InlineData("choppa", 7, 12)]   // head-top row, eye row (body art rows), as in the straw hat test
     public void Top_hat_sits_on_the_head_above_the_eyes(string skin, int headTop, int eyeRow)

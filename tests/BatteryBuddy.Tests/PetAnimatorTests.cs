@@ -1,5 +1,6 @@
 using BatteryBuddy.Pet.Animation;
 using BatteryBuddy.Pet.Scene;
+using BatteryBuddy.Pet.Ui;
 
 namespace BatteryBuddy.Tests;
 
@@ -409,6 +410,8 @@ public class PetAnimatorTests
 
     static PetAnimator WithTopHat() => new(() => 0, TimeSpan.Zero, new PixelPoint(36, 10), tophat: TopHat);
 
+    static TimeSpan Frames(int n) => PetAnimator.FrameInterval * n;
+
     [Fact]
     public void The_trick_puts_on_the_top_hat_then_presses_a_key()
     {
@@ -418,37 +421,49 @@ public class PetAnimatorTests
         var hatOn = animator.FrameAt(Ms(1000));
         Assert.Contains(new Overlay("tophat", TopHat.X, TopHat.Y), hatOn.Overlays);
         Assert.Equal(0, hatOn.PawLeftDy + hatOn.PawRightDy);   // not yet
+        Assert.Null(hatOn.Smoke);
 
         Assert.True(animator.NeedsTicks(Ms(1100)));
-        var press = animator.FrameAt(Ms(1000) + PetAnimator.FrameInterval);
+        var press = animator.FrameAt(Ms(1000) + Frames(1));
         Assert.Equal(1, press.PawLeftDy + press.PawRightDy);   // one paw, one frame
-        var after = animator.FrameAt(Ms(1000) + PetAnimator.FrameInterval * 2);
+        Assert.Null(press.Smoke);   // the key sets the bomb off
+        var after = animator.FrameAt(Ms(1000) + Frames(2));
         Assert.Equal(0, after.PawLeftDy + after.PawRightDy);
-        Assert.Null(after.Cover);   // no smoke until it vanishes
     }
 
     [Fact]
-    public void Vanishing_bursts_the_smoke_bomb_and_holds_its_last_frame()
+    public void The_smoke_bomb_goes_off_after_the_key_and_covers_the_pet_at_the_hide()
+    {
+        var animator = WithTopHat();
+        var start = Ms(1000);
+        animator.BeginTrick(start);
+        Assert.Null(animator.FrameAt(start + Frames(2) - Ms(1)).Smoke);
+        for (int n = 1; n <= PetAnimator.SmokeFrames; n++)
+            Assert.Equal($"smokebomb{n}", animator.FrameAt(start + Frames(1 + n)).Smoke);
+        // Frame 3, the one covering the whole canvas, lands exactly when the pet starts fading.
+        Assert.Equal("smokebomb3", animator.FrameAt(start + FullScreenPeek.TrickLead).Smoke);
+        Assert.Equal($"smokebomb{PetAnimator.SmokeFrames}", animator.FrameAt(start + TimeSpan.FromSeconds(10)).Smoke);   // last frame holds
+        Assert.True(animator.NeedsTicks(start + Frames(1 + PetAnimator.SmokeFrames) - Ms(1)));
+        Assert.False(animator.NeedsTicks(start + Frames(1 + PetAnimator.SmokeFrames)));   // invisible by then: no more frames
+    }
+
+    [Fact]
+    public void Hiding_without_the_lead_still_shows_the_covering_smoke()
+    {
+        var animator = WithTopHat();
+        animator.Vanish(Ms(5000));
+        Assert.True(animator.InTrick);
+        Assert.Equal("smokebomb3", animator.FrameAt(Ms(5000)).Smoke);
+    }
+
+    [Fact]
+    public void Hiding_again_while_gone_does_not_restart_the_smoke()
     {
         var animator = WithTopHat();
         animator.BeginTrick(Ms(0));
-        animator.Vanish(Ms(500));
-        Assert.Equal("smokebomb1", animator.FrameAt(Ms(500)).Cover);
-        // FrameInterval is 1/6 s rounded down to ticks, so frame indexes are checked a little past each boundary.
-        Assert.Equal("smokebomb2", animator.FrameAt(Ms(500 + 170)).Cover);
-        Assert.Equal("smokebomb3", animator.FrameAt(Ms(500 + 340)).Cover);
-        Assert.Equal("smokebomb3", animator.FrameAt(Ms(5000)).Cover);
-        Assert.False(animator.NeedsTicks(Ms(500) + PetAnimator.SmokeLength));   // invisible by then: no more frames
-    }
-
-    [Fact]
-    public void Vanishing_again_while_gone_does_not_restart_the_smoke()
-    {
-        var animator = WithTopHat();
-        animator.Vanish(Ms(0));
-        animator.Vanish(Ms(2000));   // full screen re-checked while hidden
-        Assert.Equal("smokebomb3", animator.FrameAt(Ms(2000)).Cover);
-        Assert.True(animator.InTrick);   // Vanish alone starts the trick
+        animator.Vanish(FullScreenPeek.TrickLead);
+        animator.Vanish(Ms(5000));   // full screen re-checked while hidden
+        Assert.Equal($"smokebomb{PetAnimator.SmokeFrames}", animator.FrameAt(Ms(5000)).Smoke);
     }
 
     [Fact]
@@ -456,11 +471,11 @@ public class PetAnimatorTests
     {
         var animator = WithTopHat();
         animator.BeginTrick(Ms(0));
-        animator.Vanish(Ms(500));
+        animator.FrameAt(Frames(3));   // smoke going
         animator.CancelTrick();
-        var frame = animator.FrameAt(Ms(600));
+        var frame = animator.FrameAt(Frames(4));
         Assert.False(animator.InTrick);
-        Assert.Null(frame.Cover);
+        Assert.Null(frame.Smoke);
         Assert.DoesNotContain(frame.Overlays, o => o.Sprite == "tophat");
     }
 

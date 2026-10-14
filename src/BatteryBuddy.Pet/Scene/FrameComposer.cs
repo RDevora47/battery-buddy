@@ -422,13 +422,6 @@ public static class FrameComposer
         // Earbuds sit in the ears, which a hat often covers; they stay in view over it.
         for (int i = 0; i < placements.Count; i++)
             if (placements[i].PlaceName == EarPlace) DrawDevice(i);
-        // The smoke bomb hides the whole pet, earbuds included; centred on the canvas whatever its size.
-        if (spec.Cover is { } coverName)
-        {
-            var cover = sprites[coverName];
-            int cell = res / cover.Density;
-            BlitAt(cover, (layout.CanvasWidth * res - cover.Width * cell) / 2, (h - cover.Height * cell) / 2, BodyOwner);
-        }
         if (spec.Picker is { } picker) DrawPicker(picker);
 
         return new ComposedFrame(w, h, res, pixels, owners, placements);

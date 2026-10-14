@@ -771,53 +771,26 @@ public class PerBudIndicatorTests
     }
 }
 
-public class FrameCoverTests
+public class SmokeLayerTests
 {
-    const uint Magenta = 0xFFFF00FF;
     static readonly TestSkin Axolotl = TestSkin.Load("axolotl");
 
-    // A solid magenta sprite, w x h art pixels at @2x.
-    static Dictionary<string, Sprite> WithCover(IReadOnlyDictionary<string, Sprite> sprites, int w, int h)
+    static Sprite Smoke(int artW, int artH) => new("smoke", artW * 2, artH * 2, new uint[artW * 2 * artH * 2], 2);
+
+    [Fact]
+    public void The_smoke_is_bottom_centred_on_the_canvas_just_below_it()
     {
-        var all = new Dictionary<string, Sprite>(sprites);
-        all["cover"] = new Sprite("cover", w * 2, h * 2, Enumerable.Repeat(Magenta, w * 2 * h * 2).ToArray(), 2);
-        return all;
+        var layout = Axolotl.Layout;
+        var (x, y) = SmokeLayer.Offset(layout, Smoke(60, 80), resolution: 2);
+        Assert.Equal((layout.CanvasWidth - 60) * 2 / 2, x);   // centred: (44 - 60) art px / 2, in frame pixels
+        Assert.Equal((layout.CanvasHeight + SmokeLayer.BelowCanvas - 80) * 2, y);   // its bottom just below the canvas
     }
 
     [Fact]
-    public void The_cover_is_centred_on_the_canvas_and_clipped_at_its_edges()
+    public void A_one_x_sprite_is_scaled_to_the_frame_resolution()
     {
-        var (_, layout, sprites) = Axolotl;
-        var all = WithCover(sprites, layout.CanvasWidth + 10, layout.CanvasHeight + 10);   // bigger than the canvas
-        var frame = FrameComposer.Compose(layout, all, Array.Empty<DevicePlacement>(),
-            new FrameSpec("body_idle", 0, Array.Empty<Overlay>(), Gills: "gills_perky", Cover: "cover"));
-        for (int y = 0; y < layout.CanvasHeight * 2; y++)
-            for (int x = 0; x < layout.CanvasWidth * 2; x++)
-                Assert.Equal(Magenta, frame.Pixels[y * frame.Width + x]);
-    }
-
-    [Fact]
-    public void A_small_cover_sits_in_the_middle()
-    {
-        var (_, layout, sprites) = Axolotl;
-        var frame = FrameComposer.Compose(layout, WithCover(sprites, 2, 2), Array.Empty<DevicePlacement>(),
-            new FrameSpec("body_idle", 0, Array.Empty<Overlay>(), Cover: "cover"));
-        // In frame pixels: the canvas centre minus half the cover (2 art pixels = 4 frame pixels).
-        int left = layout.CanvasWidth - 2, top = layout.CanvasHeight - 2;
-        Assert.Equal(Magenta, frame.Pixels[top * frame.Width + left]);
-        Assert.Equal(Magenta, frame.Pixels[(top + 3) * frame.Width + left + 3]);
-        Assert.NotEqual(Magenta, frame.Pixels[(top - 1) * frame.Width + left]);
-        Assert.NotEqual(Magenta, frame.Pixels[(top + 4) * frame.Width + left + 4]);
-    }
-
-    [Fact]
-    public void The_cover_hides_the_earbuds_drawn_over_hats()
-    {
-        var (_, layout, sprites) = Axolotl;
-        var earbuds = new DevicePlacement(TestReadings.Make("Buds", DeviceKind.Earbuds, battery: 100), "gills", "earbud");
-        var frame = FrameComposer.Compose(layout, WithCover(sprites, layout.CanvasWidth, layout.CanvasHeight), new[] { earbuds },
-            new FrameSpec("body_idle", 0, Array.Empty<Overlay>(), Gills: "gills_perky", Cover: "cover"));
-        var ear = layout.Places["gills"].Points[0];
-        Assert.Equal(Magenta, frame.Pixels[(ear.Y * 2 + 1) * frame.Width + ear.X * 2 + 1]);
+        var sprite = new Sprite("smoke", 2, 1, new uint[] { 0xFF000001, 0xFF000002 }, 1);
+        Assert.Equal(new uint[] { 0xFF000001, 0xFF000001, 0xFF000002, 0xFF000002, 0xFF000001, 0xFF000001, 0xFF000002, 0xFF000002 },
+            SmokeLayer.Pixels(sprite, resolution: 2));
     }
 }

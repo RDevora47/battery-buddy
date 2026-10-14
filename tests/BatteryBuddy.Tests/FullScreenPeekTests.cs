@@ -1,3 +1,4 @@
+using BatteryBuddy.Pet.Animation;
 using BatteryBuddy.Pet.Ui;
 
 namespace BatteryBuddy.Tests;
@@ -53,11 +54,11 @@ public class FullScreenPeekTests
     }
 
     [Fact]
-    public void The_trick_starts_half_a_second_before_it_hides()
+    public void The_trick_starts_four_frames_before_it_hides()
     {
         _peek.SetFullScreen(true, S(10));
-        Assert.Equal(S(0.5), FullScreenPeek.TrickLead);
-        Assert.Equal(S(10) + FullScreenPeek.IdleHide - S(0.5), _peek.TrickAt);
+        Assert.Equal(PetAnimator.FrameInterval * 4, FullScreenPeek.TrickLead);
+        Assert.Equal(S(10) + FullScreenPeek.IdleHide - FullScreenPeek.TrickLead, _peek.TrickAt);
         Assert.True(_peek.IsShown(_peek.TrickAt!.Value));   // still shown while performing it
     }
 

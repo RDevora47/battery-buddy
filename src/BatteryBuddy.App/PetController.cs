@@ -25,6 +25,8 @@ sealed class PetController : IDisposable
     PetAnimator _animator = null!;
     readonly Stopwatch _clock = Stopwatch.StartNew();
     WriteableBitmap _bitmap = null!;
+    WriteableBitmap _smokeBitmap = null!;
+    string? _smokeShown;                 // the smoke bomb frame in _smokeBitmap, while shown
     readonly DispatcherTimer _frameTimer;
     readonly DispatcherTimer _idleTimer;
     readonly DispatcherTimer _bubbleTimer;
@@ -171,6 +173,13 @@ sealed class PetController : IDisposable
         int resolution = FrameComposer.ResolutionOf(_sprites);
         _bitmap = new WriteableBitmap(_layout.FrameWidth * resolution, _layout.CanvasHeight * resolution, 96, 96, PixelFormats.Bgra32, null);
         _window.SetBitmap(_bitmap, resolution);
+        var smoke = _sprites["smokebomb1"];   // every smoke frame is this size
+        var (smokeX, smokeY) = SmokeLayer.Offset(_layout, smoke, resolution);
+        int cell = resolution / smoke.Density;
+        _smokeBitmap = new WriteableBitmap(smoke.Width * cell, smoke.Height * cell, 96, 96, PixelFormats.Bgra32, null);
+        _window.SetSmokeBitmap(_smokeBitmap, smokeX, smokeY);
+        _smokeShown = null;
+        _window.ShowSmoke(false);
     }
 
     // Top drawn over bottom, both anchored top-left; sized to cover both.
@@ -446,6 +455,17 @@ sealed class PetController : IDisposable
         var spec = _animator.FrameAt(now) with { Picker = _picker.DrawingAt(now) };
         _frame = FrameComposer.Compose(_layout, _sprites, _placements, spec, _settings.BatteryStyle);
         _bitmap.WritePixels(new Int32Rect(0, 0, _frame.Width, _frame.Height), _frame.Pixels, _frame.Width * 4, 0);
+        if (spec.Smoke != _smokeShown)
+        {
+            _smokeShown = spec.Smoke;
+            if (spec.Smoke is { } smoke)
+            {
+                int w = _smokeBitmap.PixelWidth;
+                _smokeBitmap.WritePixels(new Int32Rect(0, 0, w, _smokeBitmap.PixelHeight),
+                    SmokeLayer.Pixels(_sprites[smoke], _frame.Resolution), w * 4, 0);
+            }
+            _window.ShowSmoke(spec.Smoke is not null);
+        }
 #if DIAG_LOG
         _renders++;
 #endif
@@ -475,7 +495,7 @@ sealed class PetController : IDisposable
             _window.KeepOnTop();
             if (_peek.TrickAt is TimeSpan trick && _peek.HidesAt is TimeSpan hides)
             {
-                if (now >= trick) _animator.BeginTrick(now);
+                if (now >= trick) _animator.BeginTrick(trick);   // as scheduled, so the covering smoke lands on the hide
                 else _animator.CancelTrick();
                 var wait = (now >= trick ? hides : trick) - now;
                 _peekTimer.Interval = wait > TimeSpan.FromMilliseconds(50) ? wait : TimeSpan.FromMilliseconds(50);

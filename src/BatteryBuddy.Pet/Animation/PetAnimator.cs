@@ -21,8 +21,13 @@ public sealed class PetAnimator
     static readonly TimeSpan MouseHold = TimeSpan.FromSeconds(1);
     const int BlinkBurstFrame = 2;
 
-    /// <summary>The smoke bomb's three frames; after that its last frame holds while the pet finishes fading.</summary>
-    public static readonly TimeSpan SmokeLength = TimeSpan.FromTicks(FrameInterval.Ticks * 3);
+    /// <summary>
+    /// The smoke bomb's frames, "smokebomb1".."smokebomb5", one per frame from two frames into the trick: a poof on the
+    /// desk, billowing, the whole canvas covered (frame 3, when the pet starts fading), then wisps. The last one holds.
+    /// </summary>
+    public const int SmokeFrames = 5;
+    const int SmokeDelay = 2;     // frames from the trick's start: the hat, then the key press, then the bomb
+    const int SmokeCovers = 3;    // the frame that covers the whole pet
 
     readonly Func<double> _random;
     readonly PixelPoint _sweat;
@@ -42,7 +47,6 @@ public sealed class PetAnimator
     Paw _nextTap = Paw.Left;
     TimeSpan? _trickStart;   // the vanishing trick: top hat on since then
     TimeSpan? _trickTapAt;   // its key press, still to come
-    TimeSpan? _vanishStart;  // its smoke bomb, bursting since then
 
     enum Effect { Ploof, Whoosh }
 
@@ -97,7 +101,10 @@ public sealed class PetAnimator
     /// <summary>A device connected at (x, y): speed lines streak in and end in a sparkle.</summary>
     public void AddWhoosh(int x, int y, TimeSpan now) => _effects.Add((Effect.Whoosh, x, y, now));
 
-    /// <summary>Over full-screen content, about to hide: the pet puts on its top hat and presses a key a frame later.</summary>
+    /// <summary>
+    /// Over full-screen content, about to hide: the pet puts on its top hat, presses a key a frame later, and the smoke
+    /// bomb goes off a frame after that.
+    /// </summary>
     public void BeginTrick(TimeSpan now)
     {
         if (_trickStart is not null) return;
@@ -105,15 +112,11 @@ public sealed class PetAnimator
         _trickTapAt = now + FrameInterval;
     }
 
-    /// <summary>The pet hides: the smoke bomb goes off (and the trick starts, if it hadn't).</summary>
-    public void Vanish(TimeSpan now)
-    {
-        BeginTrick(now);
-        _vanishStart ??= now;
-    }
+    /// <summary>The pet hides. Normally the trick is already under way; if not, it starts as if on time, smoke covering the pet now.</summary>
+    public void Vanish(TimeSpan now) => BeginTrick(now - FrameInterval * (SmokeDelay + SmokeCovers - 1));
 
     /// <summary>The mouse moved or the full-screen content went: no trick, no hat, no smoke.</summary>
-    public void CancelTrick() => _trickStart = _trickTapAt = _vanishStart = null;
+    public void CancelTrick() => _trickStart = _trickTapAt = null;
 
     public bool InTrick => _trickStart is not null;
 
@@ -148,7 +151,7 @@ public sealed class PetAnimator
 
     public bool NeedsTicks(TimeSpan now) =>
         now < _leftPawUp || now < _rightPawUp || OnMouse(now) || IsSniffing(now) || InBurst(now) || _effects.Any(e => now - e.Start < EffectLength)
-        || _trickTapAt is not null || _vanishStart is TimeSpan v && now - v < SmokeLength;
+        || _trickStart is TimeSpan trick && now < trick + FrameInterval * (SmokeDelay + SmokeFrames - 1);
 
     public FrameSpec FrameAt(TimeSpan now)
     {
@@ -232,11 +235,19 @@ public sealed class PetAnimator
             }
         }
 
-        string? smoke = _vanishStart is TimeSpan vanish ? $"smokebomb{Math.Min(2, FrameIndex(now, vanish)) + 1}" : null;
         return new FrameSpec(body, dy, overlays, criticalDx,
             MoodCalculator.GillsFor(LowestBattery), MoodCalculator.FadeFor(LowestBattery),
             now < _leftPawUp ? 1 : 0, now < _rightPawUp ? 1 : 0, now < _clickUp ? 1 : 0, OnMouse(now), tail, dx, ReachStep(now),
-            Cover: smoke);
+            Smoke: SmokeAt(now));
+    }
+
+    // Counted in whole frame intervals from the trick's start (not FrameIndex, which rounds 1/6 s down), so the
+    // covering frame lands exactly on the hide.
+    string? SmokeAt(TimeSpan now)
+    {
+        if (_trickStart is not TimeSpan start) return null;
+        long frame = (now - start).Ticks / FrameInterval.Ticks - SmokeDelay;
+        return frame < 0 ? null : $"smokebomb{Math.Min(frame, SmokeFrames - 1) + 1}";
     }
 
     bool IsSniffing(TimeSpan now) =>

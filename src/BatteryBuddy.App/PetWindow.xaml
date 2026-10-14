@@ -23,5 +23,9 @@
                MouseRightButtonUp="PetImage_MouseRightButtonUp"
                MouseLeave="PetImage_MouseLeave"
                LostMouseCapture="PetImage_LostMouseCapture" />
+
+        <!-- The vanishing trick's smoke bomb, over the pet and bigger than it: sized and placed in code. -->
+        <Image x:Name="SmokeImage" Stretch="Fill" Visibility="Collapsed" IsHitTestVisible="False"
+               RenderOptions.BitmapScalingMode="NearestNeighbor" />
     </Canvas>
 </Window>

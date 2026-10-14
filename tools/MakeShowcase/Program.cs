@@ -50,6 +50,8 @@ Save("rescan", Render("axolotl", Desk(), 18, (pet, frame, now) =>
     if (frame == 8) pet.EndSniff(now);
 }));
 
+Save("vanish-choppa", Vanish("choppa"));
+
 // The banner: all twelve at work, two rows of six, each row bottom-aligned.
 Save("banner", Grid(pets.Select(p => working[p]).ToList(), columns: 6, gap: 6 * Scale));
 Console.WriteLine($"Wrote {output}");
@@ -62,7 +64,8 @@ Clip Render(string skin, DeviceReading[] devices, int frames, Action<PetAnimator
         File.ReadAllText(Path.Combine(skins, skin, "sprites.txt")));
     // With a random of 0 the idle burst comes every 3 s; starting the clock 2.5 s early plays the first at 0.5 s.
     var pet = new PetAnimator(() => 0, TimeSpan.FromSeconds(-2.5), layout.Overlays["sweat"],
-        layout.Overlays["saiyan"], layout.Overlays["strawhat"], layout.Overlays["magnifier"])
+        layout.Overlays["saiyan"], layout.Overlays["strawhat"], layout.Overlays["magnifier"],
+        layout.Overlays.GetValueOrDefault("tophat", layout.Overlays["strawhat"]))
     {
         Hat = hat,
         Hops = layout.Hops,
@@ -87,6 +90,21 @@ Clip Render(string skin, DeviceReading[] devices, int frames, Action<PetAnimator
         composed.Select(f => Enlarge(f.Pixels, f.Width, f.Height, k)).ToList());
     return Crop(clip, Scale);
 }
+
+// The vanishing trick, as over full-screen content: a beat of rest, top hat, key press, smoke bomb, fade.
+Clip Vanish(string pet)
+{
+    var clip = Render(pet, Desk(), 12, (p, frame, now) =>
+    {
+        if (frame == 3) p.BeginTrick(now);
+        if (frame == 6) p.Vanish(now);
+    });
+    // The app fades the window out over 400 ms from the first smoke frame: about 2.4 frames at 6 fps.
+    double[] alpha = { 1, 1, 1, 1, 1, 1, 1, 0.67, 0.33, 0, 0, 0 };
+    return clip with { Frames = clip.Frames.Select((f, i) => f.Select(px => Fade(px, alpha[i])).ToArray()).ToList() };
+}
+
+static uint Fade(uint argb, double alpha) => (uint)Math.Round((argb >> 24) * alpha) << 24 | argb & 0xFFFFFF;
 
 void Save(string name, Clip clip)
 {

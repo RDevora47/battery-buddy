@@ -40,6 +40,7 @@ public class SkinTests
         "smoke1", "smoke2", "smoke3", "ploof_text", "sweat",
         "bolt", "full", "whoosh1", "whoosh2", "whoosh3", "saiyan", "strawhat",
         "tophat", "smokebomb1", "smokebomb2", "smokebomb3", "smokebomb4", "smokebomb5",
+        "headband1", "headband2", "leaves1", "leaves2", "leaves3", "leaves4", "leaves5",
         "gills_perky", "gills_droopy", "gills_limp", "paw", "desk",
         "channel_bubble", "channel_empty", "channel_digit1", "channel_digit2", "channel_digit3", "channel_trail",
     };
@@ -251,8 +252,9 @@ public class SkinTests
                     AssertFits(Layout, $"{name}/{spriteName}", pt.X, pt.Y + dy, Sprites[spriteName].ArtWidth, Sprites[spriteName].ArtHeight);
             AssertFits(Layout, $"{name}/bar", place.Bar.X, place.Bar.Y + dy, BatteryBar.Width, BatteryBar.Height);
         }
-        foreach (var (name, pt) in Layout.Overlays)   // overlays bob with the pet
-            AssertFits(Layout, $"overlay {name}", pt.X, pt.Y + 1, Sprites[name].ArtWidth, Sprites[name].ArtHeight);
+        foreach (var (name, pt) in Layout.Overlays)   // overlays bob with the pet; the headband's spot holds both its poses
+            foreach (var sprite in name == "headband" ? new[] { "headband1", "headband2" } : new[] { name })
+                AssertFits(Layout, $"overlay {sprite}", pt.X, pt.Y + 1, Sprites[sprite].ArtWidth, Sprites[sprite].ArtHeight);
     }
 
     [Fact]
@@ -394,6 +396,41 @@ public class SkinTests
         Assert.True(ox >= -11 * 2, $"{-ox / 2} art pixels past the canvas's side");
         Assert.True(oy >= -35 * 2, $"{-oy / 2} art pixels above the canvas");
         Assert.True(SmokeLayer.BelowCanvas <= 35);
+    }
+
+    [Fact]
+    public void The_ninja_leaves_match_the_smoke_frame_for_frame()
+    {
+        var sprites = TestSkin.Load("choppa").Sprites;
+        var smoke = sprites["smokebomb1"];
+        foreach (var n in Enumerable.Range(1, PetAnimator.SmokeFrames))
+            Assert.Equal((smoke.Width, smoke.Height), (sprites[$"leaves{n}"].Width, sprites[$"leaves{n}"].Height));
+        Assert.Equal((sprites["headband1"].Width, sprites["headband1"].Height), (sprites["headband2"].Width, sprites["headband2"].Height));
+    }
+
+    [Theory]
+    [InlineData("choppa", 7, 12)]   // head-top row, eye row (body art rows), as in the hat tests
+    public void Headband_sits_across_the_forehead_above_the_eyes(string skin, int headTop, int eyeRow)
+    {
+        // The band is the part reaching the sprite's left edge (it wraps round the head); the tails hang off its knot.
+        var (_, Layout, Sprites) = TestSkin.Load(skin);
+        var at = Layout.Overlays["headband"];
+        foreach (var pose in new[] { "headband1", "headband2" })
+        {
+            var band = Sprites[pose];
+            var rows = Enumerable.Range(0, band.Height).Where(y => band.Pixels[y * band.Width] != 0).ToList();
+            Assert.InRange(at.Y * 2 + rows.First(), (Layout.Body.Y + headTop) * 2, (Layout.Body.Y + eyeRow) * 2 - 1);
+            Assert.InRange(at.Y * 2 + rows.Last(), (Layout.Body.Y + headTop) * 2, (Layout.Body.Y + eyeRow) * 2 - 1);
+        }
+        // The plate, in the middle of the band, is all the top row holds: it stands up above the band. It mustn't
+        // hang down over the eyes either.
+        var first = Sprites["headband1"];
+        var plate = Enumerable.Range(0, first.Width).Where(x => first.Pixels[x] != 0).ToList();
+        int plateMid = (plate.First() + plate.Last()) / 2;
+        int plateBottom = Enumerable.Range(0, first.Height).Last(y => first.Pixels[y * first.Width + plateMid] != 0);
+        Assert.True(at.Y * 2 + plateBottom < (Layout.Body.Y + eyeRow) * 2, "the plate covers the eyes");
+        int centre = at.X * 2 + (plate.First() + plate.Last()) / 2, body = Layout.Body.X * 2 + Sprites["body_idle"].Width / 2;
+        Assert.InRange(centre, body - 3, body + 3);   // the plate in the middle of the forehead
     }
 
     [Theory]

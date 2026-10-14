@@ -51,13 +51,14 @@ Save("rescan", Render("axolotl", Desk(), 18, (pet, frame, now) =>
 }));
 
 Save("vanish-choppa", Vanish("choppa"));
+Save("vanish-ninja-choppa", Vanish("choppa", VanishStyle.Ninja));
 
 // The banner: all twelve at work, two rows of six, each row bottom-aligned.
 Save("banner", Grid(pets.Select(p => working[p]).ToList(), columns: 6, gap: 6 * Scale));
 Console.WriteLine($"Wrote {output}");
 
 Clip Render(string skin, DeviceReading[] devices, int frames, Action<PetAnimator, int, TimeSpan>? script = null,
-    FullChargeHat hat = FullChargeHat.SaiyanHair)
+    FullChargeHat hat = FullChargeHat.SaiyanHair, VanishStyle vanish = VanishStyle.Magician)
 {
     var layout = SkinLayout.Parse(File.ReadAllText(Path.Combine(skins, skin, "skin.json")));
     var sprites = SpriteSheetParser.Parse(File.ReadAllText(Path.Combine(skins, "common", "sprites.txt")),
@@ -65,9 +66,11 @@ Clip Render(string skin, DeviceReading[] devices, int frames, Action<PetAnimator
     // With a random of 0 the idle burst comes every 3 s; starting the clock 2.5 s early plays the first at 0.5 s.
     var pet = new PetAnimator(() => 0, TimeSpan.FromSeconds(-2.5), layout.Overlays["sweat"],
         layout.Overlays["saiyan"], layout.Overlays["strawhat"], layout.Overlays["magnifier"],
-        layout.Overlays.GetValueOrDefault("tophat", layout.Overlays["strawhat"]))
+        layout.Overlays.GetValueOrDefault("tophat", layout.Overlays["strawhat"]),
+        layout.Overlays.GetValueOrDefault("headband", layout.Overlays["strawhat"]))
     {
         Hat = hat,
+        VanishStyle = vanish,
         Hops = layout.Hops,
         ReachFrames = layout.Reach is null ? 0 : Enumerable.Range(1, 9).TakeWhile(n => sprites.ContainsKey($"reach{n}")).Count(),
         Mood = MoodCalculator.From(devices),
@@ -98,6 +101,7 @@ Clip Render(string skin, DeviceReading[] devices, int frames, Action<PetAnimator
         if (spec.Smoke is { } smoke)
         {
             var layer = SmokeLayer.Pixels(sprites[smoke], res);
+            if (spec.Leaves is { } leaves) SmokeLayer.Over(layer, SmokeLayer.Pixels(sprites[leaves], res));
             for (int y = 0; y < smokeH; y++)
                 for (int x = 0; x < smokeW; x++)
                     if (layer[y * smokeW + x] != 0) pixels[(padT + sy + y) * w + padL + sx + x] = layer[y * smokeW + x];
@@ -111,14 +115,14 @@ Clip Render(string skin, DeviceReading[] devices, int frames, Action<PetAnimator
 }
 
 // The vanishing trick, as over full-screen content: a beat of rest, top hat, key press, smoke bomb, fade.
-Clip Vanish(string pet)
+Clip Vanish(string pet, VanishStyle style = VanishStyle.Magician)
 {
     // The trick starts at frame 3; the smoke goes off at 5 and covers the canvas at 7, when the app starts its 400 ms
     // fade (about 2.4 frames at 6 fps) while the smoke breaks into wisps.
     var clip = Render(pet, Desk(), 13, (p, frame, now) =>
     {
         if (frame == 3) p.BeginTrick(now);
-    });
+    }, vanish: style);
     double[] alpha = { 1, 1, 1, 1, 1, 1, 1, 1, 0.6, 0.2, 0, 0, 0 };
     return clip with { Frames = clip.Frames.Select((f, i) => f.Select(px => Fade(px, alpha[i])).ToArray()).ToList() };
 }

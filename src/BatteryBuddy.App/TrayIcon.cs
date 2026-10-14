@@ -58,8 +58,8 @@ sealed class TrayIcon : IDisposable
         var vanish = new WinForms.ToolStripMenuItem("Vanish");
         var vanishItems = new[]
         {
-            (Style: VanishStyle.Magician, Item: new WinForms.ToolStripMenuItem("Magician (top hat && smoke)")),
-            (Style: VanishStyle.Ninja, Item: new WinForms.ToolStripMenuItem("Ninja (headband && leaves)")),
+            (Style: VanishStyle.Magician, Item: new WinForms.ToolStripMenuItem("Magician")),
+            (Style: VanishStyle.Ninja, Item: new WinForms.ToolStripMenuItem("Ninja")),
             (Style: VanishStyle.Fade, Item: new WinForms.ToolStripMenuItem("Just fade")),
         };
         void SyncVanish()

@@ -71,6 +71,7 @@ Clip Render(string skin, DeviceReading[] devices, int frames, Action<PetAnimator
     {
         Hat = hat,
         VanishStyle = vanish,
+        Hood = sprites.ContainsKey("ninjahood") ? layout.Body : null,
         Hops = layout.Hops,
         ReachFrames = layout.Reach is null ? 0 : Enumerable.Range(1, 9).TakeWhile(n => sprites.ContainsKey($"reach{n}")).Count(),
         Mood = MoodCalculator.From(devices),

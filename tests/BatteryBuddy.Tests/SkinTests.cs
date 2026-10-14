@@ -408,6 +408,37 @@ public class SkinTests
         Assert.Equal((sprites["headband1"].Width, sprites["headband1"].Height), (sprites["headband2"].Width, sprites["headband2"].Height));
     }
 
+    // The ninja's hood, drawn over body_idle at the body spot: body art rows of the eyes (left open) and of the muzzle
+    // (covered: nose, mouth).
+    [Theory]
+    [InlineData("choppa", 11, 13, 15, 18)]
+    public void The_ninja_hood_covers_the_muzzle_and_leaves_the_eyes_and_ears_out(string skin, int eyesFrom, int eyesTo, int muzzleFrom, int muzzleTo)
+    {
+        var (_, Layout, Sprites) = TestSkin.Load(skin);
+        var hood = Sprites["ninjahood"];
+        var body = Sprites["body_idle"];
+        Assert.Equal((body.Width, body.Height), (hood.Width, hood.Height));   // laid over the body
+        bool Hood(int x, int y) => hood.Pixels[y * hood.Width + x] != 0;
+        bool Body(int x, int y) => x >= 0 && y >= 0 && x < body.Width && y < body.Height && body.Pixels[y * body.Width + x] != 0;
+        for (int y = 0; y < hood.Height; y++)
+            for (int x = 0; x < hood.Width; x++)
+            {
+                if (y >= eyesFrom * 2 && y < (eyesTo + 1) * 2)
+                    Assert.False(Hood(x, y), $"the hood covers the eyes at ({x}, {y})");
+                if (y >= muzzleFrom * 2 && y < (muzzleTo + 1) * 2 && Body(x, y))
+                    Assert.True(Hood(x, y), $"the muzzle shows at ({x}, {y})");
+                // Cloth hugs the head: nothing past the body's outline by more than one art pixel.
+                if (Hood(x, y))
+                    Assert.True(Enumerable.Range(-2, 5).Any(d => Body(x + d, y) || Body(x, y + d)), $"the hood sticks out at ({x}, {y})");
+            }
+        // The ears poke out: the hood leaves every ear pose (drawn over the body, at its spot) uncovered.
+        foreach (var ears in new[] { "gills_perky", "gills_droopy", "gills_limp" }.Select(n => Sprites[n]))
+            for (int y = 0; y < ears.Height; y++)
+                for (int x = 0; x < ears.Width; x++)
+                    if (ears.Pixels[y * ears.Width + x] != 0 && x < hood.Width && y < hood.Height)
+                        Assert.False(Hood(x, y), $"the hood covers an ear at ({x}, {y})");
+    }
+
     [Theory]
     [InlineData("choppa", 7, 12)]   // head-top row, eye row (body art rows), as in the hat tests
     public void Headband_sits_across_the_forehead_above_the_eyes(string skin, int headTop, int eyeRow)

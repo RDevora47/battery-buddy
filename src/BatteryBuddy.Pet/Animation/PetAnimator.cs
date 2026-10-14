@@ -76,6 +76,12 @@ public sealed class PetAnimator
 
     public FullChargeHat Hat { get; set; } = FullChargeHat.SaiyanHair;
 
+    /// <summary>
+    /// Where the skin's "ninjahood" goes (its body spot), or null for a skin without one: the ninja wears it under its
+    /// headband, following the body.
+    /// </summary>
+    public PixelPoint? Hood { get; init; }
+
     /// <summary>The trick it vanishes with over full-screen content; <see cref="VanishStyle.Fade"/> performs none.</summary>
     public VanishStyle VanishStyle { get; set; } = VanishStyle.Magician;
 
@@ -219,10 +225,14 @@ public sealed class PetAnimator
         else if (Hops && now < _rightPawUp && now >= _clickUp) (dx, dy) = (1, -HopHeight);
 
         if (_trickStart is TimeSpan trick)
+        {
             overlays.Insert(0, VanishStyle == VanishStyle.Ninja
                 // The headband's tails flutter, one pose a frame.
                 ? new Overlay($"headband{(now - trick).Ticks / FrameInterval.Ticks % 2 + 1}", _headband.X + dx, _headband.Y + dy)
                 : new Overlay("tophat", _tophat.X + dx, _tophat.Y + dy));
+            if (VanishStyle == VanishStyle.Ninja && Hood is PixelPoint hood)
+                overlays.Insert(0, new Overlay("ninjahood", hood.X + dx, hood.Y + dy));   // under the headband
+        }
         else if (SuperSaiyan && Hat != FullChargeHat.None)
         {
             var (sprite, at) = Hat == FullChargeHat.StrawHat ? ("strawhat", _strawHat) : ("saiyan", _saiyan);

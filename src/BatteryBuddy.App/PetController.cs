@@ -168,6 +168,7 @@ sealed class PetController : IDisposable
         {
             Hat = _settings.Hat,
             VanishStyle = _settings.Vanish,
+            Hood = _sprites.ContainsKey("ninjahood") ? _layout.Body : null,
             Hops = _layout.Hops,
             ReachFrames = _layout.Reach is null ? 0 : Enumerable.Range(1, 9).TakeWhile(n => _sprites.ContainsKey($"reach{n}")).Count(),
         };

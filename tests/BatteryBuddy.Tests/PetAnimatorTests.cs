@@ -566,4 +566,48 @@ public class PetAnimatorTests
         Assert.False(frame.Vanished);   // the window's fade alone hides it
         Assert.DoesNotContain(frame.Overlays, o => o.Sprite is "tophat" or "headband1" or "headband2");
     }
+
+    static readonly PixelPoint Body = new(6, 8);
+
+    [Fact]
+    public void The_ninja_pulls_on_its_hood_under_the_headband()
+    {
+        var animator = new PetAnimator(() => 0, TimeSpan.Zero, new PixelPoint(36, 10), headband: Headband)
+        {
+            VanishStyle = VanishStyle.Ninja,
+            Hood = Body,
+        };
+        animator.BeginTrick(Ms(0));
+        var overlays = animator.FrameAt(Ms(0)).Overlays.Select(o => o.Sprite).ToList();
+        Assert.Equal(new Overlay("ninjahood", Body.X, Body.Y), animator.FrameAt(Ms(0)).Overlays[0]);
+        Assert.True(overlays.IndexOf("ninjahood") < overlays.IndexOf("headband1"), "the headband ties over the hood");
+    }
+
+    [Fact]
+    public void The_hood_moves_with_the_pet()
+    {
+        // A perched pet hops onto the key it presses for the trick: the hood goes along.
+        var animator = new PetAnimator(() => 0, TimeSpan.Zero, new PixelPoint(36, 10), headband: Headband)
+        {
+            VanishStyle = VanishStyle.Ninja,
+            Hood = Body,
+            Hops = true,
+        };
+        animator.BeginTrick(Ms(0));
+        var hop = animator.FrameAt(Frames(1));
+        Assert.Equal(-PetAnimator.HopHeight, hop.BodyDy);
+        Assert.Equal(new Overlay("ninjahood", Body.X + hop.BodyDx, Body.Y + hop.BodyDy), hop.Overlays[0]);
+    }
+
+    [Fact]
+    public void No_hood_without_one_for_the_skin_or_for_the_magician()
+    {
+        var bare = Ninja();   // its skin has no hood yet: headband only
+        bare.BeginTrick(Ms(0));
+        Assert.DoesNotContain(bare.FrameAt(Ms(0)).Overlays, o => o.Sprite == "ninjahood");
+
+        var magician = new PetAnimator(() => 0, TimeSpan.Zero, new PixelPoint(36, 10), tophat: TopHat) { Hood = Body };
+        magician.BeginTrick(Ms(0));
+        Assert.DoesNotContain(magician.FrameAt(Ms(0)).Overlays, o => o.Sprite == "ninjahood");
+    }
 }

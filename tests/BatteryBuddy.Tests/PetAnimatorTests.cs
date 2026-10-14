@@ -404,4 +404,83 @@ public class PetAnimatorTests
         var frame = animator.FrameAt(Ms(100));
         Assert.Equal((0, 0, 1), (frame.BodyDx, frame.BodyDy, frame.PawLeftDy));
     }
+
+    static readonly PixelPoint TopHat = new(9, 2);
+
+    static PetAnimator WithTopHat() => new(() => 0, TimeSpan.Zero, new PixelPoint(36, 10), tophat: TopHat);
+
+    [Fact]
+    public void The_trick_puts_on_the_top_hat_then_presses_a_key()
+    {
+        var animator = WithTopHat();
+        animator.BeginTrick(Ms(1000));
+        Assert.True(animator.InTrick);
+        var hatOn = animator.FrameAt(Ms(1000));
+        Assert.Contains(new Overlay("tophat", TopHat.X, TopHat.Y), hatOn.Overlays);
+        Assert.Equal(0, hatOn.PawLeftDy + hatOn.PawRightDy);   // not yet
+
+        Assert.True(animator.NeedsTicks(Ms(1100)));
+        var press = animator.FrameAt(Ms(1000) + PetAnimator.FrameInterval);
+        Assert.Equal(1, press.PawLeftDy + press.PawRightDy);   // one paw, one frame
+        var after = animator.FrameAt(Ms(1000) + PetAnimator.FrameInterval * 2);
+        Assert.Equal(0, after.PawLeftDy + after.PawRightDy);
+        Assert.Null(after.Cover);   // no smoke until it vanishes
+    }
+
+    [Fact]
+    public void Vanishing_bursts_the_smoke_bomb_and_holds_its_last_frame()
+    {
+        var animator = WithTopHat();
+        animator.BeginTrick(Ms(0));
+        animator.Vanish(Ms(500));
+        Assert.Equal("smokebomb1", animator.FrameAt(Ms(500)).Cover);
+        // FrameInterval is 1/6 s rounded down to ticks, so frame indexes are checked a little past each boundary.
+        Assert.Equal("smokebomb2", animator.FrameAt(Ms(500 + 170)).Cover);
+        Assert.Equal("smokebomb3", animator.FrameAt(Ms(500 + 340)).Cover);
+        Assert.Equal("smokebomb3", animator.FrameAt(Ms(5000)).Cover);
+        Assert.False(animator.NeedsTicks(Ms(500) + PetAnimator.SmokeLength));   // invisible by then: no more frames
+    }
+
+    [Fact]
+    public void Vanishing_again_while_gone_does_not_restart_the_smoke()
+    {
+        var animator = WithTopHat();
+        animator.Vanish(Ms(0));
+        animator.Vanish(Ms(2000));   // full screen re-checked while hidden
+        Assert.Equal("smokebomb3", animator.FrameAt(Ms(2000)).Cover);
+        Assert.True(animator.InTrick);   // Vanish alone starts the trick
+    }
+
+    [Fact]
+    public void Cancelling_takes_off_the_hat_and_clears_the_smoke()
+    {
+        var animator = WithTopHat();
+        animator.BeginTrick(Ms(0));
+        animator.Vanish(Ms(500));
+        animator.CancelTrick();
+        var frame = animator.FrameAt(Ms(600));
+        Assert.False(animator.InTrick);
+        Assert.Null(frame.Cover);
+        Assert.DoesNotContain(frame.Overlays, o => o.Sprite == "tophat");
+    }
+
+    [Fact]
+    public void The_top_hat_replaces_a_full_charge_hat_during_the_trick()
+    {
+        var animator = WithTopHat();
+        animator.SuperSaiyan = true;
+        animator.BeginTrick(Ms(0));
+        var frame = animator.FrameAt(Ms(0));
+        Assert.Contains(frame.Overlays, o => o.Sprite == "tophat");
+        Assert.DoesNotContain(frame.Overlays, o => o.Sprite is "saiyan" or "strawhat");
+    }
+
+    [Fact]
+    public void No_idle_burst_during_the_trick()
+    {
+        var animator = WithTopHat();   // first idle burst due at 3 s
+        animator.BeginTrick(TimeSpan.FromSeconds(2.9));
+        var frame = animator.FrameAt(TimeSpan.FromSeconds(3) + Ms(340));   // the burst's blink frame
+        Assert.Equal("body_idle", frame.BodySprite);
+    }
 }

@@ -21,11 +21,15 @@ public sealed class PetAnimator
     static readonly TimeSpan MouseHold = TimeSpan.FromSeconds(1);
     const int BlinkBurstFrame = 2;
 
+    /// <summary>The smoke bomb's three frames; after that its last frame holds while the pet finishes fading.</summary>
+    public static readonly TimeSpan SmokeLength = TimeSpan.FromTicks(FrameInterval.Ticks * 3);
+
     readonly Func<double> _random;
     readonly PixelPoint _sweat;
     readonly PixelPoint _saiyan;
     readonly PixelPoint _strawHat;
     readonly PixelPoint _magnifier;
+    readonly PixelPoint _tophat;
     readonly List<(Effect Kind, int X, int Y, TimeSpan Start)> _effects = new();
     TimeSpan? _sniffStart;
     TimeSpan? _sniffEndRequested;
@@ -36,12 +40,16 @@ public sealed class PetAnimator
     TimeSpan _offMouse;     // the right paw rests on the mouse until this time
     TimeSpan _toMouse;      // when it last set out for the mouse
     Paw _nextTap = Paw.Left;
+    TimeSpan? _trickStart;   // the vanishing trick: top hat on since then
+    TimeSpan? _trickTapAt;   // its key press, still to come
+    TimeSpan? _vanishStart;  // its smoke bomb, bursting since then
 
     enum Effect { Ploof, Whoosh }
 
     public PetAnimator(Func<double> random, TimeSpan now, PixelPoint sweat, PixelPoint saiyan = default, PixelPoint strawHat = default,
-        PixelPoint magnifier = default)
+        PixelPoint magnifier = default, PixelPoint tophat = default)
     {
+        _tophat = tophat;
         _strawHat = strawHat;
         _magnifier = magnifier;
         _random = random;
@@ -89,6 +97,26 @@ public sealed class PetAnimator
     /// <summary>A device connected at (x, y): speed lines streak in and end in a sparkle.</summary>
     public void AddWhoosh(int x, int y, TimeSpan now) => _effects.Add((Effect.Whoosh, x, y, now));
 
+    /// <summary>Over full-screen content, about to hide: the pet puts on its top hat and presses a key a frame later.</summary>
+    public void BeginTrick(TimeSpan now)
+    {
+        if (_trickStart is not null) return;
+        _trickStart = now;
+        _trickTapAt = now + FrameInterval;
+    }
+
+    /// <summary>The pet hides: the smoke bomb goes off (and the trick starts, if it hadn't).</summary>
+    public void Vanish(TimeSpan now)
+    {
+        BeginTrick(now);
+        _vanishStart ??= now;
+    }
+
+    /// <summary>The mouse moved or the full-screen content went: no trick, no hat, no smoke.</summary>
+    public void CancelTrick() => _trickStart = _trickTapAt = _vanishStart = null;
+
+    public bool InTrick => _trickStart is not null;
+
     /// <summary>A key went down: the paws take turns tapping, each press lasting one frame.</summary>
     public void KeyTap(TimeSpan now)
     {
@@ -119,10 +147,16 @@ public sealed class PetAnimator
     }
 
     public bool NeedsTicks(TimeSpan now) =>
-        now < _leftPawUp || now < _rightPawUp || OnMouse(now) || IsSniffing(now) || InBurst(now) || _effects.Any(e => now - e.Start < EffectLength);
+        now < _leftPawUp || now < _rightPawUp || OnMouse(now) || IsSniffing(now) || InBurst(now) || _effects.Any(e => now - e.Start < EffectLength)
+        || _trickTapAt is not null || _vanishStart is TimeSpan v && now - v < SmokeLength;
 
     public FrameSpec FrameAt(TimeSpan now)
     {
+        if (_trickTapAt is TimeSpan tap && now >= tap)
+        {
+            KeyTap(tap);
+            _trickTapAt = null;
+        }
         _effects.RemoveAll(e => now - e.Start >= EffectLength);
         // The idle burst only plays when nothing else is animating: it waits for the next slot and stops if interrupted.
         bool busy = OtherAnimationRunning(now);
@@ -176,7 +210,9 @@ public sealed class PetAnimator
         if (Hops && now < _leftPawUp) (dx, dy) = (-1, -HopHeight);
         else if (Hops && now < _rightPawUp && now >= _clickUp) (dx, dy) = (1, -HopHeight);
 
-        if (SuperSaiyan && Hat != FullChargeHat.None)
+        if (InTrick)
+            overlays.Insert(0, new Overlay("tophat", _tophat.X + dx, _tophat.Y + dy));
+        else if (SuperSaiyan && Hat != FullChargeHat.None)
         {
             var (sprite, at) = Hat == FullChargeHat.StrawHat ? ("strawhat", _strawHat) : ("saiyan", _saiyan);
             overlays.Insert(0, new Overlay(sprite, at.X + dx, at.Y + dy));
@@ -196,9 +232,11 @@ public sealed class PetAnimator
             }
         }
 
+        string? smoke = _vanishStart is TimeSpan vanish ? $"smokebomb{Math.Min(2, FrameIndex(now, vanish)) + 1}" : null;
         return new FrameSpec(body, dy, overlays, criticalDx,
             MoodCalculator.GillsFor(LowestBattery), MoodCalculator.FadeFor(LowestBattery),
-            now < _leftPawUp ? 1 : 0, now < _rightPawUp ? 1 : 0, now < _clickUp ? 1 : 0, OnMouse(now), tail, dx, ReachStep(now));
+            now < _leftPawUp ? 1 : 0, now < _rightPawUp ? 1 : 0, now < _clickUp ? 1 : 0, OnMouse(now), tail, dx, ReachStep(now),
+            Cover: smoke);
     }
 
     bool IsSniffing(TimeSpan now) =>
@@ -219,7 +257,7 @@ public sealed class PetAnimator
     }
 
     bool OtherAnimationRunning(TimeSpan now) =>
-        now < _leftPawUp || now < _rightPawUp || OnMouse(now) || IsSniffing(now) || _effects.Count > 0;
+        now < _leftPawUp || now < _rightPawUp || OnMouse(now) || IsSniffing(now) || _effects.Count > 0 || InTrick;
 
     bool InBurst(TimeSpan now) => _burstStart is TimeSpan start && now - start < BurstLength;
 

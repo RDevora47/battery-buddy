@@ -16,6 +16,12 @@ public sealed class FullScreenPeek
     /// <summary>When the pet hides unless the mouse moves; null while it stays shown.</summary>
     public TimeSpan? HidesAt => IsFullScreen ? _lastMove + IdleHide : null;
 
+    /// <summary>How long before hiding the pet starts its vanishing trick (top hat, key press), so the smoke comes at the hide.</summary>
+    public static readonly TimeSpan TrickLead = TimeSpan.FromSeconds(0.5);
+
+    /// <summary>When the vanishing trick starts unless the mouse moves; null while the pet stays shown.</summary>
+    public TimeSpan? TrickAt => HidesAt - TrickLead;
+
     public bool IsShown(TimeSpan now) => HidesAt is not TimeSpan hides || now < hides;
 
     /// <summary>Full-screen content covers the pet's monitor (or no longer does). Entering it counts as a move, as for the pointer.</summary>

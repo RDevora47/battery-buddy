@@ -511,4 +511,59 @@ public class PetAnimatorTests
         var frame = animator.FrameAt(TimeSpan.FromSeconds(3) + Ms(340));   // the burst's blink frame
         Assert.Equal("body_idle", frame.BodySprite);
     }
+
+    static readonly PixelPoint Headband = new(11, 9);
+
+    static PetAnimator Ninja() => new(() => 0, TimeSpan.Zero, new PixelPoint(36, 10), tophat: TopHat, headband: Headband)
+    {
+        VanishStyle = VanishStyle.Ninja,
+    };
+
+    [Fact]
+    public void The_ninja_ties_on_a_fluttering_headband_instead_of_the_top_hat()
+    {
+        var animator = Ninja();
+        animator.BeginTrick(Ms(0));
+        var first = animator.FrameAt(Frames(0));
+        Assert.Contains(new Overlay("headband1", Headband.X, Headband.Y), first.Overlays);
+        Assert.Contains(new Overlay("headband2", Headband.X, Headband.Y), animator.FrameAt(Frames(1)).Overlays);   // tails flutter
+        Assert.Contains(new Overlay("headband1", Headband.X, Headband.Y), animator.FrameAt(Frames(2)).Overlays);
+        Assert.DoesNotContain(first.Overlays, o => o.Sprite == "tophat");
+    }
+
+    [Fact]
+    public void The_ninja_vanishes_in_smoke_and_leaves()
+    {
+        var animator = Ninja();
+        animator.BeginTrick(Ms(0));
+        Assert.Null(animator.FrameAt(Frames(1)).Leaves);
+        for (int n = 1; n <= PetAnimator.SmokeFrames; n++)
+        {
+            var frame = animator.FrameAt(Frames(1 + n));
+            Assert.Equal($"smokebomb{n}", frame.Smoke);
+            Assert.Equal($"leaves{n}", frame.Leaves);
+        }
+    }
+
+    [Fact]
+    public void The_magician_smoke_has_no_leaves()
+    {
+        var animator = WithTopHat();
+        animator.BeginTrick(Ms(0));
+        Assert.All(Enumerable.Range(0, 8), n => Assert.Null(animator.FrameAt(Frames(n)).Leaves));
+    }
+
+    [Fact]
+    public void Just_fading_performs_no_trick()
+    {
+        var animator = WithTopHat();
+        animator.VanishStyle = VanishStyle.Fade;
+        animator.BeginTrick(Ms(0));
+        animator.Vanish(FullScreenPeek.TrickLead);
+        Assert.False(animator.InTrick);
+        var frame = animator.FrameAt(FullScreenPeek.TrickLead);
+        Assert.Null(frame.Smoke);
+        Assert.False(frame.Vanished);   // the window's fade alone hides it
+        Assert.DoesNotContain(frame.Overlays, o => o.Sprite is "tophat" or "headband1" or "headband2");
+    }
 }

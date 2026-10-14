@@ -35,6 +35,7 @@ public sealed class PetAnimator
     readonly PixelPoint _strawHat;
     readonly PixelPoint _magnifier;
     readonly PixelPoint _tophat;
+    readonly PixelPoint _headband;
     readonly List<(Effect Kind, int X, int Y, TimeSpan Start)> _effects = new();
     TimeSpan? _sniffStart;
     TimeSpan? _sniffEndRequested;
@@ -51,9 +52,10 @@ public sealed class PetAnimator
     enum Effect { Ploof, Whoosh }
 
     public PetAnimator(Func<double> random, TimeSpan now, PixelPoint sweat, PixelPoint saiyan = default, PixelPoint strawHat = default,
-        PixelPoint magnifier = default, PixelPoint tophat = default)
+        PixelPoint magnifier = default, PixelPoint tophat = default, PixelPoint headband = default)
     {
         _tophat = tophat;
+        _headband = headband;
         _strawHat = strawHat;
         _magnifier = magnifier;
         _random = random;
@@ -73,6 +75,9 @@ public sealed class PetAnimator
     public bool SuperSaiyan { get; set; }
 
     public FullChargeHat Hat { get; set; } = FullChargeHat.SaiyanHair;
+
+    /// <summary>The trick it vanishes with over full-screen content; <see cref="VanishStyle.Fade"/> performs none.</summary>
+    public VanishStyle VanishStyle { get; set; } = VanishStyle.Magician;
 
     /// <summary>A perched pet types by hopping on the keys: up with each press, a pixel toward that press's side.</summary>
     public bool Hops { get; init; }
@@ -107,7 +112,7 @@ public sealed class PetAnimator
     /// </summary>
     public void BeginTrick(TimeSpan now)
     {
-        if (_trickStart is not null) return;
+        if (_trickStart is not null || VanishStyle == VanishStyle.Fade) return;
         _trickStart = now;
         _trickTapAt = now + FrameInterval;
     }
@@ -213,8 +218,11 @@ public sealed class PetAnimator
         if (Hops && now < _leftPawUp) (dx, dy) = (-1, -HopHeight);
         else if (Hops && now < _rightPawUp && now >= _clickUp) (dx, dy) = (1, -HopHeight);
 
-        if (InTrick)
-            overlays.Insert(0, new Overlay("tophat", _tophat.X + dx, _tophat.Y + dy));
+        if (_trickStart is TimeSpan trick)
+            overlays.Insert(0, VanishStyle == VanishStyle.Ninja
+                // The headband's tails flutter, one pose a frame.
+                ? new Overlay($"headband{(now - trick).Ticks / FrameInterval.Ticks % 2 + 1}", _headband.X + dx, _headband.Y + dy)
+                : new Overlay("tophat", _tophat.X + dx, _tophat.Y + dy));
         else if (SuperSaiyan && Hat != FullChargeHat.None)
         {
             var (sprite, at) = Hat == FullChargeHat.StrawHat ? ("strawhat", _strawHat) : ("saiyan", _saiyan);
@@ -238,7 +246,8 @@ public sealed class PetAnimator
         return new FrameSpec(body, dy, overlays, criticalDx,
             MoodCalculator.GillsFor(LowestBattery), MoodCalculator.FadeFor(LowestBattery),
             now < _leftPawUp ? 1 : 0, now < _rightPawUp ? 1 : 0, now < _clickUp ? 1 : 0, OnMouse(now), tail, dx, ReachStep(now),
-            Smoke: SmokeAt(now), Vanished: SmokeFrame(now) >= SmokeCovers - 1);
+            Smoke: SmokeAt(now), Leaves: VanishStyle == VanishStyle.Ninja && SmokeFrame(now) is var leaves and >= 0 ? $"leaves{leaves + 1}" : null,
+            Vanished: SmokeFrame(now) >= SmokeCovers - 1);
     }
 
     // Counted in whole frame intervals from the trick's start (not FrameIndex, which rounds 1/6 s down), so the

@@ -16,13 +16,14 @@ public enum BatteryStyle { Outline, Bar, Gauge }
 /// ReachStep: a skin's reaching limb on its way to or from the mouse, drawn as "reach{ReachStep}"; 0 = there.
 /// Picker: the channel bubbles, drawn over everything.
 /// Smoke: the vanishing trick's smoke bomb frame, shown over the pet on a layer of its own (see <see cref="SmokeLayer"/>).
+/// Leaves: the ninja's leaves swirling with the smoke, on the same layer over it.
 /// Vanished: the pet is gone behind the smoke; nothing is drawn.
 /// </summary>
 public sealed record FrameSpec(
     string BodySprite, int BodyDy, IReadOnlyList<Overlay> Overlays,
     int CriticalDx = 0, string? Gills = null, double Fade = 0, int PawLeftDy = 0, int PawRightDy = 0, int ClickDy = 0, bool RightPawOnMouse = false,
     string? Tail = null, int BodyDx = 0, int ReachStep = 0, PickerDrawing? Picker = null, string? Smoke = null,
-    bool Vanished = false)
+    string? Leaves = null, bool Vanished = false)
 {
     public int PawDy(Paw paw) => paw == Paw.Left ? PawLeftDy : PawRightDy;
 }

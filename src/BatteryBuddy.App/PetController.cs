@@ -163,8 +163,8 @@ sealed class PetController : IDisposable
         (_layout, _sprites) = SkinLoader.Load(skin);
         _animator = new PetAnimator(Random.Shared.NextDouble, _clock.Elapsed,
             _layout.Overlays["sweat"], _layout.Overlays["saiyan"], _layout.Overlays["strawhat"],
-            _layout.Overlays["magnifier"], _layout.Overlays.GetValueOrDefault("tophat", _layout.Overlays["strawhat"]),
-            _layout.Overlays.GetValueOrDefault("headband", _layout.Overlays["strawhat"]))
+            _layout.Overlays["magnifier"], _layout.Overlays["tophat"],
+            _layout.Overlays["headband"])
         {
             Hat = _settings.Hat,
             VanishStyle = _settings.Vanish,

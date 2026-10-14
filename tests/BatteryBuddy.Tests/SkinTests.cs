@@ -99,6 +99,8 @@ public class SkinTests
         Assert.True(Layout.Overlays.ContainsKey("sweat"));
         Assert.True(Layout.Overlays.ContainsKey("saiyan"));
         Assert.True(Layout.Overlays.ContainsKey("strawhat"));
+        Assert.True(Layout.Overlays.ContainsKey("tophat"));
+        Assert.True(Layout.Overlays.ContainsKey("headband"));
         Assert.NotNull(Layout.Paws);
         Assert.Equal(new[] { Paw.Left, Paw.Right }, Layout.Paws!.Keys.Order());
     }
@@ -411,7 +413,18 @@ public class SkinTests
     // The ninja's hood, drawn over body_idle at the body spot: body art rows of the eyes (left open) and of the muzzle
     // (covered: nose, mouth).
     [Theory]
-    [InlineData("choppa", 11, 13, 15, 18)]
+    [InlineData("axolotl", 4, 5, 6, 9)]
+    [InlineData("bunny", 16, 21, 22, 27)]
+    [InlineData("capybara", 7, 8, 10, 17)]
+    [InlineData("choppa", 11, 13, 14, 18)]
+    [InlineData("duck", 3, 4, 5, 7)]
+    [InlineData("jellyfish", 5, 9, 10, 12)]
+    [InlineData("missy", 7, 9, 10, 14)]
+    [InlineData("panda", 10, 13, 14, 16)]
+    [InlineData("parrot", 8, 10, 11, 14)]
+    [InlineData("pig", 5, 6, 8, 13)]
+    [InlineData("ragdoll", 9, 11, 12, 17)]
+    [InlineData("redpanda", 8, 9, 10, 12)]
     public void The_ninja_hood_covers_the_muzzle_and_leaves_the_eyes_and_ears_out(string skin, int eyesFrom, int eyesTo, int muzzleFrom, int muzzleTo)
     {
         var (_, Layout, Sprites) = TestSkin.Load(skin);
@@ -419,13 +432,15 @@ public class SkinTests
         var body = Sprites["body_idle"];
         Assert.Equal((body.Width, body.Height), (hood.Width, hood.Height));   // laid over the body
         bool Hood(int x, int y) => hood.Pixels[y * hood.Width + x] != 0;
+        var earSprites = new[] { "gills_perky", "gills_droopy", "gills_limp" }.Select(n => Sprites[n]).ToList();
+        bool Ear(int x, int y) => earSprites.Any(e => x < e.Width && y < e.Height && e.Pixels[y * e.Width + x] != 0);
         bool Body(int x, int y) => x >= 0 && y >= 0 && x < body.Width && y < body.Height && body.Pixels[y * body.Width + x] != 0;
         for (int y = 0; y < hood.Height; y++)
             for (int x = 0; x < hood.Width; x++)
             {
                 if (y >= eyesFrom * 2 && y < (eyesTo + 1) * 2)
                     Assert.False(Hood(x, y), $"the hood covers the eyes at ({x}, {y})");
-                if (y >= muzzleFrom * 2 && y < (muzzleTo + 1) * 2 && Body(x, y))
+                if (y >= muzzleFrom * 2 && y < (muzzleTo + 1) * 2 && Body(x, y) && !Ear(x, y))
                     Assert.True(Hood(x, y), $"the muzzle shows at ({x}, {y})");
                 // Cloth hugs the head: nothing past the body's outline by more than one art pixel.
                 if (Hood(x, y))
@@ -439,8 +454,20 @@ public class SkinTests
                         Assert.False(Hood(x, y), $"the hood covers an ear at ({x}, {y})");
     }
 
+    // Head-top row, and the first body art row with any of the eye in it: tighter than the hat tests' eye rows.
     [Theory]
-    [InlineData("choppa", 7, 12)]   // head-top row, eye row (body art rows), as in the hat tests
+    [InlineData("axolotl", 0, 4)]
+    [InlineData("choppa", 7, 12)]
+    [InlineData("missy", 3, 8)]
+    [InlineData("redpanda", 3, 8)]
+    [InlineData("ragdoll", 3, 9)]
+    [InlineData("duck", 0, 3)]
+    [InlineData("pig", 2, 5)]
+    [InlineData("capybara", 2, 7)]
+    [InlineData("bunny", 11, 16)]
+    [InlineData("panda", 4, 11)]      // the top of the eye patches
+    [InlineData("parrot", 5, 9)]
+    [InlineData("jellyfish", 1, 5)]
     public void Headband_sits_across_the_forehead_above_the_eyes(string skin, int headTop, int eyeRow)
     {
         // The band is the part reaching the sprite's left edge (it wraps round the head); the tails hang off its knot.
@@ -450,8 +477,9 @@ public class SkinTests
         {
             var band = Sprites[pose];
             var rows = Enumerable.Range(0, band.Height).Where(y => band.Pixels[y * band.Width] != 0).ToList();
-            Assert.InRange(at.Y * 2 + rows.First(), (Layout.Body.Y + headTop) * 2, (Layout.Body.Y + eyeRow) * 2 - 1);
+            // On the head above the eyes; on a pet with little forehead (the duck, the parrot) it rides up onto the crown.
             Assert.InRange(at.Y * 2 + rows.Last(), (Layout.Body.Y + headTop) * 2, (Layout.Body.Y + eyeRow) * 2 - 1);
+            Assert.True(at.Y * 2 + rows.First() < (Layout.Body.Y + eyeRow) * 2);
         }
         // The plate, in the middle of the band, is all the top row holds: it stands up above the band. It mustn't
         // hang down over the eyes either.
@@ -465,7 +493,18 @@ public class SkinTests
     }
 
     [Theory]
-    [InlineData("choppa", 7, 12)]   // head-top row, eye row (body art rows), as in the straw hat test
+    [InlineData("axolotl", 0, 8)]
+    [InlineData("choppa", 7, 12)]
+    [InlineData("missy", 3, 8)]
+    [InlineData("redpanda", 3, 8)]
+    [InlineData("ragdoll", 3, 8)]
+    [InlineData("duck", 0, 3)]
+    [InlineData("pig", 2, 5)]
+    [InlineData("capybara", 2, 7)]
+    [InlineData("bunny", 11, 16)]
+    [InlineData("panda", 4, 11)]
+    [InlineData("parrot", 5, 9)]
+    [InlineData("jellyfish", 1, 4)]
     public void Top_hat_sits_on_the_head_above_the_eyes(string skin, int headTop, int eyeRow)
     {
         var (_, Layout, Sprites) = TestSkin.Load(skin);

@@ -50,8 +50,12 @@ Save("rescan", Render("axolotl", Desk(), 18, (pet, frame, now) =>
     if (frame == 8) pet.EndSniff(now);
 }));
 
-Save("vanish-choppa", Vanish("choppa"));
-Save("vanish-ninja-choppa", Vanish("choppa", VanishStyle.Ninja));
+// Every pet's vanishing tricks.
+foreach (var pet in pets)
+{
+    Save($"vanish-{pet}", Vanish(pet));
+    Save($"vanish-ninja-{pet}", Vanish(pet, VanishStyle.Ninja));
+}
 
 // The banner: all twelve at work, two rows of six, each row bottom-aligned.
 Save("banner", Grid(pets.Select(p => working[p]).ToList(), columns: 6, gap: 6 * Scale));
@@ -66,8 +70,8 @@ Clip Render(string skin, DeviceReading[] devices, int frames, Action<PetAnimator
     // With a random of 0 the idle burst comes every 3 s; starting the clock 2.5 s early plays the first at 0.5 s.
     var pet = new PetAnimator(() => 0, TimeSpan.FromSeconds(-2.5), layout.Overlays["sweat"],
         layout.Overlays["saiyan"], layout.Overlays["strawhat"], layout.Overlays["magnifier"],
-        layout.Overlays.GetValueOrDefault("tophat", layout.Overlays["strawhat"]),
-        layout.Overlays.GetValueOrDefault("headband", layout.Overlays["strawhat"]))
+        layout.Overlays["tophat"],
+        layout.Overlays["headband"])
     {
         Hat = hat,
         VanishStyle = vanish,

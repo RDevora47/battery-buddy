@@ -1,3 +1,5 @@
+using BatteryBuddy.Pet.Animation;
+
 namespace BatteryBuddy.Pet.Ui;
 
 /// <summary>
@@ -15,6 +17,15 @@ public sealed class FullScreenPeek
 
     /// <summary>When the pet hides unless the mouse moves; null while it stays shown.</summary>
     public TimeSpan? HidesAt => IsFullScreen ? _lastMove + IdleHide : null;
+
+    /// <summary>
+    /// How long before hiding the pet starts its vanishing trick: top hat, a key press a frame later, then the smoke bomb,
+    /// which covers the whole pet at the hide (see <see cref="PetAnimator.SmokeFrames"/>).
+    /// </summary>
+    public static readonly TimeSpan TrickLead = PetAnimator.FrameInterval * 4;
+
+    /// <summary>When the vanishing trick starts unless the mouse moves; null while the pet stays shown.</summary>
+    public TimeSpan? TrickAt => HidesAt - TrickLead;
 
     public bool IsShown(TimeSpan now) => HidesAt is not TimeSpan hides || now < hides;
 

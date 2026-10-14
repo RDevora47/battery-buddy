@@ -84,6 +84,7 @@ public static class FrameComposer
         var pixels = new uint[w * h];
         var owners = new short[w * h];
         Array.Fill(owners, NoOwner);
+        if (spec.Vanished) return new ComposedFrame(w, h, res, pixels, owners, placements);   // gone in a puff of smoke
 
         // Fills a size x size block of frame pixels.
         void Plot(int x, int y, int size, uint color, short owner)

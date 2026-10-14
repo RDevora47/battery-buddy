@@ -1,5 +1,6 @@
 using BatteryBuddy.Pet.Animation;
 using BatteryBuddy.Pet.Scene;
+using BatteryBuddy.Pet.Ui;
 
 namespace BatteryBuddy.Tests;
 
@@ -403,5 +404,210 @@ public class PetAnimatorTests
         animator.KeyTap(Ms(100));
         var frame = animator.FrameAt(Ms(100));
         Assert.Equal((0, 0, 1), (frame.BodyDx, frame.BodyDy, frame.PawLeftDy));
+    }
+
+    static readonly PixelPoint TopHat = new(9, 2);
+
+    static PetAnimator WithTopHat() => new(() => 0, TimeSpan.Zero, new PixelPoint(36, 10), tophat: TopHat);
+
+    static TimeSpan Frames(int n) => PetAnimator.FrameInterval * n;
+
+    [Fact]
+    public void The_trick_puts_on_the_top_hat_then_presses_a_key()
+    {
+        var animator = WithTopHat();
+        animator.BeginTrick(Ms(1000));
+        Assert.True(animator.InTrick);
+        var hatOn = animator.FrameAt(Ms(1000));
+        Assert.Contains(new Overlay("tophat", TopHat.X, TopHat.Y), hatOn.Overlays);
+        Assert.Equal(0, hatOn.PawLeftDy + hatOn.PawRightDy);   // not yet
+        Assert.Null(hatOn.Smoke);
+
+        Assert.True(animator.NeedsTicks(Ms(1100)));
+        var press = animator.FrameAt(Ms(1000) + Frames(1));
+        Assert.Equal(1, press.PawLeftDy + press.PawRightDy);   // one paw, one frame
+        Assert.Null(press.Smoke);   // the key sets the bomb off
+        var after = animator.FrameAt(Ms(1000) + Frames(2));
+        Assert.Equal(0, after.PawLeftDy + after.PawRightDy);
+    }
+
+    [Fact]
+    public void The_smoke_bomb_goes_off_after_the_key_and_covers_the_pet_at_the_hide()
+    {
+        var animator = WithTopHat();
+        var start = Ms(1000);
+        animator.BeginTrick(start);
+        Assert.Null(animator.FrameAt(start + Frames(2) - Ms(1)).Smoke);
+        for (int n = 1; n <= PetAnimator.SmokeFrames; n++)
+            Assert.Equal($"smokebomb{n}", animator.FrameAt(start + Frames(1 + n)).Smoke);
+        // Frame 3, the one covering the whole canvas, lands exactly when the pet starts fading.
+        Assert.Equal("smokebomb3", animator.FrameAt(start + FullScreenPeek.TrickLead).Smoke);
+        Assert.Equal($"smokebomb{PetAnimator.SmokeFrames}", animator.FrameAt(start + TimeSpan.FromSeconds(10)).Smoke);   // last frame holds
+        Assert.True(animator.NeedsTicks(start + Frames(1 + PetAnimator.SmokeFrames) - Ms(1)));
+        Assert.False(animator.NeedsTicks(start + Frames(1 + PetAnimator.SmokeFrames)));   // invisible by then: no more frames
+    }
+
+    [Fact]
+    public void The_pet_is_gone_once_the_smoke_covers_it()
+    {
+        // From the covering frame on, the smoke thins into wisps while the window fades: nothing is left behind it.
+        var animator = WithTopHat();
+        animator.BeginTrick(Ms(0));
+        Assert.False(animator.FrameAt(Frames(3)).Vanished);   // smoke frame 2: still billowing up
+        Assert.True(animator.FrameAt(FullScreenPeek.TrickLead).Vanished);
+        Assert.True(animator.FrameAt(Ms(5000)).Vanished);
+        animator.CancelTrick();
+        Assert.False(animator.FrameAt(Ms(5100)).Vanished);   // back, as the mouse moved
+    }
+
+    [Fact]
+    public void Hiding_without_the_lead_still_shows_the_covering_smoke()
+    {
+        var animator = WithTopHat();
+        animator.Vanish(Ms(5000));
+        Assert.True(animator.InTrick);
+        Assert.Equal("smokebomb3", animator.FrameAt(Ms(5000)).Smoke);
+    }
+
+    [Fact]
+    public void Hiding_again_while_gone_does_not_restart_the_smoke()
+    {
+        var animator = WithTopHat();
+        animator.BeginTrick(Ms(0));
+        animator.Vanish(FullScreenPeek.TrickLead);
+        animator.Vanish(Ms(5000));   // full screen re-checked while hidden
+        Assert.Equal($"smokebomb{PetAnimator.SmokeFrames}", animator.FrameAt(Ms(5000)).Smoke);
+    }
+
+    [Fact]
+    public void Cancelling_takes_off_the_hat_and_clears_the_smoke()
+    {
+        var animator = WithTopHat();
+        animator.BeginTrick(Ms(0));
+        animator.FrameAt(Frames(3));   // smoke going
+        animator.CancelTrick();
+        var frame = animator.FrameAt(Frames(4));
+        Assert.False(animator.InTrick);
+        Assert.Null(frame.Smoke);
+        Assert.DoesNotContain(frame.Overlays, o => o.Sprite == "tophat");
+    }
+
+    [Fact]
+    public void The_top_hat_replaces_a_full_charge_hat_during_the_trick()
+    {
+        var animator = WithTopHat();
+        animator.SuperSaiyan = true;
+        animator.BeginTrick(Ms(0));
+        var frame = animator.FrameAt(Ms(0));
+        Assert.Contains(frame.Overlays, o => o.Sprite == "tophat");
+        Assert.DoesNotContain(frame.Overlays, o => o.Sprite is "saiyan" or "strawhat");
+    }
+
+    [Fact]
+    public void No_idle_burst_during_the_trick()
+    {
+        var animator = WithTopHat();   // first idle burst due at 3 s
+        animator.BeginTrick(TimeSpan.FromSeconds(2.9));
+        var frame = animator.FrameAt(TimeSpan.FromSeconds(3) + Ms(340));   // the burst's blink frame
+        Assert.Equal("body_idle", frame.BodySprite);
+    }
+
+    static readonly PixelPoint Headband = new(11, 9);
+
+    static PetAnimator Ninja() => new(() => 0, TimeSpan.Zero, new PixelPoint(36, 10), tophat: TopHat, headband: Headband)
+    {
+        VanishStyle = VanishStyle.Ninja,
+    };
+
+    [Fact]
+    public void The_ninja_ties_on_a_fluttering_headband_instead_of_the_top_hat()
+    {
+        var animator = Ninja();
+        animator.BeginTrick(Ms(0));
+        var first = animator.FrameAt(Frames(0));
+        Assert.Contains(new Overlay("headband1", Headband.X, Headband.Y), first.Overlays);
+        Assert.Contains(new Overlay("headband2", Headband.X, Headband.Y), animator.FrameAt(Frames(1)).Overlays);   // tails flutter
+        Assert.Contains(new Overlay("headband1", Headband.X, Headband.Y), animator.FrameAt(Frames(2)).Overlays);
+        Assert.DoesNotContain(first.Overlays, o => o.Sprite == "tophat");
+    }
+
+    [Fact]
+    public void The_ninja_vanishes_in_smoke_and_leaves()
+    {
+        var animator = Ninja();
+        animator.BeginTrick(Ms(0));
+        Assert.Null(animator.FrameAt(Frames(1)).Leaves);
+        for (int n = 1; n <= PetAnimator.SmokeFrames; n++)
+        {
+            var frame = animator.FrameAt(Frames(1 + n));
+            Assert.Equal($"smokebomb{n}", frame.Smoke);
+            Assert.Equal($"leaves{n}", frame.Leaves);
+        }
+    }
+
+    [Fact]
+    public void The_magician_smoke_has_no_leaves()
+    {
+        var animator = WithTopHat();
+        animator.BeginTrick(Ms(0));
+        Assert.All(Enumerable.Range(0, 8), n => Assert.Null(animator.FrameAt(Frames(n)).Leaves));
+    }
+
+    [Fact]
+    public void Just_fading_performs_no_trick()
+    {
+        var animator = WithTopHat();
+        animator.VanishStyle = VanishStyle.Fade;
+        animator.BeginTrick(Ms(0));
+        animator.Vanish(FullScreenPeek.TrickLead);
+        Assert.False(animator.InTrick);
+        var frame = animator.FrameAt(FullScreenPeek.TrickLead);
+        Assert.Null(frame.Smoke);
+        Assert.False(frame.Vanished);   // the window's fade alone hides it
+        Assert.DoesNotContain(frame.Overlays, o => o.Sprite is "tophat" or "headband1" or "headband2");
+    }
+
+    static readonly PixelPoint Body = new(6, 8);
+
+    [Fact]
+    public void The_ninja_pulls_on_its_hood_under_the_headband()
+    {
+        var animator = new PetAnimator(() => 0, TimeSpan.Zero, new PixelPoint(36, 10), headband: Headband)
+        {
+            VanishStyle = VanishStyle.Ninja,
+            Hood = Body,
+        };
+        animator.BeginTrick(Ms(0));
+        var overlays = animator.FrameAt(Ms(0)).Overlays.Select(o => o.Sprite).ToList();
+        Assert.Equal(new Overlay("ninjahood", Body.X, Body.Y), animator.FrameAt(Ms(0)).Overlays[0]);
+        Assert.True(overlays.IndexOf("ninjahood") < overlays.IndexOf("headband1"), "the headband ties over the hood");
+    }
+
+    [Fact]
+    public void The_hood_moves_with_the_pet()
+    {
+        // A perched pet hops onto the key it presses for the trick: the hood goes along.
+        var animator = new PetAnimator(() => 0, TimeSpan.Zero, new PixelPoint(36, 10), headband: Headband)
+        {
+            VanishStyle = VanishStyle.Ninja,
+            Hood = Body,
+            Hops = true,
+        };
+        animator.BeginTrick(Ms(0));
+        var hop = animator.FrameAt(Frames(1));
+        Assert.Equal(-PetAnimator.HopHeight, hop.BodyDy);
+        Assert.Equal(new Overlay("ninjahood", Body.X + hop.BodyDx, Body.Y + hop.BodyDy), hop.Overlays[0]);
+    }
+
+    [Fact]
+    public void No_hood_without_one_for_the_skin_or_for_the_magician()
+    {
+        var bare = Ninja();   // its skin has no hood yet: headband only
+        bare.BeginTrick(Ms(0));
+        Assert.DoesNotContain(bare.FrameAt(Ms(0)).Overlays, o => o.Sprite == "ninjahood");
+
+        var magician = new PetAnimator(() => 0, TimeSpan.Zero, new PixelPoint(36, 10), tophat: TopHat) { Hood = Body };
+        magician.BeginTrick(Ms(0));
+        Assert.DoesNotContain(magician.FrameAt(Ms(0)).Overlays, o => o.Sprite == "ninjahood");
     }
 }

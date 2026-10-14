@@ -1,3 +1,4 @@
+using BatteryBuddy.Pet.Animation;
 using BatteryBuddy.Pet.Ui;
 
 namespace BatteryBuddy.Tests;
@@ -50,6 +51,32 @@ public class FullScreenPeekTests
         _peek.SetFullScreen(true, S(0));
         _peek.SetFullScreen(true, S(2));   // re-checked (another window came forward, still full screen)
         Assert.Equal(S(0) + FullScreenPeek.IdleHide, _peek.HidesAt);
+    }
+
+    [Fact]
+    public void The_trick_starts_four_frames_before_it_hides()
+    {
+        _peek.SetFullScreen(true, S(10));
+        Assert.Equal(PetAnimator.FrameInterval * 4, FullScreenPeek.TrickLead);
+        Assert.Equal(S(10) + FullScreenPeek.IdleHide - FullScreenPeek.TrickLead, _peek.TrickAt);
+        Assert.True(_peek.IsShown(_peek.TrickAt!.Value));   // still shown while performing it
+    }
+
+    [Fact]
+    public void No_trick_without_full_screen_content()
+    {
+        Assert.Null(_peek.TrickAt);
+        _peek.SetFullScreen(true, S(0));
+        _peek.SetFullScreen(false, S(1));
+        Assert.Null(_peek.TrickAt);
+    }
+
+    [Fact]
+    public void Moving_the_mouse_puts_the_trick_off_too()
+    {
+        _peek.SetFullScreen(true, S(0));
+        _peek.MouseMoved(S(2.7));
+        Assert.Equal(S(2.7) + FullScreenPeek.IdleHide - FullScreenPeek.TrickLead, _peek.TrickAt);
     }
 }
 

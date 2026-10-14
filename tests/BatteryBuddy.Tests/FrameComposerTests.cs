@@ -770,3 +770,45 @@ public class PerBudIndicatorTests
         Assert.Equal(BatteryBar.ColorFor(10), Pixel(frame, 8, 10));
     }
 }
+
+public class SmokeLayerTests
+{
+    [Fact]
+    public void A_vanished_pet_draws_nothing_and_takes_no_clicks()
+    {
+        var (_, layout, sprites) = Axolotl;
+        var frame = FrameComposer.Compose(layout, sprites, Array.Empty<DevicePlacement>(),
+            new FrameSpec("body_idle", 0, Array.Empty<Overlay>(), Gills: "gills_perky", Vanished: true));
+        Assert.All(frame.Pixels, p => Assert.Equal(0u, p));
+        Assert.Equal(HitTarget.None, frame.HitTest(layout.CanvasWidth, layout.CanvasHeight, out _));
+    }
+
+    static readonly TestSkin Axolotl = TestSkin.Load("axolotl");
+
+    static Sprite Smoke(int artW, int artH) => new("smoke", artW * 2, artH * 2, new uint[artW * 2 * artH * 2], 2);
+
+    [Fact]
+    public void The_smoke_is_bottom_centred_on_the_canvas_just_below_it()
+    {
+        var layout = Axolotl.Layout;
+        var (x, y) = SmokeLayer.Offset(layout, Smoke(60, 80), resolution: 2);
+        Assert.Equal((layout.CanvasWidth - 60) * 2 / 2, x);   // centred: (44 - 60) art px / 2, in frame pixels
+        Assert.Equal((layout.CanvasHeight + SmokeLayer.BelowCanvas - 80) * 2, y);   // its bottom just below the canvas
+    }
+
+    [Fact]
+    public void Leaves_are_drawn_over_the_smoke_where_they_have_pixels()
+    {
+        var smoke = new uint[] { 0xFF111111, 0xFF111111, 0, 0 };
+        SmokeLayer.Over(smoke, new uint[] { 0, 0xFF22AA22, 0xFF22AA22, 0 });
+        Assert.Equal(new uint[] { 0xFF111111, 0xFF22AA22, 0xFF22AA22, 0 }, smoke);
+    }
+
+    [Fact]
+    public void A_one_x_sprite_is_scaled_to_the_frame_resolution()
+    {
+        var sprite = new Sprite("smoke", 2, 1, new uint[] { 0xFF000001, 0xFF000002 }, 1);
+        Assert.Equal(new uint[] { 0xFF000001, 0xFF000001, 0xFF000002, 0xFF000002, 0xFF000001, 0xFF000001, 0xFF000002, 0xFF000002 },
+            SmokeLayer.Pixels(sprite, resolution: 2));
+    }
+}

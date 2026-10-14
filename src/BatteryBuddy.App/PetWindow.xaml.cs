@@ -89,6 +89,21 @@ public partial class PetWindow : Window
         Height = PetImage.Height + 2 * BubbleRoom;
     }
 
+    /// <summary>
+    /// The smoke layer (call after <see cref="SetBitmap"/>): its bitmap, at the pet bitmap's resolution, and its top-left
+    /// in frame pixels from the pet frame's (see <see cref="Pet.Scene.SmokeLayer.Offset"/>). It may reach into the room around the pet.
+    /// </summary>
+    public void SetSmokeBitmap(WriteableBitmap bitmap, int x, int y)
+    {
+        SmokeImage.Source = bitmap;
+        SmokeImage.Width = bitmap.PixelWidth * Scale / _resolution;
+        SmokeImage.Height = bitmap.PixelHeight * Scale / _resolution;
+        Canvas.SetLeft(SmokeImage, _sideRoom + x * Scale / (double)_resolution);
+        Canvas.SetTop(SmokeImage, BubbleRoom + y * Scale / (double)_resolution);
+    }
+
+    public void ShowSmoke(bool shown) => SmokeImage.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
+
     /// <summary>Monitor work areas (screen minus taskbar) in DIPs.</summary>
     public IReadOnlyList<ScreenRect> WorkAreas() => WinForms.Screen.AllScreens.Select(s => ToDip(s.WorkingArea)).ToList();
 
@@ -133,7 +148,8 @@ public partial class PetWindow : Window
         _shown = shown;
         double target = shown ? 1 : 0;
         var fade = new DoubleAnimation(target, TimeSpan.FromMilliseconds(shown ? 150 : 400)) { FillBehavior = FillBehavior.Stop };
-        fade.Completed += (_, _) => Root.Opacity = target;
+        // A newer fade may have replaced this one: only the wanted state may set the final opacity.
+        fade.Completed += (_, _) => { if (_shown == shown) Root.Opacity = target; };
         Root.BeginAnimation(OpacityProperty, fade);
     }
 

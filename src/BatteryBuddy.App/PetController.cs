@@ -25,6 +25,8 @@ sealed class PetController : IDisposable
     PetAnimator _animator = null!;
     readonly Stopwatch _clock = Stopwatch.StartNew();
     WriteableBitmap _bitmap = null!;
+    WriteableBitmap _smokeBitmap = null!;
+    (string Smoke, string? Leaves)? _smokeShown;   // what _smokeBitmap holds, while shown
     readonly DispatcherTimer _frameTimer;
     readonly DispatcherTimer _idleTimer;
     readonly DispatcherTimer _bubbleTimer;
@@ -100,7 +102,8 @@ sealed class PetController : IDisposable
         {
             if (!_peek.IsFullScreen) return;
             _peek.MouseMoved(_clock.Elapsed);
-            if (!_peekTimer.IsEnabled) UpdatePeek();
+            // Asleep until the trick or the hide; a trick under way stops at once.
+            if (!_peekTimer.IsEnabled || _animator.InTrick) UpdatePeek();
         };
 
 #if DIAG_LOG
@@ -120,7 +123,7 @@ sealed class PetController : IDisposable
         {
             int opaque = _frame is null ? -1 : _frame.Pixels.Count(p => p != 0);
             DiagLog.Write($"heartbeat renders={_renders} opaque={opaque} visible={_window.IsVisible} state={_window.WindowState} " +
-                $"opacity={_window.Opacity} img={_window.PetImage.ActualWidth}x{_window.PetImage.ActualHeight} imgVis={_window.PetImage.IsVisible} " +
+                $"opacity={_window.Opacity} rootOpacity={_window.Root.Opacity:0.##} img={_window.PetImage.ActualWidth}x{_window.PetImage.ActualHeight} imgVis={_window.PetImage.IsVisible} " +
                 $"pos={_window.Left:0},{_window.Top:0} frameTimer={_frameTimer.IsEnabled} idleTimer={_idleTimer.IsEnabled} " +
                 $"tier={RenderCapability.Tier >> 16} bmp={_bitmap.PixelWidth}x{_bitmap.PixelHeight} src={ReferenceEquals(_window.PetImage.Source, _bitmap)}");
             _renders = 0;
@@ -160,9 +163,12 @@ sealed class PetController : IDisposable
         (_layout, _sprites) = SkinLoader.Load(skin);
         _animator = new PetAnimator(Random.Shared.NextDouble, _clock.Elapsed,
             _layout.Overlays["sweat"], _layout.Overlays["saiyan"], _layout.Overlays["strawhat"],
-            _layout.Overlays["magnifier"])
+            _layout.Overlays["magnifier"], _layout.Overlays["tophat"],
+            _layout.Overlays["headband"])
         {
             Hat = _settings.Hat,
+            VanishStyle = _settings.Vanish,
+            Hood = _sprites.ContainsKey("ninjahood") ? _layout.Body : null,
             Hops = _layout.Hops,
             ReachFrames = _layout.Reach is null ? 0 : Enumerable.Range(1, 9).TakeWhile(n => _sprites.ContainsKey($"reach{n}")).Count(),
         };
@@ -170,6 +176,13 @@ sealed class PetController : IDisposable
         int resolution = FrameComposer.ResolutionOf(_sprites);
         _bitmap = new WriteableBitmap(_layout.FrameWidth * resolution, _layout.CanvasHeight * resolution, 96, 96, PixelFormats.Bgra32, null);
         _window.SetBitmap(_bitmap, resolution);
+        var smoke = _sprites["smokebomb1"];   // every smoke frame is this size
+        var (smokeX, smokeY) = SmokeLayer.Offset(_layout, smoke, resolution);
+        int cell = resolution / smoke.Density;
+        _smokeBitmap = new WriteableBitmap(smoke.Width * cell, smoke.Height * cell, 96, 96, PixelFormats.Bgra32, null);
+        _window.SetSmokeBitmap(_smokeBitmap, smokeX, smokeY);
+        _smokeShown = null;
+        _window.ShowSmoke(false);
     }
 
     // Top drawn over bottom, both anchored top-left; sized to cover both.
@@ -193,6 +206,20 @@ sealed class PetController : IDisposable
             _settings = _settings with { Hat = value };
             _settings.Save();
             _animator.Hat = value;
+            Render();
+        }
+    }
+
+    /// <summary>How the pet hides over full-screen content.</summary>
+    public VanishStyle Vanish
+    {
+        get => _settings.Vanish;
+        set
+        {
+            _settings = _settings with { Vanish = value };
+            _settings.Save();
+            _animator.CancelTrick();
+            _animator.VanishStyle = value;
             Render();
         }
     }
@@ -445,6 +472,19 @@ sealed class PetController : IDisposable
         var spec = _animator.FrameAt(now) with { Picker = _picker.DrawingAt(now) };
         _frame = FrameComposer.Compose(_layout, _sprites, _placements, spec, _settings.BatteryStyle);
         _bitmap.WritePixels(new Int32Rect(0, 0, _frame.Width, _frame.Height), _frame.Pixels, _frame.Width * 4, 0);
+        (string, string?)? smokeNow = spec.Smoke is { } smoke ? (smoke, spec.Leaves) : null;
+        if (smokeNow != _smokeShown)
+        {
+            _smokeShown = smokeNow;
+            if (spec.Smoke is { } cloud)
+            {
+                int w = _smokeBitmap.PixelWidth;
+                var pixels = SmokeLayer.Pixels(_sprites[cloud], _frame.Resolution);
+                if (spec.Leaves is { } leaves) SmokeLayer.Over(pixels, SmokeLayer.Pixels(_sprites[leaves], _frame.Resolution));
+                _smokeBitmap.WritePixels(new Int32Rect(0, 0, w, _smokeBitmap.PixelHeight), pixels, w * 4, 0);
+            }
+            _window.ShowSmoke(spec.Smoke is not null);
+        }
 #if DIAG_LOG
         _renders++;
 #endif
@@ -462,7 +502,8 @@ sealed class PetController : IDisposable
         _idleTimer.Start();
     }
 
-    // Shows or hides the pet for the full-screen peek, and wakes up again when the resting mouse should hide it.
+    // Shows or hides the pet for the full-screen peek: the vanishing trick starts TrickLead before the hide, and
+    // the smoke bomb goes off with the fade-out. Wakes up again for the trick, then for the hide.
     void UpdatePeek()
     {
         var now = _clock.Elapsed;
@@ -471,15 +512,23 @@ sealed class PetController : IDisposable
         if (shown)
         {
             _window.KeepOnTop();
-            if (_peek.HidesAt is TimeSpan hides)
+            if (_peek.TrickAt is TimeSpan trick && _peek.HidesAt is TimeSpan hides)
             {
-                var wait = hides - now;
+                if (now >= trick) _animator.BeginTrick(trick);   // as scheduled, so the covering smoke lands on the hide
+                else _animator.CancelTrick();
+                var wait = (now >= trick ? hides : trick) - now;
                 _peekTimer.Interval = wait > TimeSpan.FromMilliseconds(50) ? wait : TimeSpan.FromMilliseconds(50);
                 _peekTimer.Start();
             }
+            else _animator.CancelTrick();
         }
-        else ClosePicker();
+        else
+        {
+            ClosePicker();
+            _animator.Vanish(now);
+        }
         _window.SetShown(shown);
+        Render();   // the first smoke frame in the same tick as the fade-out
     }
 
     void PlaceWindow()

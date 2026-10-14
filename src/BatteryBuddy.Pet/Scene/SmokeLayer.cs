@@ -17,6 +17,13 @@ public static class SmokeLayer
                 (layout.CanvasHeight + BelowCanvas) * resolution - smoke.Height * cell);
     }
 
+    /// <summary>Draws <paramref name="top"/> (the ninja's leaves) over <paramref name="pixels"/> where it isn't transparent; same size.</summary>
+    public static void Over(uint[] pixels, uint[] top)
+    {
+        for (int i = 0; i < pixels.Length; i++)
+            if (top[i] != 0) pixels[i] = top[i];
+    }
+
     /// <summary>The sprite's pixels at the frame's resolution (each sprite pixel a cell x cell block).</summary>
     public static uint[] Pixels(Sprite smoke, int resolution)
     {

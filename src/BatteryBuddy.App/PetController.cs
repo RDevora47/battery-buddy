@@ -26,7 +26,7 @@ sealed class PetController : IDisposable
     readonly Stopwatch _clock = Stopwatch.StartNew();
     WriteableBitmap _bitmap = null!;
     WriteableBitmap _smokeBitmap = null!;
-    string? _smokeShown;                 // the smoke bomb frame in _smokeBitmap, while shown
+    (string Smoke, string? Leaves)? _smokeShown;   // what _smokeBitmap holds, while shown
     readonly DispatcherTimer _frameTimer;
     readonly DispatcherTimer _idleTimer;
     readonly DispatcherTimer _bubbleTimer;
@@ -163,9 +163,11 @@ sealed class PetController : IDisposable
         (_layout, _sprites) = SkinLoader.Load(skin);
         _animator = new PetAnimator(Random.Shared.NextDouble, _clock.Elapsed,
             _layout.Overlays["sweat"], _layout.Overlays["saiyan"], _layout.Overlays["strawhat"],
-            _layout.Overlays["magnifier"], _layout.Overlays.GetValueOrDefault("tophat", _layout.Overlays["strawhat"]))
+            _layout.Overlays["magnifier"], _layout.Overlays.GetValueOrDefault("tophat", _layout.Overlays["strawhat"]),
+            _layout.Overlays.GetValueOrDefault("headband", _layout.Overlays["strawhat"]))
         {
             Hat = _settings.Hat,
+            VanishStyle = _settings.Vanish,
             Hops = _layout.Hops,
             ReachFrames = _layout.Reach is null ? 0 : Enumerable.Range(1, 9).TakeWhile(n => _sprites.ContainsKey($"reach{n}")).Count(),
         };
@@ -203,6 +205,20 @@ sealed class PetController : IDisposable
             _settings = _settings with { Hat = value };
             _settings.Save();
             _animator.Hat = value;
+            Render();
+        }
+    }
+
+    /// <summary>How the pet hides over full-screen content.</summary>
+    public VanishStyle Vanish
+    {
+        get => _settings.Vanish;
+        set
+        {
+            _settings = _settings with { Vanish = value };
+            _settings.Save();
+            _animator.CancelTrick();
+            _animator.VanishStyle = value;
             Render();
         }
     }
@@ -455,14 +471,16 @@ sealed class PetController : IDisposable
         var spec = _animator.FrameAt(now) with { Picker = _picker.DrawingAt(now) };
         _frame = FrameComposer.Compose(_layout, _sprites, _placements, spec, _settings.BatteryStyle);
         _bitmap.WritePixels(new Int32Rect(0, 0, _frame.Width, _frame.Height), _frame.Pixels, _frame.Width * 4, 0);
-        if (spec.Smoke != _smokeShown)
+        (string, string?)? smokeNow = spec.Smoke is { } smoke ? (smoke, spec.Leaves) : null;
+        if (smokeNow != _smokeShown)
         {
-            _smokeShown = spec.Smoke;
-            if (spec.Smoke is { } smoke)
+            _smokeShown = smokeNow;
+            if (spec.Smoke is { } cloud)
             {
                 int w = _smokeBitmap.PixelWidth;
-                _smokeBitmap.WritePixels(new Int32Rect(0, 0, w, _smokeBitmap.PixelHeight),
-                    SmokeLayer.Pixels(_sprites[smoke], _frame.Resolution), w * 4, 0);
+                var pixels = SmokeLayer.Pixels(_sprites[cloud], _frame.Resolution);
+                if (spec.Leaves is { } leaves) SmokeLayer.Over(pixels, SmokeLayer.Pixels(_sprites[leaves], _frame.Resolution));
+                _smokeBitmap.WritePixels(new Int32Rect(0, 0, w, _smokeBitmap.PixelHeight), pixels, w * 4, 0);
             }
             _window.ShowSmoke(spec.Smoke is not null);
         }

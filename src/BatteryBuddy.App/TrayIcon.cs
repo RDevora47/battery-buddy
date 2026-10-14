@@ -13,7 +13,8 @@ sealed class TrayIcon : IDisposable
 
     public TrayIcon(Sprite iconSprite, Func<Task> rescan, Func<BatteryStyle> getStyle, Action<BatteryStyle> setStyle,
         IReadOnlyList<(string Skin, string Name)> pets, Func<string> getSkin, Action<string> setSkin,
-        Func<FullChargeHat> getHat, Action<FullChargeHat> setHat, Action quit)
+        Func<FullChargeHat> getHat, Action<FullChargeHat> setHat, Func<VanishStyle> getVanish, Action<VanishStyle> setVanish,
+        Action quit)
     {
         _petName = () => pets.FirstOrDefault(p => p.Skin == getSkin()).Name ?? "";
         _menu = new WinForms.ContextMenuStrip();
@@ -52,6 +53,26 @@ sealed class TrayIcon : IDisposable
         }
         SyncHat();
         _menu.Items.Add(hat);
+
+        // How it hides over full-screen content (a video, a game) while the mouse rests.
+        var vanish = new WinForms.ToolStripMenuItem("Vanish");
+        var vanishItems = new[]
+        {
+            (Style: VanishStyle.Magician, Item: new WinForms.ToolStripMenuItem("Magician (top hat && smoke)")),
+            (Style: VanishStyle.Ninja, Item: new WinForms.ToolStripMenuItem("Ninja (headband && leaves)")),
+            (Style: VanishStyle.Fade, Item: new WinForms.ToolStripMenuItem("Just fade")),
+        };
+        void SyncVanish()
+        {
+            foreach (var (style, item) in vanishItems) item.Checked = getVanish() == style;
+        }
+        foreach (var (style, item) in vanishItems)
+        {
+            item.Click += (_, _) => { setVanish(style); SyncVanish(); };
+            vanish.DropDownItems.Add(item);
+        }
+        SyncVanish();
+        _menu.Items.Add(vanish);
 
         var display = new WinForms.ToolStripMenuItem("Battery display");
         var outline = new WinForms.ToolStripMenuItem("Colored outline");

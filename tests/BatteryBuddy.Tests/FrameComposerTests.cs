@@ -797,6 +797,14 @@ public class SmokeLayerTests
     }
 
     [Fact]
+    public void Leaves_are_drawn_over_the_smoke_where_they_have_pixels()
+    {
+        var smoke = new uint[] { 0xFF111111, 0xFF111111, 0, 0 };
+        SmokeLayer.Over(smoke, new uint[] { 0, 0xFF22AA22, 0xFF22AA22, 0 });
+        Assert.Equal(new uint[] { 0xFF111111, 0xFF22AA22, 0xFF22AA22, 0 }, smoke);
+    }
+
+    [Fact]
     public void A_one_x_sprite_is_scaled_to_the_frame_resolution()
     {
         var sprite = new Sprite("smoke", 2, 1, new uint[] { 0xFF000001, 0xFF000002 }, 1);

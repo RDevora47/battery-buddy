@@ -8,7 +8,7 @@ using BatteryBuddy.Backend;
 namespace BatteryBuddy.App;
 
 sealed record Settings(double? Left, double? Top, BatteryStyle BatteryStyle = BatteryStyle.Outline, string Skin = SkinLoader.Default,
-    FullChargeHat Hat = FullChargeHat.SaiyanHair)
+    FullChargeHat Hat = FullChargeHat.SaiyanHair, VanishStyle Vanish = VanishStyle.Magician)
 {
     static readonly string FilePath = AppDataFile("settings.json");
 

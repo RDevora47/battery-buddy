@@ -11,7 +11,7 @@ sealed class TrayIcon : IDisposable
     readonly WinForms.ContextMenuStrip _menu;
     readonly Func<string> _petName;
 
-    public TrayIcon(Sprite iconSprite, Func<Task> rescan, Func<BatteryStyle> getStyle, Action<BatteryStyle> setStyle,
+    public TrayIcon(Sprite iconSprite, Func<Task> rescan, Action move, Func<BatteryStyle> getStyle, Action<BatteryStyle> setStyle,
         IReadOnlyList<(string Skin, string Name)> pets, Func<string> getSkin, Action<string> setSkin,
         Func<FullChargeHat> getHat, Action<FullChargeHat> setHat, Func<VanishStyle> getVanish, Action<VanishStyle> setVanish,
         Action quit)
@@ -19,6 +19,8 @@ sealed class TrayIcon : IDisposable
         _petName = () => pets.FirstOrDefault(p => p.Skin == getSkin()).Name ?? "";
         _menu = new WinForms.ContextMenuStrip();
         _menu.Items.Add("Rescan", null, (_, _) => _ = rescan());
+        // The pet follows the pointer until a click drops it: for when it's hard to grab where it is.
+        _menu.Items.Add("Move", null, (_, _) => move());
 
         var pet = new WinForms.ToolStripMenuItem("Pet");
         var petItems = pets.Select(p => (p.Skin, Item: new WinForms.ToolStripMenuItem(p.Name))).ToList();

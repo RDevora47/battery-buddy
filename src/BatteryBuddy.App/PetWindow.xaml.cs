@@ -5,6 +5,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using BatteryBuddy.Pet.Ui;
 using WinForms = System.Windows.Forms;
 
@@ -32,6 +33,11 @@ public partial class PetWindow : Window
     double _sideRoom = MinSideRoom;
     // While dragging: the cursor and the window's top-left when the drag started, in screen pixels.
     (System.Drawing.Point Cursor, int Left, int Top)? _drag;
+    // While carried by the tray menu's Move: the window's top-left before it, in screen pixels, to put it back.
+    (int Left, int Top)? _carriedFrom;
+    readonly DispatcherTimer _carryTimer = new(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(10) };
+    // The button-up after the click that ended a carry, kept from the pet.
+    bool _swallowUp;
 
     public PetWindow()
     {
@@ -43,6 +49,7 @@ public partial class PetWindow : Window
             source.AddHook(WndProc);
         };
         LocationChanged += (_, _) => PlaceBubble();
+        _carryTimer.Tick += (_, _) => CarryTo(WinForms.Cursor.Position);
     }
 
     /// <summary>
@@ -199,8 +206,12 @@ public partial class PetWindow : Window
     void DragTo(System.Drawing.Point cursor)
     {
         if (_drag is not var (from, left, top)) return;
-        int x = left + cursor.X - from.X, y = top + cursor.Y - from.Y;
+        MoveTo(left + cursor.X - from.X, top + cursor.Y - from.Y, cursor);
+    }
 
+    // Moves the window's top-left to (x, y) screen pixels, keeping the pet on the monitor under the cursor.
+    void MoveTo(int x, int y, System.Drawing.Point cursor)
+    {
         // Clamp in screen pixels, against the monitor under the cursor so the pet can still cross monitors.
         var dpi = VisualTreeHelper.GetDpi(this);
         var pet = PetInWindow;
@@ -216,6 +227,78 @@ public partial class PetWindow : Window
         if (_drag is null) return;
         _drag = null;
         Moved?.Invoke();
+    }
+
+    public bool IsCarried => _carriedFrom is not null;
+
+    /// <summary>
+    /// The tray menu's Move, for a pet that's hard to grab: it follows the pointer until a click drops it there.
+    /// Esc or any other button puts it back where it was.
+    /// </summary>
+    public void BeginCarry()
+    {
+        if (_carriedFrom is not null || _drag is not null) return;
+        var hwnd = new WindowInteropHelper(this).Handle;
+        NativeMethods.GetWindowRect(hwnd, out var rect);
+        _carriedFrom = (rect.Left, rect.Top);
+        // Nearly rather than fully clear: a layered window lets clicks through its clear pixels, and the drop
+        // click must reach the window, not whatever shows through the room around the pet.
+        Root.Background = CarryBackground;
+        Cursor = Cursors.SizeAll;
+        ForceCursor = true;
+        CarryTo(WinForms.Cursor.Position);
+        _carryTimer.Start();
+    }
+
+    public void EndCarry(bool drop)
+    {
+        if (_carriedFrom is not var (left, top)) return;
+        _carryTimer.Stop();
+        _carriedFrom = null;
+        Root.Background = null;
+        Cursor = null;
+        ForceCursor = false;
+        if (drop) Moved?.Invoke();
+        else NativeMethods.MoveWindow(new WindowInteropHelper(this).Handle, left, top);
+    }
+
+    static readonly Brush CarryBackground = Frozen(new SolidColorBrush(Color.FromArgb(1, 0, 0, 0)));
+
+    static Brush Frozen(Brush brush)
+    {
+        brush.Freeze();
+        return brush;
+    }
+
+    // The middle of the pet under the cursor.
+    void CarryTo(System.Drawing.Point cursor)
+    {
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var pet = PetInWindow;
+        MoveTo(cursor.X - (int)Math.Round(pet.CenterX * dpi.DpiScaleX), cursor.Y - (int)Math.Round(pet.CenterY * dpi.DpiScaleY), cursor);
+    }
+
+    protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
+    {
+        if (_carriedFrom is null)
+        {
+            base.OnPreviewMouseDown(e);
+            return;
+        }
+        EndCarry(drop: e.ChangedButton == MouseButton.Left);
+        _swallowUp = true;
+        e.Handled = true;
+    }
+
+    protected override void OnPreviewMouseUp(MouseButtonEventArgs e)
+    {
+        if (!_swallowUp)
+        {
+            base.OnPreviewMouseUp(e);
+            return;
+        }
+        _swallowUp = false;
+        e.Handled = true;
     }
 
     // Rounding toward zero could leave the pet a pixel further off screen than allowed.

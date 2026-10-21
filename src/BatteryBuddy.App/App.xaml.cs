@@ -30,7 +30,7 @@ public partial class App : Application
         var window = new PetWindow();
         _controller = new PetController(window, Backends.Create(), Backends.CreateConnector());
         var controller = _controller;
-        _tray = new TrayIcon(controller.IconSprite, controller.RescanAsync,
+        _tray = new TrayIcon(controller.IconSprite, controller.RescanAsync, window.BeginCarry,
             () => controller.BatteryStyle, style => controller.BatteryStyle = style,
             SkinLoader.Pets, () => controller.Skin, skin => controller.Skin = skin,
             () => controller.Hat, hat => controller.Hat = hat,

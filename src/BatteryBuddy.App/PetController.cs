@@ -81,6 +81,9 @@ sealed class PetController : IDisposable
         _window.PetHovered += OnPetHovered;
         _window.Moved += ClosePicker;
         _input.EscapePressed += ClosePicker;
+        _input.EscapePressed += () => _window.EndCarry(drop: false);
+        // A click the carried pet didn't keep up with, off the window, still drops it.
+        _input.MouseClicked += () => { if (_window.IsCarried && !_window.IsMouseOver) _window.EndCarry(drop: true); };
         // A click anywhere off the pet closes the picker; clicks on it are handled by OnPetClicked.
         _input.MouseClicked += () => { if (_picker.IsOpen && !_window.IsMouseOver) ClosePicker(); };
         _input.KeyPressed += () => { _animator.KeyTap(_clock.Elapsed); Render(); };
